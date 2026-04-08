@@ -1,13 +1,46 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function BookPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [tourDate, setTourDate] = useState("");
+  const [tourTime, setTourTime] = useState("");
+  const [guests, setGuests] = useState("");
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setSubmitted(true);
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.from("bookings").insert([
+        {
+          full_name: fullName,
+          email: email,
+          tour_date: tourDate,
+          tour_time: tourTime,
+          guests: Number(guests),
+        },
+      ]);
+
+      if (error) {
+        alert(`There was a problem saving the booking: ${error.message}`);
+        console.error("Supabase error:", error);
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      alert("Something unexpected went wrong while saving the booking.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -34,6 +67,8 @@ export default function BookPage() {
               <label className="mb-2 block font-medium">Full Name</label>
               <input
                 type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
                 placeholder="Your full name"
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                 required
@@ -44,6 +79,8 @@ export default function BookPage() {
               <label className="mb-2 block font-medium">Email</label>
               <input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                 required
@@ -54,6 +91,8 @@ export default function BookPage() {
               <label className="mb-2 block font-medium">Tour Date</label>
               <input
                 type="date"
+                value={tourDate}
+                onChange={(e) => setTourDate(e.target.value)}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                 required
               />
@@ -62,12 +101,14 @@ export default function BookPage() {
             <div>
               <label className="mb-2 block font-medium">Time</label>
               <select
+                value={tourTime}
+                onChange={(e) => setTourTime(e.target.value)}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                 required
               >
                 <option value="">Select a time</option>
-                <option>10:30 AM</option>
-                <option>4:30 PM Sunset Cruise</option>
+                <option value="10:30 AM">10:30 AM</option>
+                <option value="4:30 PM Sunset Cruise">4:30 PM Sunset Cruise</option>
               </select>
             </div>
 
@@ -76,6 +117,8 @@ export default function BookPage() {
               <input
                 type="number"
                 min="1"
+                value={guests}
+                onChange={(e) => setGuests(e.target.value)}
                 placeholder="Number of guests"
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                 required
@@ -84,9 +127,10 @@ export default function BookPage() {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white"
+              disabled={loading}
+              className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
             >
-              Continue Booking
+              {loading ? "Submitting..." : "Continue Booking"}
             </button>
           </form>
         )}
