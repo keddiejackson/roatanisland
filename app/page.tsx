@@ -1,4 +1,3 @@
-import Link from "next/link";
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#F4EBD0] text-[#1F2937]">
@@ -32,13 +31,9 @@ export default function Home() {
           <div className="mt-4 flex justify-between items-center">
             <span className="font-bold text-lg">$35 / person</span>
 
-            <Link
-  href="/book"
-  className="bg-[#00A8A8] text-white px-4 py-2 rounded-lg"
->
-  Book Now
-</Link>
-            
+            <button className="bg-[#00A8A8] text-white px-4 py-2 rounded-lg">
+              Book Now
+            </button>
           </div>
         </div>
       </section>
