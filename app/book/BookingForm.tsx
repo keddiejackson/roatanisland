@@ -49,20 +49,29 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("bookings").insert([
-        {
-          full_name: fullName,
-          email,
-          tour_date: tourDate,
-          tour_time: tourTime,
-          guests: Number(guests),
-          listing_id: listingId || null,
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      ]);
+        body: JSON.stringify({
+          fullName,
+          email,
+          tourDate,
+          tourTime,
+          guests,
+          listingId: listingId || null,
+        }),
+      });
 
-      if (error) {
-        alert(`There was a problem saving the booking: ${error.message}`);
-        console.error("Supabase error:", error);
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(
+          `There was a problem saving the booking: ${
+            result.error || "Please try again."
+          }`,
+        );
         return;
       }
 

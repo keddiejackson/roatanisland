@@ -21,6 +21,14 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 Create a `.env.local` file using `.env.example` as a starting point, then add
 your Supabase project URL and anon key.
 
+Add `SUPABASE_SERVICE_ROLE_KEY` in production if you want the server routes to
+save bookings and vendor listings without browser-side RLS surprises. Keep this
+value server-only and never prefix it with `NEXT_PUBLIC_`.
+
+To receive email alerts for new booking requests and vendor listing submissions,
+add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ADMIN_NOTIFICATION_EMAIL`.
+Submissions still save if email is not configured.
+
 The admin login uses Supabase Auth email/password accounts. Create an admin user
 in Supabase Auth, then run `supabase/schema.sql` in the Supabase SQL Editor.
 Replace the example `your-admin@email.com` in that SQL file with your real admin

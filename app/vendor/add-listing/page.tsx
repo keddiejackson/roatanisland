@@ -63,53 +63,37 @@ export default function AddListingPage() {
     e.preventDefault();
     setLoading(true);
 
-    let vendorId = vendorAccount?.vendor_id;
-
-    if (!vendorId) {
-      const { data: vendor, error: vendorError } = await supabase
-        .from("vendors")
-        .insert([
-          {
-            id: crypto.randomUUID(),
-            business_name: businessName,
-            contact_name: contactName || null,
-            email: vendorEmail || null,
-            phone: phone || null,
-            website: website || null,
-            notes: vendorNotes || null,
-            is_active: true,
-          },
-        ])
-        .select("id")
-        .single();
-
-      if (vendorError) {
-        setLoading(false);
-        alert(`Error adding vendor: ${vendorError.message}`);
-        return;
-      }
-
-      vendorId = vendor.id;
-    }
-
-    const { error: listingError } = await supabase.from("listings").insert([
-      {
-        id: crypto.randomUUID(),
-        vendor_id: vendorId,
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/vendor-listings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        vendorId: vendorAccount?.vendor_id || null,
+        businessName,
+        contactName,
+        vendorEmail,
+        phone,
+        website,
+        vendorNotes,
         title,
         description,
-        price: Number(price),
+        price,
         location,
         category,
-        image_url: imageUrl || null,
-        is_active: false,
-      },
-    ]);
+        imageUrl,
+      }),
+    });
 
+    const result = await response.json();
     setLoading(false);
 
-    if (listingError) {
-      alert(`Error adding listing: ${listingError.message}`);
+    if (!response.ok) {
+      alert(`Error adding listing: ${result.error || "Please try again."}`);
       return;
     }
 

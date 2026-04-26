@@ -32,41 +32,20 @@ export default function VendorSignupPage() {
       return;
     }
 
-    const { data: vendor, error: vendorError } = await supabase
-      .from("vendors")
-      .insert([
-        {
-          id: authData.user.id,
-          business_name: businessName,
-          contact_name: contactName || null,
-          email,
-          phone: phone || null,
-          website: website || null,
-          is_active: true,
-        },
-      ])
-      .select("id")
-      .single();
-
-    if (vendorError) {
-      setError(vendorError.message);
-      setLoading(false);
-      return;
-    }
-
-    const { error: linkError } = await supabase.from("vendor_users").insert([
+    const { error: vendorError } = await supabase.rpc(
+      "create_vendor_account",
       {
-        id: crypto.randomUUID(),
-        vendor_id: vendor.id,
-        user_id: authData.user.id,
-        email,
+        business_name: businessName,
+        contact_name: contactName || null,
+        phone: phone || null,
+        website: website || null,
       },
-    ]);
+    );
 
     setLoading(false);
 
-    if (linkError) {
-      setError(linkError.message);
+    if (vendorError) {
+      setError(vendorError.message);
       return;
     }
 

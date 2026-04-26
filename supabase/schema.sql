@@ -323,6 +323,75 @@ with check (
   )
 );
 
+create or replace function public.create_vendor_account(
+  business_name text,
+  contact_name text default null,
+  phone text default null,
+  website text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  current_user_id uuid;
+  current_email text;
+  created_vendor_id uuid;
+begin
+  current_user_id := auth.uid();
+  current_email := auth.jwt() ->> 'email';
+
+  if current_user_id is null then
+    raise exception 'You must be signed in to create a vendor account.';
+  end if;
+
+  insert into public.vendors (
+    id,
+    business_name,
+    contact_name,
+    email,
+    phone,
+    website,
+    is_active
+  )
+  values (
+    current_user_id,
+    business_name,
+    contact_name,
+    current_email,
+    phone,
+    website,
+    true
+  )
+  on conflict (id) do update
+  set
+    business_name = excluded.business_name,
+    contact_name = excluded.contact_name,
+    email = excluded.email,
+    phone = excluded.phone,
+    website = excluded.website
+  returning id into created_vendor_id;
+
+  insert into public.vendor_users (
+    vendor_id,
+    user_id,
+    email
+  )
+  values (
+    created_vendor_id,
+    current_user_id,
+    current_email
+  )
+  on conflict (vendor_id, user_id) do nothing;
+
+  return created_vendor_id;
+end;
+$$;
+
+grant execute on function public.create_vendor_account(text, text, text, text)
+to authenticated;
+
 -- Replace this email with your real admin email after creating the Auth user.
 insert into public.admin_users (email)
 values ('keddiejackson@hotmail.com')
