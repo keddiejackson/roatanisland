@@ -16,6 +16,24 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Supabase setup
+
+Create a `.env.local` file using `.env.example` as a starting point, then add
+your Supabase project URL and anon key.
+
+The admin login uses Supabase Auth email/password accounts. Create an admin user
+in Supabase Auth, then run `supabase/schema.sql` in the Supabase SQL Editor.
+Replace the example `your-admin@email.com` in that SQL file with your real admin
+email before running it.
+
+`NEXT_PUBLIC_ADMIN_EMAILS` is optional. You can use it as an extra app-side
+allowlist, but the main admin permission is the `admin_users` table created by
+the SQL setup.
+
+For production, protect the `bookings` and admin-only `listings` operations with
+Supabase Row Level Security policies. The provided SQL file enables RLS and adds
+the baseline policies this app needs.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

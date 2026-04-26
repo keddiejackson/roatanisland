@@ -2,32 +2,42 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { isAdminUser } from "@/lib/admin";
+import { supabase } from "@/lib/supabase";
 
 export default function AdminLoginPage() {
   const router = useRouter();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [attempts, setAttempts] = useState(0);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setError("");
+    setLoading(true);
 
-    if (attempts >= 3) {
-      setError("Too many attempts. Refresh the page and try again.");
+    const { data, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError) {
+      setError(loginError.message);
+      setLoading(false);
       return;
     }
 
-    if (username === "admin" && password === "pirate123") {
-      localStorage.setItem("admin", "true");
-      router.push("/admin/bookings");
+    if (!(await isAdminUser(data.user?.email))) {
+      await supabase.auth.signOut();
+      setError("This account is not allowed to access the admin area.");
+      setLoading(false);
       return;
     }
 
-    const nextAttempts = attempts + 1;
-    setAttempts(nextAttempts);
-    setError(`Incorrect login (${nextAttempts}/3)`);
+    router.push("/admin/bookings");
+    router.refresh();
   }
 
   return (
@@ -40,11 +50,11 @@ export default function AdminLoginPage() {
 
         <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div>
-            <label className="mb-2 block font-medium">Username</label>
+            <label className="mb-2 block font-medium">Email</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               required
             />
@@ -65,9 +75,10 @@ export default function AdminLoginPage() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white"
+            disabled={loading}
+            className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
           >
-            Login
+            {loading ? "Signing in..." : "Login"}
           </button>
         </form>
       </div>

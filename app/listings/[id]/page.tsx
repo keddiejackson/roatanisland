@@ -1,9 +1,23 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@supabase/supabase-js";
+
+type Listing = {
+  id: string;
+  title: string;
+  description: string | null;
+  price: number | null;
+  location: string | null;
+  image_url: string | null;
+  category: string | null;
+  is_active: boolean | null;
+  rating: number | null;
+  reviews_count: number | null;
+};
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
 async function getListing(id: string) {
@@ -13,7 +27,13 @@ async function getListing(id: string) {
     .eq("id", id)
     .single();
 
-  return data;
+  const listing = data as Listing | null;
+
+  if (listing?.is_active === false) {
+    return null;
+  }
+
+  return listing;
 }
 
 export default async function ListingPage({
@@ -26,71 +46,131 @@ export default async function ListingPage({
 
   if (!listing) {
     return (
-      <main className="min-h-screen bg-[#F4EBD0] px-6 py-16">
+      <main className="min-h-screen bg-[#F7F3EA] px-6 py-16 text-[#17324D]">
         <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow">
-          <h1 className="text-2xl font-bold text-[#0B3C5D]">Listing not found</h1>
+          <h1 className="text-2xl font-bold text-[#0B3C5D]">
+            Listing not found
+          </h1>
+          <Link
+            href="/"
+            className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+          >
+            Back to listings
+          </Link>
         </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
-      <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 lg:grid-cols-2">
-          <div>
-            {listing.image_url ? (
-              <img
-                src={listing.image_url}
-                alt={listing.title}
-                className="h-[420px] w-full rounded-3xl object-cover shadow"
-              />
-            ) : (
-              <div className="flex h-[420px] w-full items-center justify-center rounded-3xl bg-white shadow">
-                <span className="text-gray-400">No image available</span>
-              </div>
-            )}
-          </div>
+    <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
+      <section className="relative min-h-[520px] overflow-hidden">
+        {listing.image_url ? (
+          <Image
+            src={listing.image_url}
+            alt={listing.title}
+            fill
+            priority
+            sizes="100vw"
+            unoptimized
+            className="object-cover"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-[#D8EFEC]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-[#F7F3EA]" />
 
-          <div className="rounded-3xl bg-white p-8 shadow">
-            <p className="text-sm font-medium uppercase tracking-wide text-[#00A8A8]">
-              Roatán Experience
+        <div className="relative mx-auto flex min-h-[520px] max-w-7xl flex-col justify-between px-6 py-8">
+          <header className="flex items-center justify-between text-white">
+            <Link href="/" className="text-xl font-bold">
+              RoatanIsland.life
+            </Link>
+            <Link
+              href="/"
+              className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+            >
+              All listings
+            </Link>
+          </header>
+
+          <div className="max-w-4xl pb-14 text-white">
+            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
+              {listing.category || "Roatan experience"}
             </p>
-
-            <h1 className="mt-2 text-4xl font-bold text-[#0B3C5D]">
+            <h1 className="mt-4 text-5xl font-bold leading-tight sm:text-6xl">
               {listing.title}
             </h1>
-
-            <p className="mt-4 text-lg leading-7 text-gray-600">
-              {listing.description}
-            </p>
-
-            <div className="mt-8 space-y-3">
-              <div className="flex items-center justify-between border-b pb-3">
-                <span className="text-gray-500">Location</span>
-                <span className="font-medium">{listing.location || "Roatán"}</span>
-              </div>
-
-              <div className="flex items-center justify-between border-b pb-3">
-                <span className="text-gray-500">Price</span>
-                <span className="text-2xl font-bold text-[#00A8A8]">
-                  ${listing.price}
-                </span>
-              </div>
+            <div className="mt-5 flex flex-wrap gap-3 text-sm font-semibold">
+              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+                {listing.location || "Roatan"}
+              </span>
+              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+                {listing.rating ?? 5}/5 rating
+              </span>
             </div>
-
-            <Link href={`/book?listing=${listing.id}`}>
-              <button className="mt-8 w-full rounded-2xl bg-[#00A8A8] px-6 py-4 text-lg font-semibold text-white transition hover:opacity-90">
-                Book This Experience
-              </button>
-            </Link>
-
-            <p className="mt-4 text-sm text-gray-400">
-              Secure your spot and experience Roatán like never before.
-            </p>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-8 px-6 py-12 lg:grid-cols-[1fr_380px]">
+        <article className="rounded-2xl bg-white p-8 shadow">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+            About this listing
+          </p>
+          <p className="mt-4 text-lg leading-8 text-gray-700">
+            {listing.description || "Details for this experience are coming soon."}
+          </p>
+
+          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+            <div className="rounded-xl bg-[#EEF7F6] p-4">
+              <p className="text-sm text-gray-500">Category</p>
+              <p className="mt-1 font-bold text-[#0B3C5D]">
+                {listing.category || "Experience"}
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#EEF7F6] p-4">
+              <p className="text-sm text-gray-500">Location</p>
+              <p className="mt-1 font-bold text-[#0B3C5D]">
+                {listing.location || "Roatan"}
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#EEF7F6] p-4">
+              <p className="text-sm text-gray-500">Reviews</p>
+              <p className="mt-1 font-bold text-[#0B3C5D]">
+                {listing.reviews_count ?? 0}
+              </p>
+            </div>
+          </div>
+        </article>
+
+        <aside className="h-fit rounded-2xl bg-white p-6 shadow lg:sticky lg:top-6">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+            Request booking
+          </p>
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-sm text-gray-500">Starting from</p>
+              <p className="text-4xl font-bold text-[#0B3C5D]">
+                {listing.price ? `$${listing.price}` : "Ask"}
+              </p>
+            </div>
+            <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-semibold text-[#0B3C5D]">
+              {listing.rating ?? 5}/5
+            </span>
+          </div>
+
+          <Link href={`/book?listing=${listing.id}`}>
+            <button className="mt-6 w-full rounded-xl bg-[#00A8A8] px-6 py-4 text-lg font-semibold text-white transition hover:bg-[#078F8F]">
+              Book This Experience
+            </button>
+          </Link>
+
+          <p className="mt-4 text-sm leading-6 text-gray-500">
+            Submit your preferred date and group size. The local operator will
+            confirm availability before your plans are final.
+          </p>
+        </aside>
+      </section>
     </main>
   );
 }

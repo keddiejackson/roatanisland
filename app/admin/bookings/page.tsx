@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import AdminNav from "@/app/admin/AdminNav";
+import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 
 type BookingRow = {
@@ -11,8 +13,12 @@ type BookingRow = {
   tour_date: string;
   tour_time: string;
   guests: number;
+  status: BookingStatus | null;
+  admin_notes: string | null;
   listing_id: string | null;
 };
+
+type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
 
 type ListingRow = {
   id: string;
@@ -26,17 +32,26 @@ type BookingWithListingName = BookingRow & {
 export default function AdminBookingsPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const [bookings, setBookings] = useState<BookingWithListingName[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const loggedIn = localStorage.getItem("admin");
+    async function verifyAdminSession() {
+      const { data, error } = await supabase.auth.getUser();
 
-    if (!loggedIn) {
-      router.replace("/admin/login");
-    } else {
+      if (error || !data.user || !(await isAdminUser(data.user.email))) {
+        await supabase.auth.signOut();
+        router.replace("/admin/login");
+        return;
+      }
+
       setAuthorized(true);
+      setCheckingAuth(false);
     }
+
+    verifyAdminSession();
   }, [router]);
 
   useEffect(() => {
@@ -83,39 +98,70 @@ export default function AdminBookingsPage() {
     }
   }, [authorized]);
 
-  if (!authorized) {
+  if (checkingAuth || !authorized) {
     return null;
+  }
+
+  async function updateBooking(
+    bookingId: string,
+    changes: Pick<BookingWithListingName, "status" | "admin_notes">,
+  ) {
+    setSavingBookingId(bookingId);
+
+    const { error } = await supabase
+      .from("bookings")
+      .update(changes)
+      .eq("id", bookingId);
+
+    if (error) {
+      alert(`Unable to update booking: ${error.message}`);
+      setSavingBookingId(null);
+      return;
+    }
+
+    setBookings((currentBookings) =>
+      currentBookings.map((booking) =>
+        booking.id === bookingId ? { ...booking, ...changes } : booking,
+      ),
+    );
+    setSavingBookingId(null);
   }
 
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
-      <div className="mx-auto max-w-7xl rounded-2xl bg-white p-8 shadow">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-[#0B3C5D]">Admin Bookings</h1>
-            <p className="mt-2 text-gray-600">
-              View all booking requests submitted through RoatanIsland.life
-            </p>
+      <div className="mx-auto max-w-7xl">
+        <AdminNav />
+
+        <div className="rounded-2xl bg-white p-8 shadow">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-[#0B3C5D]">
+                Admin Bookings
+              </h1>
+              <p className="mt-2 text-gray-600">
+                View all booking requests submitted through RoatanIsland.life
+              </p>
+            </div>
+
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                setAuthorized(false);
+                router.push("/admin/login");
+              }}
+              className="rounded-xl bg-red-500 px-4 py-2 text-white"
+            >
+              Logout
+            </button>
           </div>
 
-          <button
-            onClick={() => {
-              localStorage.removeItem("admin");
-              router.push("/admin/login");
-            }}
-            className="rounded-xl bg-red-500 px-4 py-2 text-white"
-          >
-            Logout
-          </button>
-        </div>
-
-        {loading ? (
-          <p className="mt-8">Loading bookings...</p>
-        ) : bookings.length === 0 ? (
-          <p className="mt-8">No bookings found.</p>
-        ) : (
-          <div className="mt-8 overflow-x-auto">
-            <table className="min-w-full border-collapse">
+          {loading ? (
+            <p className="mt-8">Loading bookings...</p>
+          ) : bookings.length === 0 ? (
+            <p className="mt-8">No bookings found.</p>
+          ) : (
+            <div className="mt-8 overflow-x-auto">
+              <table className="min-w-[1100px] border-collapse">
               <thead>
                 <tr className="border-b text-left">
                   <th className="px-4 py-3">Listing</th>
@@ -124,23 +170,72 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Time</th>
                   <th className="px-4 py-3">Guests</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Notes</th>
                 </tr>
               </thead>
               <tbody>
                 {bookings.map((booking) => (
-                  <tr key={booking.id} className="border-b">
+                  <tr key={booking.id} className="border-b align-top">
                     <td className="px-4 py-3 font-medium">{booking.listing_name}</td>
                     <td className="px-4 py-3">{booking.full_name}</td>
                     <td className="px-4 py-3">{booking.email}</td>
                     <td className="px-4 py-3">{booking.tour_date}</td>
                     <td className="px-4 py-3">{booking.tour_time}</td>
                     <td className="px-4 py-3">{booking.guests}</td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={booking.status || "new"}
+                        onChange={(e) =>
+                          updateBooking(booking.id, {
+                            status: e.target.value as BookingStatus,
+                            admin_notes: booking.admin_notes,
+                          })
+                        }
+                        className="w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                        disabled={savingBookingId === booking.id}
+                      >
+                        <option value="new">New</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <textarea
+                        value={booking.admin_notes || ""}
+                        onChange={(e) => {
+                          const adminNotes = e.target.value;
+                          setBookings((currentBookings) =>
+                            currentBookings.map((currentBooking) =>
+                              currentBooking.id === booking.id
+                                ? {
+                                    ...currentBooking,
+                                    admin_notes: adminNotes,
+                                  }
+                                : currentBooking,
+                            ),
+                          );
+                        }}
+                        onBlur={(e) =>
+                          updateBooking(booking.id, {
+                            status: booking.status || "new",
+                            admin_notes: e.target.value,
+                          })
+                        }
+                        rows={2}
+                        className="min-w-56 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                        placeholder="Add follow-up notes"
+                        disabled={savingBookingId === booking.id}
+                      />
+                    </td>
                   </tr>
                 ))}
               </tbody>
-            </table>
-          </div>
-        )}
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
