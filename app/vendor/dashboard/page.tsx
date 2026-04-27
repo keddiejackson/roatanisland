@@ -83,7 +83,13 @@ export default function VendorDashboardPage() {
           <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
             RoatanIsland.life
           </Link>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
+            <Link
+              href="/"
+              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
+            >
+              Home
+            </Link>
             <Link
               href="/vendor/add-listing"
               className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white"
@@ -124,7 +130,21 @@ export default function VendorDashboardPage() {
           </div>
 
           {listings.length === 0 ? (
-            <p className="mt-8 text-gray-600">No listings submitted yet.</p>
+            <div className="mt-8 rounded-xl border border-dashed border-[#00A8A8]/40 bg-[#F7F3EA] p-6">
+              <p className="font-semibold text-[#0B3C5D]">
+                No listings submitted yet.
+              </p>
+              <p className="mt-2 text-sm text-gray-600">
+                Add your first tour, stay, or transport listing for admin
+                review.
+              </p>
+              <Link
+                href="/vendor/add-listing"
+                className="mt-4 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+              >
+                Add a listing
+              </Link>
+            </div>
           ) : (
             <div className="mt-8 grid gap-4">
               {listings.map((listing) => (
@@ -140,7 +160,7 @@ export default function VendorDashboardPage() {
                       <p className="mt-2 text-sm text-gray-600">
                         {listing.category || "Listing"} in{" "}
                         {listing.location || "Roatan"}
-                        {listing.price ? ` · $${listing.price}` : ""}
+                        {listing.price ? ` - $${listing.price}` : ""}
                       </p>
                     </div>
                     <span

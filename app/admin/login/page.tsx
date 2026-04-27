@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { isAdminUser } from "@/lib/admin";
@@ -41,14 +42,27 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#F4EBD0] px-6">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow">
-        <h1 className="text-2xl font-bold text-[#0B3C5D]">Admin Login</h1>
-        <p className="mt-2 text-gray-600">
-          Sign in to view booking requests.
-        </p>
+    <main className="flex min-h-screen items-center justify-center bg-[#F7F3EA] px-6 py-10">
+      <div className="w-full max-w-md">
+        <header className="mb-8 flex items-center justify-between gap-4">
+          <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
+            RoatanIsland.life
+          </Link>
+          <Link
+            href="/"
+            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
+          >
+            Home
+          </Link>
+        </header>
 
-        <form onSubmit={handleLogin} className="mt-6 space-y-4">
+        <div className="rounded-2xl bg-white p-8 shadow">
+          <h1 className="text-3xl font-bold text-[#0B3C5D]">Admin Login</h1>
+          <p className="mt-2 text-gray-600">
+            Sign in to manage bookings, vendors, and listings.
+          </p>
+
+          <form onSubmit={handleLogin} className="mt-6 space-y-4">
           <div>
             <label className="mb-2 block font-medium">Email</label>
             <input
@@ -80,7 +94,8 @@ export default function AdminLoginPage() {
           >
             {loading ? "Signing in..." : "Login"}
           </button>
-        </form>
+          </form>
+        </div>
       </div>
     </main>
   );

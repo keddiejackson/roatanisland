@@ -82,7 +82,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="relative min-h-[640px] overflow-hidden">
+      <section className="relative min-h-[620px] overflow-hidden sm:min-h-[640px]">
         <Image
           src="/images/roatan.jpeg"
           alt="Roatan coastline"
@@ -93,12 +93,12 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-[#F7F3EA]" />
 
-        <div className="relative mx-auto flex min-h-[640px] max-w-7xl flex-col justify-between px-6 py-8">
-          <header className="flex items-center justify-between gap-4 text-white">
+        <div className="relative mx-auto flex min-h-[620px] max-w-7xl flex-col justify-between px-5 py-6 sm:min-h-[640px] sm:px-6 sm:py-8">
+          <header className="flex flex-col items-start justify-between gap-4 text-white sm:flex-row sm:items-center">
             <Link href="/" className="text-xl font-bold">
               RoatanIsland.life
             </Link>
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <a
                 href="#listings"
                 className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
@@ -126,11 +126,11 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="max-w-3xl pb-20 pt-28 text-white">
+          <div className="max-w-3xl pb-20 pt-20 text-white sm:pt-28">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
               Tours, stays, and transport
             </p>
-            <h1 className="mt-4 text-5xl font-bold leading-tight sm:text-6xl">
+            <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-6xl">
               Plan your best Roatan day in one place.
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/90">
@@ -155,7 +155,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="listings" className="relative z-10 mx-auto -mt-20 max-w-7xl px-6">
+      <section
+        id="listings"
+        className="relative z-10 mx-auto -mt-20 max-w-7xl px-5 sm:px-6"
+      >
         <div className="rounded-2xl bg-white p-4 shadow-xl shadow-black/10 ring-1 ring-black/5">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
             <input
@@ -166,7 +169,7 @@ export default function Home() {
               className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
             />
 
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {categories.map((cat) => (
                 <button
                   key={cat}
@@ -185,7 +188,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-16">
+      <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-16">
         {featuredListings.length > 0 ? (
           <div className="mb-14">
             <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -278,7 +281,17 @@ export default function Home() {
 
         {filteredListings.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#00A8A8]/40 bg-white p-10 text-center text-gray-600">
-            No listings match that search yet.
+            <p>No listings match that search yet.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setCategory("All");
+              }}
+              className="mt-4 rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+            >
+              Clear search
+            </button>
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
