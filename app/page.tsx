@@ -37,6 +37,13 @@ export default function Home() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [leadName, setLeadName] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadPhone, setLeadPhone] = useState("");
+  const [leadInterest, setLeadInterest] = useState("Tours");
+  const [leadMessage, setLeadMessage] = useState("");
+  const [leadLoading, setLeadLoading] = useState(false);
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
 
   useEffect(() => {
     async function fetchListings() {
@@ -79,6 +86,40 @@ export default function Home() {
     () => listings.filter((listing) => listing.is_featured).slice(0, 3),
     [listings],
   );
+
+  async function handleLeadSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setLeadLoading(true);
+
+    const response = await fetch("/api/contact", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: leadName,
+        email: leadEmail,
+        phone: leadPhone,
+        interest: leadInterest,
+        message: leadMessage,
+      }),
+    });
+
+    const result = await response.json();
+    setLeadLoading(false);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to send your message. Please try again.");
+      return;
+    }
+
+    setLeadSubmitted(true);
+    setLeadName("");
+    setLeadEmail("");
+    setLeadPhone("");
+    setLeadInterest("Tours");
+    setLeadMessage("");
+  }
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
@@ -369,6 +410,107 @@ export default function Home() {
               <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="bg-[#0B3C5D] px-5 py-14 text-white sm:px-6 sm:py-16">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
+              Need help planning?
+            </p>
+            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
+              Tell us what kind of Roatan trip you want.
+            </h2>
+            <p className="mt-4 max-w-xl leading-8 text-white/80">
+              If you are not sure what to book yet, send a quick note. We will
+              point you toward the right tours, stays, or transport options.
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-white p-6 text-[#17324D] shadow-xl">
+            {leadSubmitted ? (
+              <div className="rounded-xl bg-green-100 p-5 text-green-800">
+                <h3 className="text-xl font-bold">Message Sent</h3>
+                <p className="mt-2">
+                  Thanks. We received your note and will follow up soon.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setLeadSubmitted(false)}
+                  className="mt-4 rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                >
+                  Send another message
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleLeadSubmit} className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="mb-2 block font-medium">Name</label>
+                  <input
+                    value={leadName}
+                    onChange={(e) => setLeadName(e.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block font-medium">Email</label>
+                  <input
+                    type="email"
+                    value={leadEmail}
+                    onChange={(e) => setLeadEmail(e.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block font-medium">Phone</label>
+                  <input
+                    value={leadPhone}
+                    onChange={(e) => setLeadPhone(e.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block font-medium">Interest</label>
+                  <select
+                    value={leadInterest}
+                    onChange={(e) => setLeadInterest(e.target.value)}
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                  >
+                    <option value="Tours">Tours</option>
+                    <option value="Hotels">Hotels</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Not sure yet">Not sure yet</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="mb-2 block font-medium">Message</label>
+                  <textarea
+                    value={leadMessage}
+                    onChange={(e) => setLeadMessage(e.target.value)}
+                    rows={4}
+                    placeholder="Tell us your dates, group size, and what you want to do."
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={leadLoading}
+                  className="rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
+                >
+                  {leadLoading ? "Sending..." : "Send Planning Request"}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       </section>
     </main>
