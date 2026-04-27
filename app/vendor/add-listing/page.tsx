@@ -31,6 +31,7 @@ export default function AddListingPage() {
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("Tours");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -64,6 +65,36 @@ export default function AddListingPage() {
     setLoading(true);
 
     const { data: sessionData } = await supabase.auth.getSession();
+    let finalImageUrl = imageUrl;
+
+    if (imageFile) {
+      const uploadForm = new FormData();
+      uploadForm.append("image", imageFile);
+      uploadForm.append("vendorId", vendorAccount?.vendor_id || "pending");
+
+      const uploadResponse = await fetch("/api/uploads/listing-image", {
+        method: "POST",
+        headers: {
+          ...(sessionData.session?.access_token
+            ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+            : {}),
+        },
+        body: uploadForm,
+      });
+
+      const uploadResult = await uploadResponse.json();
+
+      if (!uploadResponse.ok) {
+        setLoading(false);
+        alert(
+          `Error uploading image: ${uploadResult.error || "Please try again."}`,
+        );
+        return;
+      }
+
+      finalImageUrl = uploadResult.imageUrl;
+    }
+
     const response = await fetch("/api/vendor-listings", {
       method: "POST",
       headers: {
@@ -85,7 +116,7 @@ export default function AddListingPage() {
         price,
         location,
         category,
-        imageUrl,
+        imageUrl: finalImageUrl,
       }),
     });
 
@@ -296,10 +327,33 @@ export default function AddListingPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block font-medium">Image URL</label>
+                    <label className="mb-2 block font-medium">
+                      Listing Image
+                    </label>
                     <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={(e) =>
+                        setImageFile(e.target.files?.[0] || null)
+                      }
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                    />
+                    {imageFile ? (
+                      <p className="mt-2 text-sm text-gray-500">
+                        Selected: {imageFile.name}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block font-medium">
+                      Image URL fallback
+                    </label>
+                    <input
+                      type="url"
                       value={imageUrl}
                       onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="https://..."
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                     />
                   </div>
