@@ -14,6 +14,7 @@ type Listing = {
   image_url: string | null;
   category: string | null;
   is_active: boolean | null;
+  is_featured: boolean | null;
   rating: number | null;
   reviews_count: number | null;
 };
@@ -52,17 +53,31 @@ export default function Home() {
 
   const filteredListings = useMemo(
     () =>
-      listings.filter((listing) => {
-        const matchesSearch = `${listing.title} ${listing.location} ${listing.description}`
-          .toLowerCase()
-          .includes(search.toLowerCase());
+      listings
+        .filter((listing) => {
+          const matchesSearch =
+            `${listing.title} ${listing.location} ${listing.description}`
+              .toLowerCase()
+              .includes(search.toLowerCase());
 
-        const matchesCategory =
-          category === "All" || listing.category === category;
+          const matchesCategory =
+            category === "All" || listing.category === category;
 
-        return matchesSearch && matchesCategory;
-      }),
+          return matchesSearch && matchesCategory;
+        })
+        .sort((a, b) => {
+          if (Boolean(a.is_featured) === Boolean(b.is_featured)) {
+            return 0;
+          }
+
+          return a.is_featured ? -1 : 1;
+        }),
     [category, listings, search],
+  );
+
+  const featuredListings = useMemo(
+    () => listings.filter((listing) => listing.is_featured).slice(0, 3),
+    [listings],
   );
 
   return (
@@ -171,6 +186,81 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-16">
+        {featuredListings.length > 0 ? (
+          <div className="mb-14">
+            <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Featured picks
+                </p>
+                <h2 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+                  Start with these island favorites
+                </h2>
+              </div>
+              <a
+                href="#all-listings"
+                className="text-sm font-semibold text-[#007B7B]"
+              >
+                View all listings
+              </a>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              {featuredListings.map((listing) => (
+                <Link
+                  key={listing.id}
+                  href={`/listings/${listing.id}`}
+                  className="group overflow-hidden rounded-2xl bg-white shadow transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
+                >
+                  <div className="relative h-64 bg-[#D8EFEC]">
+                    {listing.image_url ? (
+                      <Image
+                        src={listing.image_url}
+                        alt={listing.title}
+                        fill
+                        sizes="(min-width: 1024px) 33vw, 100vw"
+                        unoptimized
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
+                        No image yet
+                      </div>
+                    )}
+                    <span className="absolute left-4 top-4 rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+                      Featured
+                    </span>
+                    <span className="absolute bottom-4 right-4 rounded-full bg-[#0B3C5D] px-3 py-1 text-sm font-bold text-white shadow">
+                      {formatPrice(listing.price)}
+                    </span>
+                  </div>
+
+                  <div className="p-5">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
+                      {listing.category || "Experience"}
+                    </p>
+                    <h3 className="mt-2 text-xl font-bold text-[#0B3C5D]">
+                      {listing.title}
+                    </h3>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+                      {listing.description || "Details coming soon."}
+                    </p>
+                    <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
+                      <span className="text-gray-500">
+                        {listing.location || "Roatan"}
+                      </span>
+                      <span className="font-semibold text-[#0B3C5D]">
+                        {listing.rating ?? 5}/5 rating
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div id="all-listings" />
         <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -216,6 +306,11 @@ export default function Home() {
                   {listing.category ? (
                     <span className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#0B3C5D]">
                       {listing.category}
+                    </span>
+                  ) : null}
+                  {listing.is_featured ? (
+                    <span className="absolute right-4 top-4 rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
+                      Featured
                     </span>
                   ) : null}
                   <span className="absolute bottom-4 right-4 rounded-full bg-[#0B3C5D] px-3 py-1 text-sm font-bold text-white shadow">

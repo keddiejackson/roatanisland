@@ -16,6 +16,7 @@ type ListingRow = {
   image_url: string | null;
   category: string | null;
   is_active: boolean | null;
+  is_featured: boolean | null;
 };
 
 type VendorRow = {
@@ -33,6 +34,7 @@ type ListingDraft = {
   image_url: string;
   category: string;
   is_active: boolean;
+  is_featured: boolean;
 };
 
 function toDraft(listing: ListingRow): ListingDraft {
@@ -45,6 +47,7 @@ function toDraft(listing: ListingRow): ListingDraft {
     image_url: listing.image_url || "",
     category: listing.category || "Tours",
     is_active: listing.is_active ?? true,
+    is_featured: listing.is_featured ?? false,
   };
 }
 
@@ -61,6 +64,7 @@ export default function AdminListingsPage() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
+  const [featuredFilter, setFeaturedFilter] = useState("All");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -83,13 +87,14 @@ export default function AdminListingsPage() {
     async function fetchListings() {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, vendor_id, title, description, price, location, image_url, category, is_active")
+        .select("id, vendor_id, title, description, price, location, image_url, category, is_active, is_featured")
         .order("created_at", { ascending: false });
 
       if (error) {
         const missingSetupColumn =
           error.message.includes("is_active") ||
           error.message.includes("vendor_id") ||
+          error.message.includes("is_featured") ||
           error.code === "42703";
 
         if (!missingSetupColumn) {
@@ -113,15 +118,16 @@ export default function AdminListingsPage() {
 
         const fallbackRows = ((fallbackData as Omit<
           ListingRow,
-          "is_active" | "vendor_id"
+          "is_active" | "is_featured" | "vendor_id"
         >[]) || []).map((listing) => ({
           ...listing,
           vendor_id: null,
           is_active: true,
+          is_featured: false,
         }));
 
         setSetupMessage(
-          "Run the updated Supabase SQL setup to enable vendor assignment and the Active listing toggle.",
+          "Run the updated Supabase SQL setup to enable vendor assignment, active toggles, and featured listings.",
         );
         setListings(fallbackRows);
         setDrafts(
@@ -180,6 +186,7 @@ export default function AdminListingsPage() {
           vendors.find((vendor) => vendor.id === draft.vendor_id)
             ?.business_name || "";
         const isActive = draft.is_active;
+        const isFeatured = draft.is_featured;
         const matchesSearch = [
           draft.title,
           draft.description,
@@ -196,10 +203,14 @@ export default function AdminListingsPage() {
           statusFilter === "All" ||
           (statusFilter === "Active" && isActive) ||
           (statusFilter === "Inactive" && !isActive);
+        const matchesFeatured =
+          featuredFilter === "All" ||
+          (featuredFilter === "Featured" && isFeatured) ||
+          (featuredFilter === "Not featured" && !isFeatured);
 
-        return matchesSearch && matchesCategory && matchesStatus;
+        return matchesSearch && matchesCategory && matchesStatus && matchesFeatured;
       }),
-    [categoryFilter, drafts, listings, search, statusFilter, vendors],
+    [categoryFilter, drafts, featuredFilter, listings, search, statusFilter, vendors],
   );
 
   if (checkingAuth || !authorized) {
@@ -239,7 +250,9 @@ export default function AdminListingsPage() {
         location: draft.location,
         image_url: draft.image_url || null,
         category: draft.category,
-        ...(setupMessage ? {} : { is_active: draft.is_active }),
+        ...(setupMessage
+          ? {}
+          : { is_active: draft.is_active, is_featured: draft.is_featured }),
       })
       .eq("id", listingId);
 
@@ -262,6 +275,7 @@ export default function AdminListingsPage() {
               image_url: draft.image_url || null,
               category: draft.category,
               is_active: draft.is_active,
+              is_featured: draft.is_featured,
             }
           : listing,
       ),
@@ -294,7 +308,7 @@ export default function AdminListingsPage() {
             <p className="mt-8">No listings found.</p>
           ) : (
             <>
-            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_180px_180px_auto] lg:items-center">
+            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_180px_180px_180px_auto] lg:items-center">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -319,6 +333,15 @@ export default function AdminListingsPage() {
                 <option value="All">All statuses</option>
                 <option value="Active">Active</option>
                 <option value="Inactive">Inactive</option>
+              </select>
+              <select
+                value={featuredFilter}
+                onChange={(e) => setFeaturedFilter(e.target.value)}
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              >
+                <option value="All">All featured</option>
+                <option value="Featured">Featured</option>
+                <option value="Not featured">Not featured</option>
               </select>
               <p className="text-sm font-semibold text-[#0B3C5D]">
                 {filteredListings.length} shown
@@ -452,6 +475,22 @@ export default function AdminListingsPage() {
                             }
                           />
                           Active on public site
+                        </label>
+
+                        <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-2">
+                          <input
+                            type="checkbox"
+                            checked={draft.is_featured}
+                            disabled={Boolean(setupMessage)}
+                            onChange={(e) =>
+                              updateDraft(
+                                listing.id,
+                                "is_featured",
+                                e.target.checked,
+                              )
+                            }
+                          />
+                          Featured
                         </label>
 
                         <button

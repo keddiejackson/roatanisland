@@ -95,6 +95,7 @@ create table if not exists public.listings (
   image_url text,
   category text not null default 'Tours',
   is_active boolean not null default true,
+  is_featured boolean not null default false,
   rating numeric default 5,
   reviews_count integer default 0,
   created_at timestamptz not null default now()
@@ -102,6 +103,9 @@ create table if not exists public.listings (
 
 alter table public.listings
 add column if not exists is_active boolean not null default true;
+
+alter table public.listings
+add column if not exists is_featured boolean not null default false;
 
 alter table public.listings
 add column if not exists vendor_id uuid references public.vendors(id) on delete set null;
