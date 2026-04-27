@@ -159,5 +159,17 @@ export async function POST(request: Request) {
     ].join("\n"),
   });
 
+  await supabaseServer.from("analytics_events").insert([
+    {
+      event_type: "vendor_listing_submission",
+      path: "/vendor/add-listing",
+      listing_id: listing.id,
+      vendor_id: listing.vendor_id,
+      metadata: {
+        category: listing.category,
+      },
+    },
+  ]);
+
   return NextResponse.json({ listingId: listing.id });
 }

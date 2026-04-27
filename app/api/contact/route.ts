@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
+import { supabaseServer } from "@/lib/supabase-server";
 
 type ContactRequest = {
   name?: string;
@@ -40,6 +41,16 @@ export async function POST(request: Request) {
       `Message: ${body.message}`,
     ].join("\n"),
   });
+
+  await supabaseServer.from("analytics_events").insert([
+    {
+      event_type: "planning_lead",
+      path: "/",
+      metadata: {
+        interest: body.interest || "",
+      },
+    },
+  ]);
 
   return NextResponse.json({ ok: true });
 }

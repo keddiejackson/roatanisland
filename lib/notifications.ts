@@ -5,6 +5,10 @@ type AdminNotification = {
   replyTo?: string;
 };
 
+type EmailNotification = AdminNotification & {
+  to: string | string[];
+};
+
 function getAdminRecipients() {
   const raw =
     process.env.ADMIN_NOTIFICATION_EMAIL ||
@@ -27,11 +31,25 @@ export function escapeHtml(value: string | number | null | undefined) {
 }
 
 export async function sendAdminNotification(message: AdminNotification) {
-  const apiKey = process.env.RESEND_API_KEY;
   const recipients = getAdminRecipients();
 
+  if (recipients.length === 0) {
+    console.info("Admin email skipped: missing recipient.");
+    return { sent: false, skipped: true };
+  }
+
+  return sendEmailNotification({
+    ...message,
+    to: recipients,
+  });
+}
+
+export async function sendEmailNotification(message: EmailNotification) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const recipients = Array.isArray(message.to) ? message.to : [message.to];
+
   if (!apiKey || recipients.length === 0) {
-    console.info("Admin email skipped: missing RESEND_API_KEY or recipient.");
+    console.info("Email skipped: missing RESEND_API_KEY or recipient.");
     return { sent: false, skipped: true };
   }
 

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
+import {
+  escapeHtml,
+  sendAdminNotification,
+  sendEmailNotification,
+} from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingRequest = {
@@ -50,16 +54,29 @@ export async function POST(request: Request) {
   }
 
   let listingTitle = "General booking request";
+  let vendorEmail: string | null = null;
+  let vendorName: string | null = null;
 
   if (booking.listing_id) {
     const { data: listing } = await supabaseServer
       .from("listings")
-      .select("title")
+      .select("title, vendor_id")
       .eq("id", booking.listing_id)
       .maybeSingle();
 
     if (listing?.title) {
       listingTitle = listing.title;
+    }
+
+    if (listing?.vendor_id) {
+      const { data: vendor } = await supabaseServer
+        .from("vendors")
+        .select("business_name, email")
+        .eq("id", listing.vendor_id)
+        .maybeSingle();
+
+      vendorEmail = vendor?.email || null;
+      vendorName = vendor?.business_name || null;
     }
   }
 
@@ -85,6 +102,46 @@ export async function POST(request: Request) {
       `Guests: ${booking.guests}`,
     ].join("\n"),
   });
+
+  await supabaseServer.from("analytics_events").insert([
+    {
+      event_type: "booking_request",
+      path: "/book",
+      listing_id: booking.listing_id,
+      metadata: {
+        guests: booking.guests,
+        tour_date: booking.tour_date,
+      },
+    },
+  ]);
+
+  if (vendorEmail) {
+    await sendEmailNotification({
+      to: vendorEmail,
+      subject: `New booking request: ${listingTitle}`,
+      replyTo: booking.email,
+      html: `
+        <h2>New booking request</h2>
+        <p><strong>Business:</strong> ${escapeHtml(vendorName)}</p>
+        <p><strong>Listing:</strong> ${escapeHtml(listingTitle)}</p>
+        <p><strong>Name:</strong> ${escapeHtml(booking.full_name)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(booking.email)}</p>
+        <p><strong>Date:</strong> ${escapeHtml(booking.tour_date)}</p>
+        <p><strong>Time:</strong> ${escapeHtml(booking.tour_time)}</p>
+        <p><strong>Guests:</strong> ${escapeHtml(booking.guests)}</p>
+      `,
+      text: [
+        "New booking request",
+        `Business: ${vendorName || ""}`,
+        `Listing: ${listingTitle}`,
+        `Name: ${booking.full_name}`,
+        `Email: ${booking.email}`,
+        `Date: ${booking.tour_date}`,
+        `Time: ${booking.tour_time}`,
+        `Guests: ${booking.guests}`,
+      ].join("\n"),
+    });
+  }
 
   return NextResponse.json({ bookingId: booking.id });
 }

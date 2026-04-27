@@ -16,6 +16,8 @@ type BookingRow = {
   status: BookingStatus | null;
   admin_notes: string | null;
   listing_id: string | null;
+  deposit_status: string | null;
+  deposit_amount_cents: number | null;
 };
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -28,6 +30,21 @@ type ListingRow = {
 type BookingWithListingName = BookingRow & {
   listing_name: string;
 };
+
+function formatDeposit(booking: BookingWithListingName) {
+  if (!booking.deposit_status || booking.deposit_status === "not_requested") {
+    return "Not requested";
+  }
+
+  const amount = booking.deposit_amount_cents
+    ? new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(booking.deposit_amount_cents / 100)
+    : "";
+
+  return `${booking.deposit_status.replaceAll("_", " ")} ${amount}`.trim();
+}
 
 export default function AdminBookingsPage() {
   const router = useRouter();
@@ -226,6 +243,7 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Time</th>
                   <th className="px-4 py-3">Guests</th>
+                  <th className="px-4 py-3">Deposit</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Notes</th>
                 </tr>
@@ -239,6 +257,9 @@ export default function AdminBookingsPage() {
                     <td className="px-4 py-3">{booking.tour_date}</td>
                     <td className="px-4 py-3">{booking.tour_time}</td>
                     <td className="px-4 py-3">{booking.guests}</td>
+                    <td className="px-4 py-3 capitalize">
+                      {formatDeposit(booking)}
+                    </td>
                     <td className="px-4 py-3">
                       <select
                         value={booking.status || "new"}

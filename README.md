@@ -29,6 +29,11 @@ To receive email alerts for new booking requests and vendor listing submissions,
 add `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and `ADMIN_NOTIFICATION_EMAIL`.
 Submissions still save if email is not configured.
 
+Stripe deposits are optional. To turn them on, add `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`, `STRIPE_DEPOSIT_AMOUNT_CENTS`, `NEXT_PUBLIC_SITE_URL`,
+and set `NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED=true`. The webhook endpoint is
+`/api/stripe/webhook`.
+
 The admin login uses Supabase Auth email/password accounts. Create an admin user
 in Supabase Auth, then run `supabase/schema.sql` in the Supabase SQL Editor.
 Replace the example `your-admin@email.com` in that SQL file with your real admin

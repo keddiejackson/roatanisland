@@ -17,6 +17,8 @@ type ListingSummary = {
 export default function BookingForm({ listingId }: BookingFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [depositLoading, setDepositLoading] = useState(false);
+  const [bookingId, setBookingId] = useState<string | null>(null);
   const [listing, setListing] = useState<ListingSummary | null>(null);
 
   const [fullName, setFullName] = useState("");
@@ -76,6 +78,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
         return;
       }
 
+      setBookingId(result.bookingId || null);
       setSubmitted(true);
     } catch (err) {
       console.error("Unexpected error:", err);
@@ -83,6 +86,32 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function startDepositCheckout() {
+    if (!bookingId) {
+      return;
+    }
+
+    setDepositLoading(true);
+
+    const response = await fetch("/api/payments/deposit", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ bookingId }),
+    });
+
+    const result = await response.json();
+    setDepositLoading(false);
+
+    if (!response.ok || !result.url) {
+      alert(result.error || "Unable to start deposit checkout.");
+      return;
+    }
+
+    window.location.href = result.url;
   }
 
   return (
@@ -117,6 +146,17 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             availability is reviewed.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
+            {process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true" &&
+            bookingId ? (
+              <button
+                type="button"
+                onClick={startDepositCheckout}
+                disabled={depositLoading}
+                className="rounded-xl bg-[#0B3C5D] px-5 py-3 font-semibold text-white disabled:opacity-50"
+              >
+                {depositLoading ? "Opening checkout..." : "Pay deposit"}
+              </button>
+            ) : null}
             <Link
               href="/"
               className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"

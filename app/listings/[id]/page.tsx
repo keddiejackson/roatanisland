@@ -1,9 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@supabase/supabase-js";
+import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
   id: string;
+  vendor_id: string | null;
   title: string;
   description: string | null;
   price: number | null;
@@ -15,10 +16,11 @@ type Listing = {
   reviews_count: number | null;
 };
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-);
+type Vendor = {
+  id: string;
+  business_name: string;
+  website: string | null;
+};
 
 function formatPrice(price: number | null) {
   if (!price) {
@@ -33,7 +35,7 @@ function formatPrice(price: number | null) {
 }
 
 async function getListing(id: string) {
-  const { data } = await supabase
+  const { data } = await supabaseServer
     .from("listings")
     .select("*")
     .eq("id", id)
@@ -55,6 +57,7 @@ export default async function ListingPage({
 }) {
   const { id } = await params;
   const listing = await getListing(id);
+  let vendor: Vendor | null = null;
 
   if (!listing) {
     return (
@@ -72,6 +75,17 @@ export default async function ListingPage({
         </div>
       </main>
     );
+  }
+
+  if (listing.vendor_id) {
+    const { data } = await supabaseServer
+      .from("vendors")
+      .select("id, business_name, website")
+      .eq("id", listing.vendor_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    vendor = data as Vendor | null;
   }
 
   return (
@@ -164,6 +178,35 @@ export default async function ListingPage({
               </p>
             </div>
           </div>
+
+          {vendor ? (
+            <div className="mt-8 rounded-2xl border border-[#00A8A8]/20 bg-white p-6">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Local operator
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                {vendor.business_name}
+              </h2>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <Link
+                  href={`/vendors/${vendor.id}`}
+                  className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                >
+                  View Profile
+                </Link>
+                {vendor.website ? (
+                  <a
+                    href={vendor.website}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-xl border border-[#00A8A8] px-5 py-3 font-semibold text-[#007B7B]"
+                  >
+                    Website
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-8 rounded-2xl bg-[#F7F3EA] p-6">
             <h2 className="text-xl font-bold text-[#0B3C5D]">

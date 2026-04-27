@@ -120,6 +120,23 @@ create table if not exists public.bookings (
   status text not null default 'new' check (status in ('new', 'confirmed', 'completed', 'cancelled')),
   admin_notes text,
   listing_id uuid references public.listings(id) on delete set null,
+  deposit_status text not null default 'not_requested',
+  deposit_amount_cents integer,
+  stripe_checkout_session_id text,
+  stripe_payment_intent_id text,
+  paid_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.analytics_events (
+  id uuid primary key default gen_random_uuid(),
+  event_type text not null default 'page_view',
+  path text,
+  listing_id uuid references public.listings(id) on delete set null,
+  vendor_id uuid references public.vendors(id) on delete set null,
+  metadata jsonb not null default '{}'::jsonb,
+  referrer text,
+  user_agent text,
   created_at timestamptz not null default now()
 );
 
@@ -130,17 +147,38 @@ check (status in ('new', 'confirmed', 'completed', 'cancelled'));
 alter table public.bookings
 add column if not exists admin_notes text;
 
+alter table public.bookings
+add column if not exists deposit_status text not null default 'not_requested';
+
+alter table public.bookings
+add column if not exists deposit_amount_cents integer;
+
+alter table public.bookings
+add column if not exists stripe_checkout_session_id text;
+
+alter table public.bookings
+add column if not exists stripe_payment_intent_id text;
+
+alter table public.bookings
+add column if not exists paid_at timestamptz;
+
+alter table public.analytics_events
+add column if not exists metadata jsonb not null default '{}'::jsonb;
+
 alter table public.admin_users enable row level security;
 alter table public.vendors enable row level security;
 alter table public.vendor_users enable row level security;
 alter table public.listings enable row level security;
 alter table public.bookings enable row level security;
+alter table public.analytics_events enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select, insert on public.vendors to anon, authenticated;
 grant select, insert on public.vendor_users to anon, authenticated;
 grant select, insert on public.listings to anon, authenticated;
 grant select, insert on public.bookings to anon, authenticated;
+grant insert on public.analytics_events to anon, authenticated;
+grant select on public.analytics_events to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
 grant select, update on public.bookings to authenticated;
@@ -313,6 +351,26 @@ on public.bookings
 for insert
 to anon, authenticated
 with check (true);
+
+drop policy if exists "Anyone can create analytics events" on public.analytics_events;
+create policy "Anyone can create analytics events"
+on public.analytics_events
+for insert
+to anon, authenticated
+with check (true);
+
+drop policy if exists "Admins can view analytics events" on public.analytics_events;
+create policy "Admins can view analytics events"
+on public.analytics_events
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
 
 drop policy if exists "Admins can view bookings" on public.bookings;
 create policy "Admins can view bookings"
