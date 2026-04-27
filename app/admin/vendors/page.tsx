@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
+import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 
@@ -273,11 +274,14 @@ export default function AdminVendorsPage() {
           </section>
 
           <section className="rounded-2xl bg-white p-8 shadow">
-            <div>
-              <h2 className="text-2xl font-bold text-[#0B3C5D]">Vendors</h2>
-              <p className="mt-2 text-gray-600">
-                Keep partner contact details handy for bookings and follow-up.
-              </p>
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div>
+                <h2 className="text-2xl font-bold text-[#0B3C5D]">Vendors</h2>
+                <p className="mt-2 text-gray-600">
+                  Keep partner contact details handy for bookings and follow-up.
+                </p>
+              </div>
+              <ExportCsvButton type="vendors" />
             </div>
 
             {loading ? (

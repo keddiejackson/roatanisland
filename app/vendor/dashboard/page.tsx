@@ -21,10 +21,23 @@ type ListingRow = {
   is_active: boolean | null;
 };
 
+type BookingRow = {
+  id: string;
+  listing_name: string;
+  full_name: string;
+  email: string;
+  tour_date: string;
+  tour_time: string;
+  guests: number;
+  status: string | null;
+  deposit_status: string | null;
+};
+
 export default function VendorDashboardPage() {
   const router = useRouter();
   const [vendorAccount, setVendorAccount] = useState<VendorAccount | null>(null);
   const [listings, setListings] = useState<ListingRow[]>([]);
+  const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -57,6 +70,21 @@ export default function VendorDashboardPage() {
         .order("created_at", { ascending: false });
 
       setListings((listingData as ListingRow[]) || []);
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const bookingsResponse = await fetch("/api/vendor/bookings", {
+        headers: {
+          ...(sessionData.session?.access_token
+            ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+            : {}),
+        },
+      });
+
+      if (bookingsResponse.ok) {
+        const bookingsResult = await bookingsResponse.json();
+        setBookings((bookingsResult.bookings as BookingRow[]) || []);
+      }
+
       setLoading(false);
     }
 
@@ -115,6 +143,56 @@ export default function VendorDashboardPage() {
           <p className="mt-2 text-gray-600">
             Track submitted listings and add new experiences for admin review.
           </p>
+        </section>
+
+        <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+          <div>
+            <h2 className="text-2xl font-bold text-[#0B3C5D]">
+              Booking Requests
+            </h2>
+            <p className="mt-2 text-gray-600">
+              Recent requests for your active listings.
+            </p>
+          </div>
+
+          {bookings.length === 0 ? (
+            <div className="mt-8 rounded-xl border border-dashed border-[#00A8A8]/40 bg-[#F7F3EA] p-6 text-sm text-gray-600">
+              No booking requests yet.
+            </div>
+          ) : (
+            <div className="mt-8 overflow-x-auto">
+              <table className="min-w-[900px] border-collapse">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="px-4 py-3">Listing</th>
+                    <th className="px-4 py-3">Guest</th>
+                    <th className="px-4 py-3">Email</th>
+                    <th className="px-4 py-3">Date</th>
+                    <th className="px-4 py-3">Time</th>
+                    <th className="px-4 py-3">Guests</th>
+                    <th className="px-4 py-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map((booking) => (
+                    <tr key={booking.id} className="border-b">
+                      <td className="px-4 py-3 font-medium">
+                        {booking.listing_name}
+                      </td>
+                      <td className="px-4 py-3">{booking.full_name}</td>
+                      <td className="px-4 py-3">{booking.email}</td>
+                      <td className="px-4 py-3">{booking.tour_date}</td>
+                      <td className="px-4 py-3">{booking.tour_time}</td>
+                      <td className="px-4 py-3">{booking.guests}</td>
+                      <td className="px-4 py-3 capitalize">
+                        {booking.status || "new"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section className="mt-8 rounded-2xl bg-white p-8 shadow">

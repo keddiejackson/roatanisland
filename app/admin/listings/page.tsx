@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
+import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 
@@ -289,11 +290,16 @@ export default function AdminListingsPage() {
         <AdminNav />
 
         <div className="rounded-2xl bg-white p-8 shadow">
-          <div>
-            <h1 className="text-3xl font-bold text-[#0B3C5D]">Admin Listings</h1>
-            <p className="mt-2 text-gray-600">
-              Edit listings and choose which ones appear on the public site.
-            </p>
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+            <div>
+              <h1 className="text-3xl font-bold text-[#0B3C5D]">
+                Admin Listings
+              </h1>
+              <p className="mt-2 text-gray-600">
+                Edit listings and choose which ones appear on the public site.
+              </p>
+            </div>
+            <ExportCsvButton type="listings" />
           </div>
 
           {setupMessage ? (

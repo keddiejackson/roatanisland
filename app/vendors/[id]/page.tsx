@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Vendor = {
@@ -34,6 +35,51 @@ function formatPrice(price: number | null) {
   }).format(price);
 }
 
+async function getVendor(id: string) {
+  const { data } = await supabaseServer
+    .from("vendors")
+    .select("id, business_name, contact_name, website, notes, is_active")
+    .eq("id", id)
+    .maybeSingle();
+
+  const vendor = data as Vendor | null;
+
+  if (vendor?.is_active === false) {
+    return null;
+  }
+
+  return vendor;
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const vendor = await getVendor(id);
+
+  if (!vendor) {
+    return {
+      title: "Vendor not found | RoatanIsland.life",
+    };
+  }
+
+  const description = (
+    vendor.notes || `Browse active Roatan listings from ${vendor.business_name}.`
+  ).slice(0, 160);
+
+  return {
+    title: `${vendor.business_name} | RoatanIsland.life`,
+    description,
+    openGraph: {
+      title: vendor.business_name,
+      description,
+      type: "profile",
+    },
+  };
+}
+
 export default async function VendorProfilePage({
   params,
 }: {
@@ -41,13 +87,7 @@ export default async function VendorProfilePage({
 }) {
   const { id } = await params;
 
-  const { data: vendorData } = await supabaseServer
-    .from("vendors")
-    .select("id, business_name, contact_name, website, notes, is_active")
-    .eq("id", id)
-    .maybeSingle();
-
-  const vendor = vendorData as Vendor | null;
+  const vendor = await getVendor(id);
 
   if (!vendor || vendor.is_active === false) {
     return (

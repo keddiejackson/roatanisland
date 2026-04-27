@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
+import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 
@@ -147,16 +148,30 @@ export default function AdminBookingsPage() {
   async function updateBooking(
     bookingId: string,
     changes: Pick<BookingWithListingName, "status" | "admin_notes">,
+    sendEmail = false,
   ) {
     setSavingBookingId(bookingId);
 
-    const { error } = await supabase
-      .from("bookings")
-      .update(changes)
-      .eq("id", bookingId);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch(`/api/admin/bookings/${bookingId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        status: changes.status,
+        adminNotes: changes.admin_notes,
+        sendEmail,
+      }),
+    });
 
-    if (error) {
-      alert(`Unable to update booking: ${error.message}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert(`Unable to update booking: ${result.error || "Please try again."}`);
       setSavingBookingId(null);
       return;
     }
@@ -175,7 +190,7 @@ export default function AdminBookingsPage() {
         <AdminNav />
 
         <div className="rounded-2xl bg-white p-8 shadow">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <h1 className="text-3xl font-bold text-[#0B3C5D]">
                 Admin Bookings
@@ -185,16 +200,19 @@ export default function AdminBookingsPage() {
               </p>
             </div>
 
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                setAuthorized(false);
-                router.push("/admin/login");
-              }}
-              className="rounded-xl bg-red-500 px-4 py-2 text-white"
-            >
-              Logout
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <ExportCsvButton type="bookings" />
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setAuthorized(false);
+                  router.push("/admin/login");
+                }}
+                className="rounded-xl bg-red-500 px-4 py-2 text-white"
+              >
+                Logout
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -267,7 +285,7 @@ export default function AdminBookingsPage() {
                           updateBooking(booking.id, {
                             status: e.target.value as BookingStatus,
                             admin_notes: booking.admin_notes,
-                          })
+                          }, e.target.value !== booking.status)
                         }
                         className="w-36 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
                         disabled={savingBookingId === booking.id}

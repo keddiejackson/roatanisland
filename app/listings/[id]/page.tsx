@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import type { Metadata } from "next";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
@@ -48,6 +49,43 @@ async function getListing(id: string) {
   }
 
   return listing;
+}
+
+function seoDescription(listing: Listing) {
+  return (
+    listing.description ||
+    `${listing.category || "Experience"} in ${listing.location || "Roatan"} on RoatanIsland.life.`
+  ).slice(0, 160);
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const listing = await getListing(id);
+
+  if (!listing) {
+    return {
+      title: "Listing not found | RoatanIsland.life",
+    };
+  }
+
+  const description = seoDescription(listing);
+
+  return {
+    title: `${listing.title} | RoatanIsland.life`,
+    description,
+    openGraph: {
+      title: listing.title,
+      description,
+      type: "website",
+      images: listing.image_url
+        ? [{ url: listing.image_url, alt: listing.title }]
+        : undefined,
+    },
+  };
 }
 
 export default async function ListingPage({

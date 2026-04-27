@@ -3,8 +3,17 @@ import AnalyticsTracker from "./AnalyticsTracker";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.roatanisland.life",
+  ),
   title: "RoatanIsland.life",
   description: "Discover and book tours, stays, and transport in Roatan.",
+  openGraph: {
+    title: "RoatanIsland.life",
+    description: "Discover and book tours, stays, and transport in Roatan.",
+    siteName: "RoatanIsland.life",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
