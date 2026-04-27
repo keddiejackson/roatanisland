@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import { isAdminUser } from "@/lib/admin";
@@ -45,6 +45,8 @@ export default function AdminVendorsPage() {
   const [saving, setSaving] = useState(false);
   const [savingVendorId, setSavingVendorId] = useState<string | null>(null);
   const [setupMessage, setSetupMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -86,6 +88,31 @@ export default function AdminVendorsPage() {
       fetchVendors();
     }
   }, [authorized]);
+
+  const filteredVendors = useMemo(
+    () =>
+      vendors.filter((vendor) => {
+        const isActive = vendor.is_active !== false;
+        const matchesStatus =
+          statusFilter === "All" ||
+          (statusFilter === "Active" && isActive) ||
+          (statusFilter === "Inactive" && !isActive);
+        const matchesSearch = [
+          vendor.business_name,
+          vendor.contact_name || "",
+          vendor.email || "",
+          vendor.phone || "",
+          vendor.website || "",
+          vendor.notes || "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase());
+
+        return matchesSearch && matchesStatus;
+      }),
+    [search, statusFilter, vendors],
+  );
 
   if (checkingAuth || !authorized) {
     return null;
@@ -258,8 +285,35 @@ export default function AdminVendorsPage() {
             ) : vendors.length === 0 ? (
               <p className="mt-8">No vendors found.</p>
             ) : (
-              <div className="mt-8 grid gap-4">
-                {vendors.map((vendor) => (
+              <>
+              <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 md:grid-cols-[1fr_180px_auto] md:items-center">
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search vendors, contacts, notes"
+                  className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+                >
+                  <option value="All">All statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                <p className="text-sm font-semibold text-[#0B3C5D]">
+                  {filteredVendors.length} shown
+                </p>
+              </div>
+
+              {filteredVendors.length === 0 ? (
+                <p className="mt-8 rounded-xl border border-dashed border-gray-300 p-6 text-center text-gray-600">
+                  No vendors match those filters.
+                </p>
+              ) : (
+              <div className="mt-6 grid gap-4">
+                {filteredVendors.map((vendor) => (
                   <article
                     key={vendor.id}
                     className="rounded-xl border border-gray-200 p-5"
@@ -308,6 +362,8 @@ export default function AdminVendorsPage() {
                   </article>
                 ))}
               </div>
+              )}
+              </>
             )}
           </section>
         </div>

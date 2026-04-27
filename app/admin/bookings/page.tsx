@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import { isAdminUser } from "@/lib/admin";
@@ -36,6 +36,8 @@ export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<BookingWithListingName[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -97,6 +99,29 @@ export default function AdminBookingsPage() {
       fetchBookingsAndListings();
     }
   }, [authorized]);
+
+  const filteredBookings = useMemo(
+    () =>
+      bookings.filter((booking) => {
+        const bookingStatus = booking.status || "new";
+        const matchesStatus =
+          statusFilter === "all" || bookingStatus === statusFilter;
+        const matchesSearch = [
+          booking.listing_name,
+          booking.full_name,
+          booking.email,
+          booking.tour_date,
+          booking.tour_time,
+          booking.admin_notes || "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase());
+
+        return matchesStatus && matchesSearch;
+      }),
+    [bookings, search, statusFilter],
+  );
 
   if (checkingAuth || !authorized) {
     return null;
@@ -160,7 +185,38 @@ export default function AdminBookingsPage() {
           ) : bookings.length === 0 ? (
             <p className="mt-8">No bookings found.</p>
           ) : (
-            <div className="mt-8 overflow-x-auto">
+            <>
+            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_220px_auto] lg:items-center">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search bookings, names, emails, dates, notes"
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              />
+              <select
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value as BookingStatus | "all")
+                }
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              >
+                <option value="all">All statuses</option>
+                <option value="new">New</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <p className="text-sm font-semibold text-[#0B3C5D]">
+                {filteredBookings.length} shown
+              </p>
+            </div>
+
+            {filteredBookings.length === 0 ? (
+              <p className="mt-8 rounded-xl border border-dashed border-gray-300 p-6 text-center text-gray-600">
+                No bookings match those filters.
+              </p>
+            ) : (
+            <div className="mt-6 overflow-x-auto">
               <table className="min-w-[1100px] border-collapse">
               <thead>
                 <tr className="border-b text-left">
@@ -175,7 +231,7 @@ export default function AdminBookingsPage() {
                 </tr>
               </thead>
               <tbody>
-                {bookings.map((booking) => (
+                {filteredBookings.map((booking) => (
                   <tr key={booking.id} className="border-b align-top">
                     <td className="px-4 py-3 font-medium">{booking.listing_name}</td>
                     <td className="px-4 py-3">{booking.full_name}</td>
@@ -234,6 +290,8 @@ export default function AdminBookingsPage() {
               </tbody>
               </table>
             </div>
+            )}
+            </>
           )}
         </div>
       </div>

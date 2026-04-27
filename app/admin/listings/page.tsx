@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import { isAdminUser } from "@/lib/admin";
@@ -58,6 +58,9 @@ export default function AdminListingsPage() {
   const [loading, setLoading] = useState(true);
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
   const [setupMessage, setSetupMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -169,6 +172,36 @@ export default function AdminListingsPage() {
     }
   }, [authorized]);
 
+  const filteredListings = useMemo(
+    () =>
+      listings.filter((listing) => {
+        const draft = drafts[listing.id] || toDraft(listing);
+        const vendorName =
+          vendors.find((vendor) => vendor.id === draft.vendor_id)
+            ?.business_name || "";
+        const isActive = draft.is_active;
+        const matchesSearch = [
+          draft.title,
+          draft.description,
+          draft.location,
+          draft.category,
+          vendorName,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(search.toLowerCase());
+        const matchesCategory =
+          categoryFilter === "All" || draft.category === categoryFilter;
+        const matchesStatus =
+          statusFilter === "All" ||
+          (statusFilter === "Active" && isActive) ||
+          (statusFilter === "Inactive" && !isActive);
+
+        return matchesSearch && matchesCategory && matchesStatus;
+      }),
+    [categoryFilter, drafts, listings, search, statusFilter, vendors],
+  );
+
   if (checkingAuth || !authorized) {
     return null;
   }
@@ -260,8 +293,45 @@ export default function AdminListingsPage() {
           ) : listings.length === 0 ? (
             <p className="mt-8">No listings found.</p>
           ) : (
-            <div className="mt-8 space-y-6">
-              {listings.map((listing) => {
+            <>
+            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_180px_180px_auto] lg:items-center">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search listings, vendors, locations"
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              />
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              >
+                <option value="All">All categories</option>
+                <option value="Tours">Tours</option>
+                <option value="Hotels">Hotels</option>
+                <option value="Transport">Transport</option>
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              >
+                <option value="All">All statuses</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+              <p className="text-sm font-semibold text-[#0B3C5D]">
+                {filteredListings.length} shown
+              </p>
+            </div>
+
+            {filteredListings.length === 0 ? (
+              <p className="mt-8 rounded-xl border border-dashed border-gray-300 p-6 text-center text-gray-600">
+                No listings match those filters.
+              </p>
+            ) : (
+            <div className="mt-6 space-y-6">
+              {filteredListings.map((listing) => {
                 const draft = drafts[listing.id];
 
                 if (!draft) {
@@ -411,6 +481,8 @@ export default function AdminListingsPage() {
                 );
               })}
             </div>
+            )}
+            </>
           )}
         </div>
       </div>
