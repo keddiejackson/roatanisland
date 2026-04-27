@@ -20,6 +20,18 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
+function formatPrice(price: number | null) {
+  if (!price) {
+    return "Ask";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
 async function getListing(id: string) {
   const { data } = await supabase
     .from("listings")
@@ -64,7 +76,7 @@ export default async function ListingPage({
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="relative min-h-[520px] overflow-hidden">
+      <section className="relative min-h-[560px] overflow-hidden">
         {listing.image_url ? (
           <Image
             src={listing.image_url}
@@ -80,17 +92,25 @@ export default async function ListingPage({
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-[#F7F3EA]" />
 
-        <div className="relative mx-auto flex min-h-[520px] max-w-7xl flex-col justify-between px-6 py-8">
-          <header className="flex items-center justify-between text-white">
+        <div className="relative mx-auto flex min-h-[560px] max-w-7xl flex-col justify-between px-6 py-8">
+          <header className="flex items-center justify-between gap-4 text-white">
             <Link href="/" className="text-xl font-bold">
               RoatanIsland.life
             </Link>
-            <Link
-              href="/"
-              className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
-            >
-              All listings
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/"
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              >
+                All listings
+              </Link>
+              <Link
+                href={`/book?listing=${listing.id}`}
+                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] transition hover:bg-[#EEF7F6]"
+              >
+                Book
+              </Link>
+            </div>
           </header>
 
           <div className="max-w-4xl pb-14 text-white">
@@ -106,6 +126,9 @@ export default async function ListingPage({
               </span>
               <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
                 {listing.rating ?? 5}/5 rating
+              </span>
+              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+                {formatPrice(listing.price)} starting price
               </span>
             </div>
           </div>
@@ -141,6 +164,32 @@ export default async function ListingPage({
               </p>
             </div>
           </div>
+
+          <div className="mt-8 rounded-2xl bg-[#F7F3EA] p-6">
+            <h2 className="text-xl font-bold text-[#0B3C5D]">
+              Before you book
+            </h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div>
+                <p className="font-semibold text-[#0B3C5D]">Request</p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  Send your preferred date, time, and group size.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-[#0B3C5D]">Review</p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  The operator checks availability and details.
+                </p>
+              </div>
+              <div>
+                <p className="font-semibold text-[#0B3C5D]">Confirm</p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  Your plans are confirmed after the operator follows up.
+                </p>
+              </div>
+            </div>
+          </div>
         </article>
 
         <aside className="h-fit rounded-2xl bg-white p-6 shadow lg:sticky lg:top-6">
@@ -151,7 +200,7 @@ export default async function ListingPage({
             <div>
               <p className="text-sm text-gray-500">Starting from</p>
               <p className="text-4xl font-bold text-[#0B3C5D]">
-                {listing.price ? `$${listing.price}` : "Ask"}
+                {formatPrice(listing.price)}
               </p>
             </div>
             <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-semibold text-[#0B3C5D]">

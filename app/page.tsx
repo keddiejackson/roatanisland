@@ -20,6 +20,18 @@ type Listing = {
 
 const categories = ["All", "Tours", "Hotels", "Transport"];
 
+function formatPrice(price: number | null) {
+  if (!price) {
+    return "Ask";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
 export default function Home() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState("");
@@ -55,7 +67,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="relative min-h-[620px] overflow-hidden">
+      <section className="relative min-h-[640px] overflow-hidden">
         <Image
           src="/images/roatan.jpeg"
           alt="Roatan coastline"
@@ -66,15 +78,21 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-[#F7F3EA]" />
 
-        <div className="relative mx-auto flex min-h-[620px] max-w-7xl flex-col justify-between px-6 py-8">
+        <div className="relative mx-auto flex min-h-[640px] max-w-7xl flex-col justify-between px-6 py-8">
           <header className="flex items-center justify-between gap-4 text-white">
             <Link href="/" className="text-xl font-bold">
               RoatanIsland.life
             </Link>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <a
+                href="#listings"
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              >
+                Browse
+              </a>
               <Link
                 href="/vendor/signup"
-                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] transition hover:bg-[#EEF7F6]"
+                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm transition hover:bg-[#EEF7F6]"
               >
                 List your business
               </Link>
@@ -93,7 +111,7 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="max-w-3xl pb-16 pt-28 text-white">
+          <div className="max-w-3xl pb-20 pt-28 text-white">
             <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
               Tours, stays, and transport
             </p>
@@ -104,12 +122,26 @@ export default function Home() {
               Browse local experiences, compare prices, and request bookings
               from a simple island directory built for travelers.
             </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a
+                href="#listings"
+                className="rounded-full bg-[#00A8A8] px-6 py-3 font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-[#078F8F]"
+              >
+                Find an experience
+              </a>
+              <Link
+                href="/vendor/signup"
+                className="rounded-full bg-white px-6 py-3 font-semibold text-[#0B3C5D] shadow-lg shadow-black/10 transition hover:bg-[#EEF7F6]"
+              >
+                Add your business
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="relative z-10 mx-auto -mt-20 max-w-7xl px-6">
-        <div className="rounded-2xl bg-white p-4 shadow-xl shadow-black/10">
+      <section id="listings" className="relative z-10 mx-auto -mt-20 max-w-7xl px-6">
+        <div className="rounded-2xl bg-white p-4 shadow-xl shadow-black/10 ring-1 ring-black/5">
           <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
             <input
               type="text"
@@ -164,7 +196,7 @@ export default function Home() {
               <Link
                 key={listing.id}
                 href={`/listings/${listing.id}`}
-                className="group overflow-hidden rounded-2xl bg-white shadow transition hover:-translate-y-1 hover:shadow-xl"
+                className="group overflow-hidden rounded-2xl bg-white shadow transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
               >
                 <div className="relative h-56 bg-[#D8EFEC]">
                   {listing.image_url ? (
@@ -186,6 +218,9 @@ export default function Home() {
                       {listing.category}
                     </span>
                   ) : null}
+                  <span className="absolute bottom-4 right-4 rounded-full bg-[#0B3C5D] px-3 py-1 text-sm font-bold text-white shadow">
+                    {formatPrice(listing.price)}
+                  </span>
                 </div>
 
                 <div className="p-5">
@@ -193,9 +228,6 @@ export default function Home() {
                     <h3 className="text-lg font-bold text-[#0B3C5D]">
                       {listing.title}
                     </h3>
-                    <span className="shrink-0 font-bold text-[#00A8A8]">
-                      {listing.price ? `$${listing.price}` : "Ask"}
-                    </span>
                   </div>
 
                   <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
@@ -207,7 +239,7 @@ export default function Home() {
                       {listing.location || "Roatan"}
                     </span>
                     <span className="font-semibold text-[#0B3C5D]">
-                      {listing.rating ?? 5}/5
+                      {listing.rating ?? 5}/5 rating
                     </span>
                   </div>
                 </div>
@@ -215,6 +247,21 @@ export default function Home() {
             ))}
           </div>
         )}
+      </section>
+
+      <section className="bg-white px-6 py-12">
+        <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-3">
+          {[
+            ["Browse", "Search active island listings by type and location."],
+            ["Request", "Send your preferred date, time, and group size."],
+            ["Confirm", "The operator reviews availability before it is final."],
+          ].map(([title, text]) => (
+            <div key={title} className="rounded-2xl bg-[#F7F3EA] p-6">
+              <p className="text-lg font-bold text-[#0B3C5D]">{title}</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
+            </div>
+          ))}
+        </div>
       </section>
     </main>
   );

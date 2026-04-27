@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
@@ -85,8 +86,11 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow">
-      <h1 className="text-3xl font-bold text-[#0B3C5D]">
+    <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow ring-1 ring-black/5">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+        Booking request
+      </p>
+      <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
         {listing ? `Book ${listing.title}` : "Request a Booking"}
       </h1>
 
@@ -100,7 +104,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
           <p className="font-semibold text-[#0B3C5D]">{listing.title}</p>
           <p className="mt-1 text-sm text-gray-600">
             {listing.location || "Roatan"}
-            {listing.price ? ` · From $${listing.price}` : ""}
+            {listing.price ? ` - From $${listing.price}` : ""}
           </p>
         </div>
       ) : null}
@@ -109,8 +113,25 @@ export default function BookingForm({ listingId }: BookingFormProps) {
         <div className="mt-8 rounded-xl bg-green-100 p-6 text-green-800">
           <h2 className="text-xl font-semibold">Booking Request Received</h2>
           <p className="mt-2">
-            Thank you. Your booking request has been submitted successfully.
+            Thank you. Your request has been sent, and you will hear back after
+            availability is reviewed.
           </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              href="/"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+            >
+              Browse more listings
+            </Link>
+            {listingId ? (
+              <Link
+                href={`/listings/${listingId}`}
+                className="rounded-xl bg-white px-5 py-3 font-semibold text-green-800"
+              >
+                Back to listing
+              </Link>
+            ) : null}
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
