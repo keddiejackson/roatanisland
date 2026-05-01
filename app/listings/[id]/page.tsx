@@ -12,6 +12,7 @@ type Listing = {
   location: string | null;
   image_url: string | null;
   category: string | null;
+  tour_times: string[] | null;
   is_active: boolean | null;
   rating: number | null;
   reviews_count: number | null;
@@ -49,6 +50,12 @@ async function getListing(id: string) {
   }
 
   return listing;
+}
+
+function getTourTimes(listing: Listing) {
+  return listing.tour_times && listing.tour_times.length > 0
+    ? listing.tour_times
+    : ["10:30 AM", "4:30 PM Sunset Cruise"];
 }
 
 function seoDescription(listing: Listing) {
@@ -294,6 +301,22 @@ export default async function ListingPage({
               Book This Experience
             </button>
           </Link>
+
+          <div className="mt-6 rounded-xl bg-[#F7F3EA] p-4">
+            <p className="text-sm font-semibold text-[#0B3C5D]">
+              Available times
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {getTourTimes(listing).map((time) => (
+                <span
+                  key={time}
+                  className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#0B3C5D]"
+                >
+                  {time}
+                </span>
+              ))}
+            </div>
+          </div>
 
           <p className="mt-4 text-sm leading-6 text-gray-500">
             Submit your preferred date and group size. The local operator will

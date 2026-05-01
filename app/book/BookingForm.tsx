@@ -12,7 +12,10 @@ type ListingSummary = {
   title: string;
   price: number | null;
   location: string | null;
+  tour_times: string[] | null;
 };
+
+const DEFAULT_TOUR_TIMES = ["10:30 AM", "4:30 PM Sunset Cruise"];
 
 export default function BookingForm({ listingId }: BookingFormProps) {
   const [submitted, setSubmitted] = useState(false);
@@ -35,17 +38,38 @@ export default function BookingForm({ listingId }: BookingFormProps) {
 
       const { data, error } = await supabase
         .from("listings")
-        .select("title, price, location")
+        .select("title, price, location, tour_times")
         .eq("id", listingId)
         .single();
 
       if (!error && data) {
         setListing(data as ListingSummary);
+        return;
+      }
+
+      if (error?.code === "42703") {
+        const fallback = await supabase
+          .from("listings")
+          .select("title, price, location")
+          .eq("id", listingId)
+          .single();
+
+        if (!fallback.error && fallback.data) {
+          setListing({
+            ...(fallback.data as Omit<ListingSummary, "tour_times">),
+            tour_times: DEFAULT_TOUR_TIMES,
+          });
+        }
       }
     }
 
     fetchListing();
   }, [listingId]);
+
+  const availableTourTimes =
+    listing?.tour_times && listing.tour_times.length > 0
+      ? listing.tour_times
+      : DEFAULT_TOUR_TIMES;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -219,10 +243,11 @@ export default function BookingForm({ listingId }: BookingFormProps) {
               required
             >
               <option value="">Select a time</option>
-              <option value="10:30 AM">10:30 AM</option>
-              <option value="4:30 PM Sunset Cruise">
-                4:30 PM Sunset Cruise
-              </option>
+              {availableTourTimes.map((time) => (
+                <option key={time} value={time}>
+                  {time}
+                </option>
+              ))}
             </select>
           </div>
 

@@ -19,6 +19,7 @@ type ListingRow = {
   location: string | null;
   price: number | null;
   is_active: boolean | null;
+  tour_times: string[] | null;
 };
 
 type BookingRow = {
@@ -38,6 +39,8 @@ export default function VendorDashboardPage() {
   const [vendorAccount, setVendorAccount] = useState<VendorAccount | null>(null);
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
+  const [savingListingId, setSavingListingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -63,13 +66,44 @@ export default function VendorDashboardPage() {
       const account = accountData as unknown as VendorAccount;
       setVendorAccount(account);
 
-      const { data: listingData } = await supabase
+      const listingSelect =
+        "id, title, category, location, price, is_active, tour_times";
+      const listingResult = await supabase
         .from("listings")
-        .select("id, title, category, location, price, is_active")
+        .select(listingSelect)
         .eq("vendor_id", account.vendor_id)
         .order("created_at", { ascending: false });
+      let listingData: unknown[] | null = listingResult.data;
+      let listingError = listingResult.error;
 
-      setListings((listingData as ListingRow[]) || []);
+      if (listingError?.code === "42703") {
+        const fallback = await supabase
+          .from("listings")
+          .select("id, title, category, location, price, is_active")
+          .eq("vendor_id", account.vendor_id)
+          .order("created_at", { ascending: false });
+
+        listingData = fallback.data as unknown[] | null;
+        listingError = fallback.error;
+      }
+
+      const rows = ((listingData as Partial<ListingRow>[]) || []).map((listing) => ({
+        ...listing,
+        tour_times: listing.tour_times || [
+          "10:30 AM",
+          "4:30 PM Sunset Cruise",
+        ],
+      })) as ListingRow[];
+
+      setListings(rows);
+      setListingTimes(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            (listing.tour_times || []).join("\n"),
+          ]),
+        ),
+      );
 
       const { data: sessionData } = await supabase.auth.getSession();
       const bookingsResponse = await fetch("/api/vendor/bookings", {
@@ -94,6 +128,58 @@ export default function VendorDashboardPage() {
   async function logout() {
     await supabase.auth.signOut();
     router.push("/");
+  }
+
+  function updateListingTimes(listingId: string, value: string) {
+    setListingTimes((currentTimes) => ({
+      ...currentTimes,
+      [listingId]: value,
+    }));
+  }
+
+  async function saveListingTimes(listingId: string) {
+    const times = (listingTimes[listingId] || "")
+      .split("\n")
+      .map((time) => time.trim())
+      .filter(Boolean);
+
+    if (times.length === 0) {
+      alert("Add at least one tour time.");
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    setSavingListingId(listingId);
+
+    const response = await fetch("/api/vendor/listing-times", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        listingId,
+        tourTimes: times,
+      }),
+    });
+
+    const result = await response.json();
+    setSavingListingId(null);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to save tour times.");
+      return;
+    }
+
+    setListings((currentListings) =>
+      currentListings.map((listing) =>
+        listing.id === listingId
+          ? { ...listing, tour_times: result.tourTimes }
+          : listing,
+      ),
+    );
   }
 
   if (loading) {
@@ -240,16 +326,44 @@ export default function VendorDashboardPage() {
                         {listing.location || "Roatan"}
                         {listing.price ? ` - $${listing.price}` : ""}
                       </p>
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                          Available tour times
+                        </label>
+                        <textarea
+                          value={listingTimes[listing.id] || ""}
+                          onChange={(e) =>
+                            updateListingTimes(listing.id, e.target.value)
+                          }
+                          rows={3}
+                          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                        />
+                        <p className="mt-2 text-sm text-gray-500">
+                          One time per line. These options show on the booking
+                          form.
+                        </p>
+                      </div>
                     </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                        listing.is_active
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-800"
-                      }`}
-                    >
-                      {listing.is_active ? "Live" : "Waiting for review"}
-                    </span>
+                    <div className="flex flex-col items-start gap-3 sm:items-end">
+                      <span
+                        className={`rounded-full px-3 py-1 text-sm font-semibold ${
+                          listing.is_active
+                            ? "bg-green-100 text-green-700"
+                            : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {listing.is_active ? "Live" : "Waiting for review"}
+                      </span>
+                      <button
+                        onClick={() => saveListingTimes(listing.id)}
+                        disabled={savingListingId === listing.id}
+                        className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        {savingListingId === listing.id
+                          ? "Saving..."
+                          : "Save times"}
+                      </button>
+                    </div>
                   </div>
                 </article>
               ))}

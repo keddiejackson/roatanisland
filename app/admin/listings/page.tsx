@@ -16,6 +16,7 @@ type ListingRow = {
   location: string | null;
   image_url: string | null;
   category: string | null;
+  tour_times: string[] | null;
   is_active: boolean | null;
   is_featured: boolean | null;
 };
@@ -34,6 +35,7 @@ type ListingDraft = {
   location: string;
   image_url: string;
   category: string;
+  tour_times: string;
   is_active: boolean;
   is_featured: boolean;
 };
@@ -47,6 +49,10 @@ function toDraft(listing: ListingRow): ListingDraft {
     location: listing.location || "",
     image_url: listing.image_url || "",
     category: listing.category || "Tours",
+    tour_times: (listing.tour_times || [
+      "10:30 AM",
+      "4:30 PM Sunset Cruise",
+    ]).join("\n"),
     is_active: listing.is_active ?? true,
     is_featured: listing.is_featured ?? false,
   };
@@ -88,7 +94,7 @@ export default function AdminListingsPage() {
     async function fetchListings() {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, vendor_id, title, description, price, location, image_url, category, is_active, is_featured")
+        .select("id, vendor_id, title, description, price, location, image_url, category, tour_times, is_active, is_featured")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -96,6 +102,7 @@ export default function AdminListingsPage() {
           error.message.includes("is_active") ||
           error.message.includes("vendor_id") ||
           error.message.includes("is_featured") ||
+          error.message.includes("tour_times") ||
           error.code === "42703";
 
         if (!missingSetupColumn) {
@@ -119,16 +126,17 @@ export default function AdminListingsPage() {
 
         const fallbackRows = ((fallbackData as Omit<
           ListingRow,
-          "is_active" | "is_featured" | "vendor_id"
+          "is_active" | "is_featured" | "vendor_id" | "tour_times"
         >[]) || []).map((listing) => ({
           ...listing,
           vendor_id: null,
+          tour_times: ["10:30 AM", "4:30 PM Sunset Cruise"],
           is_active: true,
           is_featured: false,
         }));
 
         setSetupMessage(
-          "Run the updated Supabase SQL setup to enable vendor assignment, active toggles, and featured listings.",
+          "Run the updated Supabase SQL setup to enable vendor assignment, active toggles, featured listings, and custom tour times.",
         );
         setListings(fallbackRows);
         setDrafts(
@@ -240,6 +248,10 @@ export default function AdminListingsPage() {
     }
 
     setSavingListingId(listingId);
+    const tourTimes = draft.tour_times
+      .split("\n")
+      .map((time) => time.trim())
+      .filter(Boolean);
 
     const { error } = await supabase
       .from("listings")
@@ -251,6 +263,7 @@ export default function AdminListingsPage() {
         location: draft.location,
         image_url: draft.image_url || null,
         category: draft.category,
+        ...(setupMessage ? {} : { tour_times: tourTimes }),
         ...(setupMessage
           ? {}
           : { is_active: draft.is_active, is_featured: draft.is_featured }),
@@ -275,6 +288,7 @@ export default function AdminListingsPage() {
               location: draft.location,
               image_url: draft.image_url || null,
               category: draft.category,
+              tour_times: tourTimes,
               is_active: draft.is_active,
               is_featured: draft.is_featured,
             }
@@ -466,6 +480,27 @@ export default function AdminListingsPage() {
                         />
                       </div>
 
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">
+                          Available Tour Times
+                        </label>
+                        <textarea
+                          value={draft.tour_times}
+                          disabled={Boolean(setupMessage)}
+                          onChange={(e) =>
+                            updateDraft(
+                              listing.id,
+                              "tour_times",
+                              e.target.value,
+                            )
+                          }
+                          rows={3}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
                       <div className="flex items-end gap-4">
                         <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-2">
                           <input

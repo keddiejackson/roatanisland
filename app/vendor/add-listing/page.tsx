@@ -30,6 +30,9 @@ export default function AddListingPage() {
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
   const [category, setCategory] = useState("Tours");
+  const [tourTimes, setTourTimes] = useState(
+    "10:30 AM\n4:30 PM Sunset Cruise",
+  );
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -117,6 +120,10 @@ export default function AddListingPage() {
         location,
         category,
         imageUrl: finalImageUrl,
+        tourTimes: tourTimes
+          .split("\n")
+          .map((time) => time.trim())
+          .filter(Boolean),
       }),
     });
 
@@ -324,6 +331,24 @@ export default function AddListingPage() {
                       <option value="Hotels">Hotels</option>
                       <option value="Transport">Transport</option>
                     </select>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block font-medium">
+                      Available Tour Times
+                    </label>
+                    <textarea
+                      value={tourTimes}
+                      onChange={(e) => setTourTimes(e.target.value)}
+                      rows={4}
+                      placeholder={"9:00 AM\n1:30 PM\n4:30 PM Sunset Cruise"}
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                      required
+                    />
+                    <p className="mt-2 text-sm text-gray-500">
+                      Add one time per line. You can change these later from
+                      your dashboard.
+                    </p>
                   </div>
 
                   <div>

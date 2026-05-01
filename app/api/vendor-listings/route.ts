@@ -20,7 +20,23 @@ type VendorListingRequest = {
   location?: string;
   category?: string;
   imageUrl?: string;
+  tourTimes?: string[];
 };
+
+function cleanTourTimes(times: unknown) {
+  if (!Array.isArray(times)) {
+    return ["10:30 AM", "4:30 PM Sunset Cruise"];
+  }
+
+  const cleanedTimes = times
+    .filter((time): time is string => typeof time === "string")
+    .map((time) => time.trim())
+    .filter(Boolean);
+
+  return cleanedTimes.length > 0
+    ? cleanedTimes.slice(0, 12)
+    : ["10:30 AM", "4:30 PM Sunset Cruise"];
+}
 
 async function getSessionFromRequest(request: Request) {
   const authorization = request.headers.get("authorization");
@@ -134,6 +150,7 @@ export async function POST(request: Request) {
         location: body.location,
         category: body.category,
         image_url: body.imageUrl || null,
+        tour_times: cleanTourTimes(body.tourTimes),
         is_active: false,
       },
     ])
