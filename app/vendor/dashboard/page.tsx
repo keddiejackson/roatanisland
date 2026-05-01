@@ -21,6 +21,8 @@ type ListingRow = {
   is_active: boolean | null;
   tour_times: string[] | null;
   availability_note: string | null;
+  max_guests: number | null;
+  minimum_notice_hours: number | null;
 };
 
 type BookingRow = {
@@ -42,6 +44,8 @@ export default function VendorDashboardPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
+  const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
+  const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -69,7 +73,7 @@ export default function VendorDashboardPage() {
       setVendorAccount(account);
 
       const listingSelect =
-        "id, title, category, location, price, is_active, tour_times, availability_note";
+        "id, title, category, location, price, is_active, tour_times, availability_note, max_guests, minimum_notice_hours";
       const listingResult = await supabase
         .from("listings")
         .select(listingSelect)
@@ -96,6 +100,8 @@ export default function VendorDashboardPage() {
           "4:30 PM Sunset Cruise",
         ],
         availability_note: listing.availability_note || null,
+        max_guests: listing.max_guests ?? null,
+        minimum_notice_hours: listing.minimum_notice_hours ?? null,
       })) as ListingRow[];
 
       setListings(rows);
@@ -112,6 +118,24 @@ export default function VendorDashboardPage() {
           rows.map((listing) => [
             listing.id,
             listing.availability_note || "",
+          ]),
+        ),
+      );
+      setMaxGuestsByListing(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            listing.max_guests ? String(listing.max_guests) : "",
+          ]),
+        ),
+      );
+      setNoticeHoursByListing(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            listing.minimum_notice_hours !== null
+              ? String(listing.minimum_notice_hours)
+              : "",
           ]),
         ),
       );
@@ -155,6 +179,20 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function updateMaxGuests(listingId: string, value: string) {
+    setMaxGuestsByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: value,
+    }));
+  }
+
+  function updateNoticeHours(listingId: string, value: string) {
+    setNoticeHoursByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: value,
+    }));
+  }
+
   async function saveListingTimes(listingId: string) {
     const times = (listingTimes[listingId] || "")
       .split("\n")
@@ -181,6 +219,8 @@ export default function VendorDashboardPage() {
         listingId,
         tourTimes: times,
         availabilityNote: availabilityNotes[listingId] || "",
+        maxGuests: maxGuestsByListing[listingId] || "",
+        minimumNoticeHours: noticeHoursByListing[listingId] || "",
       }),
     });
 
@@ -199,6 +239,8 @@ export default function VendorDashboardPage() {
               ...listing,
               tour_times: result.tourTimes,
               availability_note: result.availabilityNote || null,
+              max_guests: result.maxGuests,
+              minimum_notice_hours: result.minimumNoticeHours,
             }
           : listing,
       ),
@@ -206,6 +248,17 @@ export default function VendorDashboardPage() {
     setAvailabilityNotes((currentNotes) => ({
       ...currentNotes,
       [listingId]: result.availabilityNote || "",
+    }));
+    setMaxGuestsByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: result.maxGuests ? String(result.maxGuests) : "",
+    }));
+    setNoticeHoursByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]:
+        result.minimumNoticeHours !== null
+          ? String(result.minimumNoticeHours)
+          : "",
     }));
   }
 
@@ -382,6 +435,38 @@ export default function VendorDashboardPage() {
                           placeholder="Runs Monday-Friday, weather permitting"
                           className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
                         />
+                      </div>
+                      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Max guests
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={maxGuestsByListing[listing.id] || ""}
+                            onChange={(e) =>
+                              updateMaxGuests(listing.id, e.target.value)
+                            }
+                            placeholder="12"
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Notice hours
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={noticeHoursByListing[listing.id] || ""}
+                            onChange={(e) =>
+                              updateNoticeHours(listing.id, e.target.value)
+                            }
+                            placeholder="24"
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
                     <div className="flex flex-col items-start gap-3 sm:items-end">

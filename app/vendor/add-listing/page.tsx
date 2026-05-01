@@ -34,6 +34,8 @@ export default function AddListingPage() {
     "10:30 AM\n4:30 PM Sunset Cruise",
   );
   const [availabilityNote, setAvailabilityNote] = useState("");
+  const [maxGuests, setMaxGuests] = useState("");
+  const [minimumNoticeHours, setMinimumNoticeHours] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -126,6 +128,8 @@ export default function AddListingPage() {
           .map((time) => time.trim())
           .filter(Boolean),
         availabilityNote,
+        maxGuests,
+        minimumNoticeHours,
       }),
     });
 
@@ -361,6 +365,34 @@ export default function AddListingPage() {
                       value={availabilityNote}
                       onChange={(e) => setAvailabilityNote(e.target.value)}
                       placeholder="Runs Monday-Friday, weather permitting"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block font-medium">
+                      Max Guests Per Tour
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={maxGuests}
+                      onChange={(e) => setMaxGuests(e.target.value)}
+                      placeholder="12"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block font-medium">
+                      Minimum Notice Hours
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={minimumNoticeHours}
+                      onChange={(e) => setMinimumNoticeHours(e.target.value)}
+                      placeholder="24"
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                     />
                   </div>

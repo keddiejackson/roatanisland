@@ -14,9 +14,20 @@ type ListingSummary = {
   location: string | null;
   tour_times: string[] | null;
   availability_note: string | null;
+  max_guests: number | null;
+  minimum_notice_hours: number | null;
 };
 
 const DEFAULT_TOUR_TIMES = ["10:30 AM", "4:30 PM Sunset Cruise"];
+
+function dateValueFromOffset(hours: number) {
+  const date = new Date();
+  date.setHours(date.getHours() + hours);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 export default function BookingForm({ listingId }: BookingFormProps) {
   const [submitted, setSubmitted] = useState(false);
@@ -39,7 +50,9 @@ export default function BookingForm({ listingId }: BookingFormProps) {
 
       const { data, error } = await supabase
         .from("listings")
-        .select("title, price, location, tour_times, availability_note")
+        .select(
+          "title, price, location, tour_times, availability_note, max_guests, minimum_notice_hours",
+        )
         .eq("id", listingId)
         .single();
 
@@ -57,9 +70,17 @@ export default function BookingForm({ listingId }: BookingFormProps) {
 
         if (!fallback.error && fallback.data) {
           setListing({
-            ...(fallback.data as Omit<ListingSummary, "tour_times">),
+            ...(fallback.data as Omit<
+              ListingSummary,
+              | "tour_times"
+              | "availability_note"
+              | "max_guests"
+              | "minimum_notice_hours"
+            >),
             tour_times: DEFAULT_TOUR_TIMES,
             availability_note: null,
+            max_guests: null,
+            minimum_notice_hours: null,
           });
         }
       }
@@ -72,6 +93,18 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     listing?.tour_times && listing.tour_times.length > 0
       ? listing.tour_times
       : DEFAULT_TOUR_TIMES;
+  const minimumTourDate =
+    listing?.minimum_notice_hours !== null &&
+    listing?.minimum_notice_hours !== undefined
+      ? dateValueFromOffset(listing.minimum_notice_hours)
+      : undefined;
+  const guestCount = Number(guests);
+  const guestWarning =
+    listing?.max_guests &&
+    Number.isFinite(guestCount) &&
+    guestCount > listing.max_guests
+      ? `This listing allows up to ${listing.max_guests} guests per tour.`
+      : "";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -230,10 +263,17 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             <input
               type="date"
               value={tourDate}
+              min={minimumTourDate}
               onChange={(e) => setTourDate(e.target.value)}
               className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               required
             />
+            {listing?.minimum_notice_hours ? (
+              <p className="mt-2 text-sm text-gray-500">
+                Please book at least {listing.minimum_notice_hours} hours in
+                advance.
+              </p>
+            ) : null}
           </div>
 
           <div>
@@ -263,17 +303,28 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             <input
               type="number"
               min="1"
+              max={listing?.max_guests || undefined}
               value={guests}
               onChange={(e) => setGuests(e.target.value)}
               placeholder="Number of guests"
               className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               required
             />
+            {listing?.max_guests ? (
+              <p className="mt-2 text-sm text-gray-500">
+                Up to {listing.max_guests} guests per tour.
+              </p>
+            ) : null}
+            {guestWarning ? (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {guestWarning}
+              </p>
+            ) : null}
           </div>
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || Boolean(guestWarning)}
             className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
           >
             {loading ? "Submitting..." : "Submit Booking Request"}

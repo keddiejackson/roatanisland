@@ -22,6 +22,8 @@ type VendorListingRequest = {
   imageUrl?: string;
   tourTimes?: string[];
   availabilityNote?: string;
+  maxGuests?: number | string;
+  minimumNoticeHours?: number | string;
 };
 
 function cleanTourTimes(times: unknown) {
@@ -54,6 +56,10 @@ async function getSessionFromRequest(request: Request) {
 export async function POST(request: Request) {
   const body = (await request.json()) as VendorListingRequest;
   const price = Number(body.price);
+  const maxGuests = body.maxGuests ? Number(body.maxGuests) : null;
+  const minimumNoticeHours = body.minimumNoticeHours
+    ? Number(body.minimumNoticeHours)
+    : null;
 
   if (
     !body.title ||
@@ -64,6 +70,17 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json(
       { error: "Please complete every required listing field." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    (maxGuests !== null && (!Number.isInteger(maxGuests) || maxGuests < 1)) ||
+    (minimumNoticeHours !== null &&
+      (!Number.isInteger(minimumNoticeHours) || minimumNoticeHours < 0))
+  ) {
+    return NextResponse.json(
+      { error: "Please check the capacity and notice settings." },
       { status: 400 },
     );
   }
@@ -153,6 +170,8 @@ export async function POST(request: Request) {
         image_url: body.imageUrl || null,
         tour_times: cleanTourTimes(body.tourTimes),
         availability_note: body.availabilityNote?.trim() || null,
+        max_guests: maxGuests,
+        minimum_notice_hours: minimumNoticeHours,
         is_active: false,
       },
     ])

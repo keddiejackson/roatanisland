@@ -96,6 +96,8 @@ create table if not exists public.listings (
   category text not null default 'Tours',
   tour_times text[] not null default array['10:30 AM', '4:30 PM Sunset Cruise']::text[],
   availability_note text,
+  max_guests integer,
+  minimum_notice_hours integer,
   is_active boolean not null default true,
   is_featured boolean not null default false,
   rating numeric default 5,
@@ -117,6 +119,12 @@ add column if not exists tour_times text[] not null default array['10:30 AM', '4
 
 alter table public.listings
 add column if not exists availability_note text;
+
+alter table public.listings
+add column if not exists max_guests integer;
+
+alter table public.listings
+add column if not exists minimum_notice_hours integer;
 
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),

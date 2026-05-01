@@ -16,6 +16,15 @@ type BookingRequest = {
   listingId?: string | null;
 };
 
+function dateValueFromOffset(hours: number) {
+  const date = new Date();
+  date.setHours(date.getHours() + hours);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export async function POST(request: Request) {
   const body = (await request.json()) as BookingRequest;
   const guests = Number(body.guests);
@@ -32,6 +41,48 @@ export async function POST(request: Request) {
       { error: "Please complete every required booking field." },
       { status: 400 },
     );
+  }
+
+  if (body.listingId) {
+    const { data: listing, error: listingRulesError } = await supabaseServer
+      .from("listings")
+      .select("max_guests, minimum_notice_hours")
+      .eq("id", body.listingId)
+      .maybeSingle();
+
+    if (listingRulesError && listingRulesError.code !== "42703") {
+      return NextResponse.json(
+        { error: listingRulesError.message },
+        { status: 500 },
+      );
+    }
+
+    const listingRules = listing as {
+      max_guests?: number | null;
+      minimum_notice_hours?: number | null;
+    } | null;
+
+    if (listingRules?.max_guests && guests > listingRules.max_guests) {
+      return NextResponse.json(
+        {
+          error: `This listing allows up to ${listingRules.max_guests} guests per tour.`,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (listingRules?.minimum_notice_hours) {
+      const minimumDate = dateValueFromOffset(listingRules.minimum_notice_hours);
+
+      if (body.tourDate < minimumDate) {
+        return NextResponse.json(
+          {
+            error: `Please book at least ${listingRules.minimum_notice_hours} hours in advance.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
   }
 
   const { data: booking, error } = await supabaseServer

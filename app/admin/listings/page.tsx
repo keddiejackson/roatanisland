@@ -18,6 +18,8 @@ type ListingRow = {
   category: string | null;
   tour_times: string[] | null;
   availability_note: string | null;
+  max_guests: number | null;
+  minimum_notice_hours: number | null;
   is_active: boolean | null;
   is_featured: boolean | null;
 };
@@ -38,6 +40,8 @@ type ListingDraft = {
   category: string;
   tour_times: string;
   availability_note: string;
+  max_guests: string;
+  minimum_notice_hours: string;
   is_active: boolean;
   is_featured: boolean;
 };
@@ -56,6 +60,11 @@ function toDraft(listing: ListingRow): ListingDraft {
       "4:30 PM Sunset Cruise",
     ]).join("\n"),
     availability_note: listing.availability_note || "",
+    max_guests: listing.max_guests ? String(listing.max_guests) : "",
+    minimum_notice_hours:
+      listing.minimum_notice_hours !== null
+        ? String(listing.minimum_notice_hours)
+        : "",
     is_active: listing.is_active ?? true,
     is_featured: listing.is_featured ?? false,
   };
@@ -97,7 +106,7 @@ export default function AdminListingsPage() {
     async function fetchListings() {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, vendor_id, title, description, price, location, image_url, category, tour_times, availability_note, is_active, is_featured")
+        .select("id, vendor_id, title, description, price, location, image_url, category, tour_times, availability_note, max_guests, minimum_notice_hours, is_active, is_featured")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -107,6 +116,8 @@ export default function AdminListingsPage() {
           error.message.includes("is_featured") ||
           error.message.includes("tour_times") ||
           error.message.includes("availability_note") ||
+          error.message.includes("max_guests") ||
+          error.message.includes("minimum_notice_hours") ||
           error.code === "42703";
 
         if (!missingSetupColumn) {
@@ -130,18 +141,26 @@ export default function AdminListingsPage() {
 
         const fallbackRows = ((fallbackData as Omit<
           ListingRow,
-          "is_active" | "is_featured" | "vendor_id" | "tour_times" | "availability_note"
+          | "is_active"
+          | "is_featured"
+          | "vendor_id"
+          | "tour_times"
+          | "availability_note"
+          | "max_guests"
+          | "minimum_notice_hours"
         >[]) || []).map((listing) => ({
           ...listing,
           vendor_id: null,
           tour_times: ["10:30 AM", "4:30 PM Sunset Cruise"],
           availability_note: null,
+          max_guests: null,
+          minimum_notice_hours: null,
           is_active: true,
           is_featured: false,
         }));
 
         setSetupMessage(
-          "Run the updated Supabase SQL setup to enable vendor assignment, active toggles, featured listings, custom tour times, and availability notes.",
+          "Run the updated Supabase SQL setup to enable vendor assignment, active toggles, featured listings, custom tour times, availability notes, and capacity rules.",
         );
         setListings(fallbackRows);
         setDrafts(
@@ -257,6 +276,10 @@ export default function AdminListingsPage() {
       .split("\n")
       .map((time) => time.trim())
       .filter(Boolean);
+    const maxGuests = draft.max_guests ? Number(draft.max_guests) : null;
+    const minimumNoticeHours = draft.minimum_notice_hours
+      ? Number(draft.minimum_notice_hours)
+      : null;
 
     const { error } = await supabase
       .from("listings")
@@ -272,6 +295,12 @@ export default function AdminListingsPage() {
         ...(setupMessage
           ? {}
           : { availability_note: draft.availability_note || null }),
+        ...(setupMessage
+          ? {}
+          : {
+              max_guests: maxGuests,
+              minimum_notice_hours: minimumNoticeHours,
+            }),
         ...(setupMessage
           ? {}
           : { is_active: draft.is_active, is_featured: draft.is_featured }),
@@ -298,6 +327,8 @@ export default function AdminListingsPage() {
               category: draft.category,
               tour_times: tourTimes,
               availability_note: draft.availability_note || null,
+              max_guests: maxGuests,
+              minimum_notice_hours: minimumNoticeHours,
               is_active: draft.is_active,
               is_featured: draft.is_featured,
             }
@@ -526,6 +557,47 @@ export default function AdminListingsPage() {
                         placeholder="Runs Monday-Friday, weather permitting"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
                       />
+                    </div>
+
+                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">
+                          Max Guests Per Tour
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={draft.max_guests}
+                          disabled={Boolean(setupMessage)}
+                          onChange={(e) =>
+                            updateDraft(
+                              listing.id,
+                              "max_guests",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">
+                          Minimum Notice Hours
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={draft.minimum_notice_hours}
+                          disabled={Boolean(setupMessage)}
+                          onChange={(e) =>
+                            updateDraft(
+                              listing.id,
+                              "minimum_notice_hours",
+                              e.target.value,
+                            )
+                          }
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                        />
+                      </div>
                     </div>
 
                     <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">

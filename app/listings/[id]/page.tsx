@@ -14,6 +14,8 @@ type Listing = {
   category: string | null;
   tour_times: string[] | null;
   availability_note: string | null;
+  max_guests: number | null;
+  minimum_notice_hours: number | null;
   is_active: boolean | null;
   rating: number | null;
   reviews_count: number | null;
@@ -225,6 +227,27 @@ export default async function ListingPage({
             </div>
           </div>
 
+          {listing.max_guests || listing.minimum_notice_hours ? (
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {listing.max_guests ? (
+                <div className="rounded-xl bg-[#EEF7F6] p-4">
+                  <p className="text-sm text-gray-500">Capacity</p>
+                  <p className="mt-1 font-bold text-[#0B3C5D]">
+                    Up to {listing.max_guests} guests
+                  </p>
+                </div>
+              ) : null}
+              {listing.minimum_notice_hours ? (
+                <div className="rounded-xl bg-[#EEF7F6] p-4">
+                  <p className="text-sm text-gray-500">Minimum notice</p>
+                  <p className="mt-1 font-bold text-[#0B3C5D]">
+                    {listing.minimum_notice_hours} hours
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {vendor ? (
             <div className="mt-8 rounded-2xl border border-[#00A8A8]/20 bg-white p-6">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -320,6 +343,20 @@ export default async function ListingPage({
             {listing.availability_note ? (
               <p className="mt-3 text-sm leading-6 text-gray-600">
                 {listing.availability_note}
+              </p>
+            ) : null}
+            {listing.max_guests || listing.minimum_notice_hours ? (
+              <p className="mt-3 text-sm leading-6 text-gray-600">
+                {[
+                  listing.max_guests
+                    ? `Up to ${listing.max_guests} guests`
+                    : "",
+                  listing.minimum_notice_hours
+                    ? `${listing.minimum_notice_hours} hours notice`
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" - ")}
               </p>
             ) : null}
           </div>
