@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   ),
   title: "RoatanIsland.life",
   description: "Discover and book tours, stays, and transport in Roatan.",
+  verification: {
+    google: "rvSAtX1sV6nfPG1RCaF8euFpTRUtZ3NqRwmqE_J5C4o",
+  },
   openGraph: {
     title: "RoatanIsland.life",
     description: "Discover and book tours, stays, and transport in Roatan.",
