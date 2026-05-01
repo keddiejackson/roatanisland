@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAppError } from "@/lib/error-log";
 import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
 import {
   createSupabaseUserClient,
@@ -98,6 +99,14 @@ export async function POST(request: Request) {
 
     if (vendorError) {
       console.error("Vendor listing vendor error:", vendorError.message);
+      await logAppError({
+        source: "vendor_listing_vendor",
+        message: vendorError.message,
+        details: {
+          businessName: body.businessName,
+          vendorEmail: body.vendorEmail,
+        },
+      });
       return NextResponse.json({ error: vendorError.message }, { status: 500 });
     }
 
@@ -133,6 +142,15 @@ export async function POST(request: Request) {
 
   if (listingError) {
     console.error("Vendor listing API error:", listingError.message);
+    await logAppError({
+      source: "vendor_listing_submission",
+      message: listingError.message,
+      details: {
+        vendorId,
+        title: body.title,
+        category: body.category,
+      },
+    });
     return NextResponse.json({ error: listingError.message }, { status: 500 });
   }
 

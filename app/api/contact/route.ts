@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAppError } from "@/lib/error-log";
 import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
     ].join("\n"),
   });
 
-  await supabaseServer.from("analytics_events").insert([
+  const { error: analyticsError } = await supabaseServer.from("analytics_events").insert([
     {
       event_type: "planning_lead",
       path: "/",
@@ -51,6 +52,17 @@ export async function POST(request: Request) {
       },
     },
   ]);
+
+  if (analyticsError) {
+    await logAppError({
+      source: "planning_lead_analytics",
+      message: analyticsError.message,
+      details: {
+        interest: body.interest || "",
+      },
+      severity: "warning",
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

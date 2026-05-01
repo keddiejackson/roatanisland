@@ -1,3 +1,5 @@
+import { logAppError } from "@/lib/error-log";
+
 type AdminNotification = {
   subject: string;
   html: string;
@@ -50,6 +52,16 @@ export async function sendEmailNotification(message: EmailNotification) {
 
   if (!apiKey || recipients.length === 0) {
     console.info("Email skipped: missing RESEND_API_KEY or recipient.");
+    await logAppError({
+      source: "email",
+      message: "Email skipped because configuration or recipients are missing.",
+      details: {
+        hasApiKey: Boolean(apiKey),
+        recipients,
+        subject: message.subject,
+      },
+      severity: "warning",
+    });
     return { sent: false, skipped: true };
   }
 
@@ -74,6 +86,15 @@ export async function sendEmailNotification(message: EmailNotification) {
   if (!response.ok) {
     const details = await response.text();
     console.error("Admin email failed:", details);
+    await logAppError({
+      source: "email",
+      message: "Email provider rejected a message.",
+      details: {
+        details,
+        recipients,
+        subject: message.subject,
+      },
+    });
     return { sent: false, skipped: false };
   }
 

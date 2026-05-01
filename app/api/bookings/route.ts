@@ -4,6 +4,7 @@ import {
   sendAdminNotification,
   sendEmailNotification,
 } from "@/lib/notifications";
+import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingRequest = {
@@ -50,6 +51,14 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Booking API error:", error.message);
+    await logAppError({
+      source: "booking_request",
+      message: error.message,
+      details: {
+        listingId: body.listingId || null,
+        email: body.email,
+      },
+    });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 

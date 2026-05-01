@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type DepositRequest = {
@@ -42,6 +43,13 @@ export async function POST(request: Request) {
     .single();
 
   if (bookingError || !booking) {
+    await logAppError({
+      source: "stripe_deposit",
+      message: bookingError?.message || "Booking not found for deposit checkout.",
+      details: {
+        bookingId: body.bookingId,
+      },
+    });
     return NextResponse.json(
       { error: "Booking not found." },
       { status: 404 },
@@ -102,6 +110,14 @@ export async function POST(request: Request) {
 
   if (!stripeResponse.ok || !checkoutSession.url) {
     console.error("Stripe checkout failed:", checkoutSession);
+    await logAppError({
+      source: "stripe_deposit",
+      message: "Stripe checkout session creation failed.",
+      details: {
+        bookingId: booking.id,
+        stripeResponse: checkoutSession,
+      },
+    });
     return NextResponse.json(
       { error: "Unable to start Stripe checkout." },
       { status: 500 },

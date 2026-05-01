@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextResponse } from "next/server";
+import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type StripeCheckoutSession = {
@@ -72,10 +73,23 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
 
   if (!webhookSecret || !signature) {
+    await logAppError({
+      source: "stripe_webhook",
+      message: "Stripe webhook missing secret or signature.",
+      details: {
+        hasWebhookSecret: Boolean(webhookSecret),
+        hasSignature: Boolean(signature),
+      },
+    });
     return NextResponse.json({ error: "Webhook not configured." }, { status: 400 });
   }
 
   if (!verifyStripeSignature(payload, signature, webhookSecret)) {
+    await logAppError({
+      source: "stripe_webhook",
+      message: "Stripe webhook signature verification failed.",
+      details: {},
+    });
     return NextResponse.json({ error: "Invalid signature." }, { status: 400 });
   }
 

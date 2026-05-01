@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type AnalyticsRequest = {
@@ -31,6 +32,15 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Analytics event failed:", error.message);
+    await logAppError({
+      source: "analytics",
+      message: error.message,
+      details: {
+        eventType: body.eventType,
+        path: body.path,
+      },
+      severity: "warning",
+    });
   }
 
   return NextResponse.json({ ok: true });

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
 const bucketName = "listing-images";
@@ -58,6 +59,16 @@ export async function POST(request: Request) {
 
   if (error) {
     console.error("Listing image upload failed:", error.message);
+    await logAppError({
+      source: "listing_image_upload",
+      message: error.message,
+      details: {
+        vendorId,
+        fileName: image.name,
+        fileType: image.type,
+        fileSize: image.size,
+      },
+    });
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
