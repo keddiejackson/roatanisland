@@ -21,6 +21,7 @@ type VendorListingRequest = {
   category?: string;
   imageUrl?: string;
   tourTimes?: string[];
+  availabilityNote?: string;
 };
 
 function cleanTourTimes(times: unknown) {
@@ -151,6 +152,7 @@ export async function POST(request: Request) {
         category: body.category,
         image_url: body.imageUrl || null,
         tour_times: cleanTourTimes(body.tourTimes),
+        availability_note: body.availabilityNote?.trim() || null,
         is_active: false,
       },
     ])

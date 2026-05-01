@@ -13,6 +13,7 @@ type Listing = {
   image_url: string | null;
   category: string | null;
   tour_times: string[] | null;
+  availability_note: string | null;
   is_active: boolean | null;
   rating: number | null;
   reviews_count: number | null;
@@ -316,6 +317,11 @@ export default async function ListingPage({
                 </span>
               ))}
             </div>
+            {listing.availability_note ? (
+              <p className="mt-3 text-sm leading-6 text-gray-600">
+                {listing.availability_note}
+              </p>
+            ) : null}
           </div>
 
           <p className="mt-4 text-sm leading-6 text-gray-500">

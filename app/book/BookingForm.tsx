@@ -13,6 +13,7 @@ type ListingSummary = {
   price: number | null;
   location: string | null;
   tour_times: string[] | null;
+  availability_note: string | null;
 };
 
 const DEFAULT_TOUR_TIMES = ["10:30 AM", "4:30 PM Sunset Cruise"];
@@ -38,7 +39,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
 
       const { data, error } = await supabase
         .from("listings")
-        .select("title, price, location, tour_times")
+        .select("title, price, location, tour_times, availability_note")
         .eq("id", listingId)
         .single();
 
@@ -58,6 +59,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
           setListing({
             ...(fallback.data as Omit<ListingSummary, "tour_times">),
             tour_times: DEFAULT_TOUR_TIMES,
+            availability_note: null,
           });
         }
       }
@@ -249,6 +251,11 @@ export default function BookingForm({ listingId }: BookingFormProps) {
                 </option>
               ))}
             </select>
+            {listing?.availability_note ? (
+              <p className="mt-2 text-sm text-gray-500">
+                {listing.availability_note}
+              </p>
+            ) : null}
           </div>
 
           <div>

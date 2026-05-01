@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 type UpdateTimesRequest = {
   listingId?: string;
   tourTimes?: unknown;
+  availabilityNote?: string;
 };
 
 async function getUserId(request: Request) {
@@ -40,6 +41,7 @@ export async function PATCH(request: Request) {
 
   const body = (await request.json()) as UpdateTimesRequest;
   const tourTimes = cleanTourTimes(body.tourTimes);
+  const availabilityNote = body.availabilityNote?.trim() || null;
 
   if (!body.listingId) {
     return NextResponse.json({ error: "Missing listing." }, { status: 400 });
@@ -75,12 +77,15 @@ export async function PATCH(request: Request) {
 
   const { error } = await supabaseServer
     .from("listings")
-    .update({ tour_times: tourTimes })
+    .update({
+      tour_times: tourTimes,
+      availability_note: availabilityNote,
+    })
     .eq("id", body.listingId);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ tourTimes });
+  return NextResponse.json({ tourTimes, availabilityNote });
 }

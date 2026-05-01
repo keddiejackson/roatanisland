@@ -65,7 +65,7 @@ async function fetchRows(type: ExportType) {
     const { data, error } = await supabaseServer
       .from("listings")
       .select(
-        "id, vendor_id, title, description, price, location, category, tour_times, is_active, is_featured, image_url, created_at",
+        "id, vendor_id, title, description, price, location, category, tour_times, availability_note, is_active, is_featured, image_url, created_at",
       )
       .order("created_at", { ascending: false });
 

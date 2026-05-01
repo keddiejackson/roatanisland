@@ -20,6 +20,7 @@ type ListingRow = {
   price: number | null;
   is_active: boolean | null;
   tour_times: string[] | null;
+  availability_note: string | null;
 };
 
 type BookingRow = {
@@ -40,6 +41,7 @@ export default function VendorDashboardPage() {
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
+  const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +69,7 @@ export default function VendorDashboardPage() {
       setVendorAccount(account);
 
       const listingSelect =
-        "id, title, category, location, price, is_active, tour_times";
+        "id, title, category, location, price, is_active, tour_times, availability_note";
       const listingResult = await supabase
         .from("listings")
         .select(listingSelect)
@@ -93,6 +95,7 @@ export default function VendorDashboardPage() {
           "10:30 AM",
           "4:30 PM Sunset Cruise",
         ],
+        availability_note: listing.availability_note || null,
       })) as ListingRow[];
 
       setListings(rows);
@@ -101,6 +104,14 @@ export default function VendorDashboardPage() {
           rows.map((listing) => [
             listing.id,
             (listing.tour_times || []).join("\n"),
+          ]),
+        ),
+      );
+      setAvailabilityNotes(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            listing.availability_note || "",
           ]),
         ),
       );
@@ -137,6 +148,13 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function updateAvailabilityNote(listingId: string, value: string) {
+    setAvailabilityNotes((currentNotes) => ({
+      ...currentNotes,
+      [listingId]: value,
+    }));
+  }
+
   async function saveListingTimes(listingId: string) {
     const times = (listingTimes[listingId] || "")
       .split("\n")
@@ -162,6 +180,7 @@ export default function VendorDashboardPage() {
       body: JSON.stringify({
         listingId,
         tourTimes: times,
+        availabilityNote: availabilityNotes[listingId] || "",
       }),
     });
 
@@ -176,10 +195,18 @@ export default function VendorDashboardPage() {
     setListings((currentListings) =>
       currentListings.map((listing) =>
         listing.id === listingId
-          ? { ...listing, tour_times: result.tourTimes }
+          ? {
+              ...listing,
+              tour_times: result.tourTimes,
+              availability_note: result.availabilityNote || null,
+            }
           : listing,
       ),
     );
+    setAvailabilityNotes((currentNotes) => ({
+      ...currentNotes,
+      [listingId]: result.availabilityNote || "",
+    }));
   }
 
   if (loading) {
@@ -338,10 +365,23 @@ export default function VendorDashboardPage() {
                           rows={3}
                           className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
                         />
-                        <p className="mt-2 text-sm text-gray-500">
+                      <p className="mt-2 text-sm text-gray-500">
                           One time per line. These options show on the booking
                           form.
                         </p>
+                      </div>
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                          Availability note
+                        </label>
+                        <input
+                          value={availabilityNotes[listing.id] || ""}
+                          onChange={(e) =>
+                            updateAvailabilityNote(listing.id, e.target.value)
+                          }
+                          placeholder="Runs Monday-Friday, weather permitting"
+                          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                        />
                       </div>
                     </div>
                     <div className="flex flex-col items-start gap-3 sm:items-end">

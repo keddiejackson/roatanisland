@@ -33,6 +33,7 @@ export default function AddListingPage() {
   const [tourTimes, setTourTimes] = useState(
     "10:30 AM\n4:30 PM Sunset Cruise",
   );
+  const [availabilityNote, setAvailabilityNote] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -124,6 +125,7 @@ export default function AddListingPage() {
           .split("\n")
           .map((time) => time.trim())
           .filter(Boolean),
+        availabilityNote,
       }),
     });
 
@@ -349,6 +351,18 @@ export default function AddListingPage() {
                       Add one time per line. You can change these later from
                       your dashboard.
                     </p>
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block font-medium">
+                      Availability Note
+                    </label>
+                    <input
+                      value={availabilityNote}
+                      onChange={(e) => setAvailabilityNote(e.target.value)}
+                      placeholder="Runs Monday-Friday, weather permitting"
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                    />
                   </div>
 
                   <div>
