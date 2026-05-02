@@ -113,8 +113,10 @@ create table if not exists public.listings (
   price numeric,
   location text,
   image_url text,
+  gallery_image_urls text[] not null default '{}'::text[],
   category text not null default 'Tours',
   tour_times text[] not null default array['10:30 AM', '4:30 PM Sunset Cruise']::text[],
+  blocked_dates date[] not null default '{}'::date[],
   availability_note text,
   max_guests integer,
   minimum_notice_hours integer,
@@ -136,6 +138,12 @@ add column if not exists vendor_id uuid references public.vendors(id) on delete 
 
 alter table public.listings
 add column if not exists tour_times text[] not null default array['10:30 AM', '4:30 PM Sunset Cruise']::text[];
+
+alter table public.listings
+add column if not exists gallery_image_urls text[] not null default '{}'::text[];
+
+alter table public.listings
+add column if not exists blocked_dates date[] not null default '{}'::date[];
 
 alter table public.listings
 add column if not exists availability_note text;

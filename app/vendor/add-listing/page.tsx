@@ -37,6 +37,8 @@ export default function AddListingPage() {
   const [maxGuests, setMaxGuests] = useState("");
   const [minimumNoticeHours, setMinimumNoticeHours] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [galleryImageUrls, setGalleryImageUrls] = useState("");
+  const [blockedDates, setBlockedDates] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -123,9 +125,17 @@ export default function AddListingPage() {
         location,
         category,
         imageUrl: finalImageUrl,
+        galleryImageUrls: galleryImageUrls
+          .split("\n")
+          .map((url) => url.trim())
+          .filter(Boolean),
         tourTimes: tourTimes
           .split("\n")
           .map((time) => time.trim())
+          .filter(Boolean),
+        blockedDates: blockedDates
+          .split("\n")
+          .map((date) => date.trim())
           .filter(Boolean),
         availabilityNote,
         maxGuests,
@@ -427,6 +437,35 @@ export default function AddListingPage() {
                       placeholder="https://..."
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                     />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block font-medium">
+                      Gallery Image URLs
+                    </label>
+                    <textarea
+                      value={galleryImageUrls}
+                      onChange={(e) => setGalleryImageUrls(e.target.value)}
+                      rows={3}
+                      placeholder={"https://...\nhttps://..."}
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block font-medium">
+                      Blocked Dates
+                    </label>
+                    <textarea
+                      value={blockedDates}
+                      onChange={(e) => setBlockedDates(e.target.value)}
+                      rows={3}
+                      placeholder={"2026-06-15\n2026-06-16"}
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                    />
+                    <p className="mt-2 text-sm text-gray-500">
+                      Optional. Add dates you already know are unavailable.
+                    </p>
                   </div>
                 </div>
               </section>

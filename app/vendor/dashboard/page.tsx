@@ -30,8 +30,10 @@ type ListingRow = {
   location: string | null;
   price: number | null;
   image_url: string | null;
+  gallery_image_urls: string[] | null;
   is_active: boolean | null;
   tour_times: string[] | null;
+  blocked_dates: string[] | null;
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
@@ -44,6 +46,7 @@ type ListingDraft = {
   location: string;
   category: string;
   imageUrl: string;
+  galleryImageUrls: string;
 };
 
 type BookingRow = {
@@ -83,6 +86,7 @@ export default function VendorDashboardPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
+  const [blockedDates, setBlockedDates] = useState<Record<string, string>>({});
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
@@ -127,11 +131,11 @@ export default function VendorDashboardPage() {
         showWebsite: account.vendors?.show_website ?? true,
       });
 
-      const listingSelect =
-        "id, title, description, category, location, price, image_url, is_active, tour_times, availability_note, max_guests, minimum_notice_hours";
+      const listingSelectWithAvailability =
+        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours";
       const listingResult = await supabase
         .from("listings")
-        .select(listingSelect)
+        .select(listingSelectWithAvailability)
         .eq("vendor_id", account.vendor_id)
         .order("created_at", { ascending: false });
       let listingData: unknown[] | null = listingResult.data;
@@ -154,6 +158,8 @@ export default function VendorDashboardPage() {
           "10:30 AM",
           "4:30 PM Sunset Cruise",
         ],
+        gallery_image_urls: listing.gallery_image_urls || [],
+        blocked_dates: listing.blocked_dates || [],
         availability_note: listing.availability_note || null,
         max_guests: listing.max_guests ?? null,
         minimum_notice_hours: listing.minimum_notice_hours ?? null,
@@ -171,7 +177,16 @@ export default function VendorDashboardPage() {
               location: listing.location || "",
               category: listing.category || "Tours",
               imageUrl: listing.image_url || "",
+              galleryImageUrls: (listing.gallery_image_urls || []).join("\n"),
             },
+          ]),
+        ),
+      );
+      setBlockedDates(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            (listing.blocked_dates || []).join("\n"),
           ]),
         ),
       );
@@ -363,6 +378,13 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function updateBlockedDates(listingId: string, value: string) {
+    setBlockedDates((currentDates) => ({
+      ...currentDates,
+      [listingId]: value,
+    }));
+  }
+
   function updateAvailabilityNote(listingId: string, value: string) {
     setAvailabilityNotes((currentNotes) => ({
       ...currentNotes,
@@ -389,6 +411,14 @@ export default function VendorDashboardPage() {
     const times = (listingTimes[listingId] || "")
       .split("\n")
       .map((time) => time.trim())
+      .filter(Boolean);
+    const unavailableDates = (blockedDates[listingId] || "")
+      .split("\n")
+      .map((date) => date.trim())
+      .filter(Boolean);
+    const galleryImageUrls = (draft.galleryImageUrls || "")
+      .split("\n")
+      .map((url) => url.trim())
       .filter(Boolean);
 
     if (!draft) {
@@ -447,7 +477,9 @@ export default function VendorDashboardPage() {
         location: draft.location,
         category: draft.category,
         imageUrl: finalImageUrl,
+        galleryImageUrls,
         tourTimes: times,
+        blockedDates: unavailableDates,
         availabilityNote: availabilityNotes[listingId] || "",
         maxGuests: maxGuestsByListing[listingId] || "",
         minimumNoticeHours: noticeHoursByListing[listingId] || "",
@@ -473,7 +505,9 @@ export default function VendorDashboardPage() {
               location: result.listing.location,
               category: result.listing.category,
               image_url: result.listing.image_url,
+              gallery_image_urls: result.listing.gallery_image_urls || [],
               tour_times: result.listing.tour_times,
+              blocked_dates: result.listing.blocked_dates || [],
               availability_note: result.listing.availability_note || null,
               max_guests: result.listing.max_guests,
               minimum_notice_hours: result.listing.minimum_notice_hours,
@@ -492,7 +526,12 @@ export default function VendorDashboardPage() {
         location: result.listing.location || "",
         category: result.listing.category || "Tours",
         imageUrl: result.listing.image_url || "",
+        galleryImageUrls: (result.listing.gallery_image_urls || []).join("\n"),
       },
+    }));
+    setBlockedDates((currentDates) => ({
+      ...currentDates,
+      [listingId]: (result.listing.blocked_dates || []).join("\n"),
     }));
     setListingImageFiles((currentFiles) => ({
       ...currentFiles,
@@ -582,6 +621,42 @@ export default function VendorDashboardPage() {
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [bookings]);
 
+  const notifications = useMemo(() => {
+    const newBookings = bookings.filter(
+      (booking) => (booking.status || "new") === "new",
+    ).length;
+    const waitingListings = listings.filter(
+      (listing) => listing.is_active === false,
+    ).length;
+    const confirmedBookings = bookings.filter(
+      (booking) => booking.status === "confirmed",
+    ).length;
+
+    return [
+      {
+        label: "New booking requests",
+        value: newBookings,
+        text:
+          newBookings === 0
+            ? "No new requests waiting."
+            : "Review and confirm or cancel these requests.",
+      },
+      {
+        label: "Listings waiting for review",
+        value: waitingListings,
+        text:
+          waitingListings === 0
+            ? "No listing changes waiting."
+            : "These listings are hidden until admin approves them.",
+      },
+      {
+        label: "Confirmed bookings",
+        value: confirmedBookings,
+        text: "Keep guest pickup and trip details up to date.",
+      },
+    ];
+  }, [bookings, listings]);
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
@@ -618,6 +693,20 @@ export default function VendorDashboardPage() {
             </button>
           </div>
         </header>
+
+        <section className="mb-8 grid gap-4 md:grid-cols-3">
+          {notifications.map((notification) => (
+            <div key={notification.label} className="rounded-2xl bg-white p-5 shadow">
+              <p className="text-sm text-gray-600">{notification.label}</p>
+              <p className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+                {notification.value}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                {notification.text}
+              </p>
+            </div>
+          ))}
+        </section>
 
         <section className="rounded-2xl bg-white p-8 shadow">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -1101,6 +1190,28 @@ export default function VendorDashboardPage() {
                             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
                           />
                         </div>
+
+                        <div className="md:col-span-2">
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Gallery Image URLs
+                          </label>
+                          <textarea
+                            value={draft.galleryImageUrls}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "galleryImageUrls",
+                                e.target.value,
+                              )
+                            }
+                            rows={3}
+                            placeholder={"https://...\nhttps://..."}
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                          <p className="mt-2 text-sm text-gray-500">
+                            Add one image URL per line for the public gallery.
+                          </p>
+                        </div>
                       </div>
 
                       <div className="mt-4">
@@ -1132,6 +1243,23 @@ export default function VendorDashboardPage() {
                           placeholder="Runs Monday-Friday, weather permitting"
                           className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
                         />
+                      </div>
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                          Blocked Dates
+                        </label>
+                        <textarea
+                          value={blockedDates[listing.id] || ""}
+                          onChange={(e) =>
+                            updateBlockedDates(listing.id, e.target.value)
+                          }
+                          rows={3}
+                          placeholder={"2026-06-15\n2026-06-16"}
+                          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                        />
+                        <p className="mt-2 text-sm text-gray-500">
+                          Add one unavailable date per line using YYYY-MM-DD.
+                        </p>
                       </div>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>

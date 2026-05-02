@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   if (body.listingId) {
     const { data: listing, error: listingRulesError } = await supabaseServer
       .from("listings")
-      .select("max_guests, minimum_notice_hours, price")
+      .select("max_guests, minimum_notice_hours, price, blocked_dates")
       .eq("id", body.listingId)
       .maybeSingle();
 
@@ -66,6 +66,7 @@ export async function POST(request: Request) {
       max_guests?: number | null;
       minimum_notice_hours?: number | null;
       price?: number | null;
+      blocked_dates?: string[] | null;
     } | null;
 
     if (listingRules?.price) {
@@ -93,6 +94,13 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
+    }
+
+    if (listingRules?.blocked_dates?.includes(body.tourDate)) {
+      return NextResponse.json(
+        { error: "That date is not available for this listing." },
+        { status: 400 },
+      );
     }
   }
 

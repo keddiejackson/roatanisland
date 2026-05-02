@@ -12,6 +12,7 @@ type Listing = {
   price: number | null;
   location: string | null;
   image_url: string | null;
+  gallery_image_urls: string[] | null;
   category: string | null;
   tour_times: string[] | null;
   availability_note: string | null;
@@ -116,6 +117,10 @@ export default async function ListingPage({
   const listing = await getListing(id);
   let vendor: Vendor | null = null;
   let reviews: Review[] = [];
+  const galleryImages = [
+    listing?.image_url || "",
+    ...((listing?.gallery_image_urls || []) as string[]),
+  ].filter(Boolean);
 
   if (!listing) {
     return (
@@ -225,6 +230,26 @@ export default async function ListingPage({
           <p className="mt-4 text-lg leading-8 text-gray-700">
             {listing.description || "Details for this experience are coming soon."}
           </p>
+
+          {galleryImages.length > 1 ? (
+            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {galleryImages.slice(0, 6).map((imageUrl, index) => (
+                <div
+                  key={`${imageUrl}-${index}`}
+                  className="relative h-48 overflow-hidden rounded-2xl bg-[#D8EFEC]"
+                >
+                  <Image
+                    src={imageUrl}
+                    alt={`${listing.title} photo ${index + 1}`}
+                    fill
+                    sizes="(min-width: 1024px) 24vw, (min-width: 640px) 50vw, 100vw"
+                    unoptimized
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl bg-[#EEF7F6] p-4">

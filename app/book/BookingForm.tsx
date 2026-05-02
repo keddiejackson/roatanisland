@@ -13,6 +13,7 @@ type ListingSummary = {
   price: number | null;
   location: string | null;
   tour_times: string[] | null;
+  blocked_dates: string[] | null;
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
@@ -52,7 +53,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "title, price, location, tour_times, availability_note, max_guests, minimum_notice_hours",
+          "title, price, location, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours",
         )
         .eq("id", listingId)
         .single();
@@ -79,6 +80,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
               | "minimum_notice_hours"
             >),
             tour_times: DEFAULT_TOUR_TIMES,
+            blocked_dates: [],
             availability_note: null,
             max_guests: null,
             minimum_notice_hours: null,
@@ -105,6 +107,10 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     Number.isFinite(guestCount) &&
     guestCount > listing.max_guests
       ? `This listing allows up to ${listing.max_guests} guests per tour.`
+      : "";
+  const dateWarning =
+    tourDate && listing?.blocked_dates?.includes(tourDate)
+      ? "That date is not available for this listing."
       : "";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -149,7 +155,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     }
   }
 
-  async function startDepositCheckout() {
+  async function startDepositCheckout(paymentType: "deposit" | "full" = "deposit") {
     if (!bookingId) {
       return;
     }
@@ -161,7 +167,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ bookingId }),
+      body: JSON.stringify({ bookingId, paymentType }),
     });
 
     const result = await response.json();
@@ -211,16 +217,34 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             bookingId ? (
               <button
                 type="button"
-                onClick={startDepositCheckout}
+                onClick={() => startDepositCheckout("deposit")}
                 disabled={depositLoading}
                 className="rounded-xl bg-[#0B3C5D] px-5 py-3 font-semibold text-white disabled:opacity-50"
               >
                 {depositLoading ? "Opening checkout..." : "Pay deposit"}
               </button>
             ) : null}
+            {process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true" &&
+            bookingId &&
+            listing?.price ? (
+              <button
+                type="button"
+                onClick={() => startDepositCheckout("full")}
+                disabled={depositLoading}
+                className="rounded-xl bg-[#0B3C5D] px-5 py-3 font-semibold text-white disabled:opacity-50"
+              >
+                Pay full amount
+              </button>
+            ) : null}
+            <Link
+              href={bookingId ? `/book/status/${bookingId}` : "/"}
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+            >
+              View booking status
+            </Link>
             <Link
               href="/"
-              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+              className="rounded-xl border border-[#00A8A8] px-5 py-3 font-semibold text-[#007B7B]"
             >
               Browse more listings
             </Link>
@@ -274,6 +298,11 @@ export default function BookingForm({ listingId }: BookingFormProps) {
               <p className="mt-2 text-sm text-gray-500">
                 Please book at least {listing.minimum_notice_hours} hours in
                 advance.
+              </p>
+            ) : null}
+            {dateWarning ? (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {dateWarning}
               </p>
             ) : null}
           </div>
@@ -344,7 +373,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
 
           <button
             type="submit"
-            disabled={loading || Boolean(guestWarning)}
+            disabled={loading || Boolean(guestWarning || dateWarning)}
             className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
           >
             {loading ? "Submitting..." : "Submit Booking Request"}

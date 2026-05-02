@@ -200,6 +200,12 @@ export default function Home() {
                 List your business
               </Link>
               <Link
+                href="/vendors"
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              >
+                Vendors
+              </Link>
+              <Link
                 href="/vendor/login"
                 className="hidden rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25 sm:inline-block"
               >

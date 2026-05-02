@@ -1,6 +1,12 @@
 import Link from "next/link";
 
-export default function BookingPaymentSuccessPage() {
+export default async function BookingPaymentSuccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ booking?: string }>;
+}) {
+  const { booking } = await searchParams;
+
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-16 text-[#17324D]">
       <div className="mx-auto max-w-2xl rounded-2xl bg-white p-8 shadow">
@@ -16,10 +22,10 @@ export default function BookingPaymentSuccessPage() {
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link
-            href="/"
+            href={booking ? `/book/status/${booking}` : "/"}
             className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
           >
-            Back to Home
+            View booking status
           </Link>
           <Link
             href="/#listings"

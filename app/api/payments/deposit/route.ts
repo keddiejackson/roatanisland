@@ -4,6 +4,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 type DepositRequest = {
   bookingId?: string;
+  paymentType?: "deposit" | "full";
 };
 
 function getBaseUrl(request: Request) {
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
 
   const { data: booking, error: bookingError } = await supabaseServer
     .from("bookings")
-    .select("id, full_name, email, listing_id")
+    .select("id, full_name, email, listing_id, booking_value_cents")
     .eq("id", body.bookingId)
     .single();
 
@@ -57,6 +58,13 @@ export async function POST(request: Request) {
   }
 
   let listingTitle = "Roatan booking deposit";
+  let checkoutAmountCents = depositAmountCents;
+  let paymentLabel = "deposit";
+
+  if (body.paymentType === "full" && booking.booking_value_cents) {
+    checkoutAmountCents = booking.booking_value_cents;
+    paymentLabel = "full payment";
+  }
 
   if (booking.listing_id) {
     const { data: listing } = await supabaseServer
@@ -66,7 +74,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (listing?.title) {
-      listingTitle = `${listing.title} deposit`;
+      listingTitle = `${listing.title} ${paymentLabel}`;
     }
   }
 
@@ -88,7 +96,7 @@ export async function POST(request: Request) {
   params.append("line_items[0][price_data][currency]", "usd");
   params.append(
     "line_items[0][price_data][unit_amount]",
-    String(depositAmountCents),
+    String(checkoutAmountCents),
   );
   params.append(
     "line_items[0][price_data][product_data][name]",
@@ -127,8 +135,9 @@ export async function POST(request: Request) {
   await supabaseServer
     .from("bookings")
     .update({
-      deposit_status: "checkout_started",
-      deposit_amount_cents: depositAmountCents,
+      deposit_status:
+        body.paymentType === "full" ? "full_checkout_started" : "checkout_started",
+      deposit_amount_cents: checkoutAmountCents,
       stripe_checkout_session_id: checkoutSession.id,
     })
     .eq("id", booking.id);

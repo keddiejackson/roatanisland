@@ -22,7 +22,9 @@ type VendorListingRequest = {
   location?: string;
   category?: string;
   imageUrl?: string;
+  galleryImageUrls?: unknown;
   tourTimes?: string[];
+  blockedDates?: unknown;
   availabilityNote?: string;
   maxGuests?: number | string;
   minimumNoticeHours?: number | string;
@@ -41,6 +43,18 @@ function cleanTourTimes(times: unknown) {
   return cleanedTimes.length > 0
     ? cleanedTimes.slice(0, 12)
     : ["10:30 AM", "4:30 PM Sunset Cruise"];
+}
+
+function cleanTextList(values: unknown, limit = 12) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, limit);
 }
 
 async function getSessionFromRequest(request: Request) {
@@ -174,7 +188,9 @@ export async function POST(request: Request) {
         location: body.location,
         category: body.category,
         image_url: body.imageUrl || null,
+        gallery_image_urls: cleanTextList(body.galleryImageUrls),
         tour_times: cleanTourTimes(body.tourTimes),
+        blocked_dates: cleanTextList(body.blockedDates, 60),
         availability_note: body.availabilityNote?.trim() || null,
         max_guests: maxGuests,
         minimum_notice_hours: minimumNoticeHours,
