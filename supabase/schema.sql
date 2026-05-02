@@ -37,6 +37,10 @@ create table if not exists public.vendors (
   website text,
   notes text,
   profile_image_url text,
+  show_contact_name boolean not null default true,
+  show_email boolean not null default true,
+  show_phone boolean not null default true,
+  show_website boolean not null default true,
   is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
@@ -82,6 +86,18 @@ add column if not exists notes text;
 
 alter table public.vendors
 add column if not exists profile_image_url text;
+
+alter table public.vendors
+add column if not exists show_contact_name boolean not null default true;
+
+alter table public.vendors
+add column if not exists show_email boolean not null default true;
+
+alter table public.vendors
+add column if not exists show_phone boolean not null default true;
+
+alter table public.vendors
+add column if not exists show_website boolean not null default true;
 
 alter table public.vendors
 add column if not exists is_active boolean not null default true;

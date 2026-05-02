@@ -7,9 +7,15 @@ type Vendor = {
   id: string;
   business_name: string;
   contact_name: string | null;
+  email: string | null;
+  phone: string | null;
   website: string | null;
   notes: string | null;
   profile_image_url: string | null;
+  show_contact_name: boolean | null;
+  show_email: boolean | null;
+  show_phone: boolean | null;
+  show_website: boolean | null;
   is_active: boolean | null;
 };
 
@@ -40,7 +46,7 @@ async function getVendor(id: string) {
   const { data } = await supabaseServer
     .from("vendors")
     .select(
-      "id, business_name, contact_name, website, notes, profile_image_url, is_active",
+      "id, business_name, contact_name, email, phone, website, notes, profile_image_url, show_contact_name, show_email, show_phone, show_website, is_active",
     )
     .eq("id", id)
     .maybeSingle();
@@ -163,22 +169,74 @@ export default async function VendorProfilePage({
                 {vendor.notes ||
                   "Browse active listings from this Roatan operator."}
               </p>
-              {vendor.website ? (
+              <div className="mt-6 flex flex-wrap gap-3">
+              {vendor.show_website !== false && vendor.website ? (
                 <a
                   href={vendor.website}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-6 inline-block rounded-xl bg-white px-5 py-3 font-semibold text-[#0B3C5D]"
+                  className="inline-block rounded-xl bg-white px-5 py-3 font-semibold text-[#0B3C5D]"
                 >
                   Visit Website
                 </a>
               ) : null}
+              {vendor.show_email !== false && vendor.email ? (
+                <a
+                  href={`mailto:${vendor.email}`}
+                  className="inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                >
+                  Email Vendor
+                </a>
+              ) : null}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-14">
+        {vendor.show_contact_name !== false && vendor.contact_name ? (
+          <div className="mb-8 rounded-2xl bg-white p-6 shadow">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+              Contact
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <p className="text-sm text-gray-500">Contact name</p>
+                <p className="mt-1 font-bold text-[#0B3C5D]">
+                  {vendor.contact_name}
+                </p>
+              </div>
+              {vendor.show_phone !== false && vendor.phone ? (
+                <div>
+                  <p className="text-sm text-gray-500">Phone</p>
+                  <a
+                    href={`tel:${vendor.phone}`}
+                    className="mt-1 block font-bold text-[#007B7B]"
+                  >
+                    {vendor.phone}
+                  </a>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        ) : vendor.show_phone !== false && vendor.phone ? (
+          <div className="mb-8 rounded-2xl bg-white p-6 shadow">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+              Contact
+            </p>
+            <div className="mt-4">
+              <p className="text-sm text-gray-500">Phone</p>
+              <a
+                href={`tel:${vendor.phone}`}
+                className="mt-1 block font-bold text-[#007B7B]"
+              >
+                {vendor.phone}
+              </a>
+            </div>
+          </div>
+        ) : null}
+
         <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">

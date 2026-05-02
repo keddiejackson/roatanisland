@@ -15,6 +15,10 @@ type VendorAccount = {
     website: string | null;
     notes: string | null;
     profile_image_url: string | null;
+    show_contact_name: boolean | null;
+    show_email: boolean | null;
+    show_phone: boolean | null;
+    show_website: boolean | null;
   } | null;
 };
 
@@ -66,6 +70,10 @@ export default function VendorDashboardPage() {
     website: "",
     notes: "",
     profileImageUrl: "",
+    showContactName: true,
+    showEmail: true,
+    showPhone: true,
+    showWebsite: true,
   });
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
@@ -94,7 +102,7 @@ export default function VendorDashboardPage() {
       const { data: accountData, error: accountError } = await supabase
         .from("vendor_users")
         .select(
-          "vendor_id, vendors(business_name, contact_name, email, phone, website, notes, profile_image_url)",
+          "vendor_id, vendors(business_name, contact_name, email, phone, website, notes, profile_image_url, show_contact_name, show_email, show_phone, show_website)",
         )
         .eq("user_id", userData.user.id)
         .single();
@@ -113,6 +121,10 @@ export default function VendorDashboardPage() {
         website: account.vendors?.website || "",
         notes: account.vendors?.notes || "",
         profileImageUrl: account.vendors?.profile_image_url || "",
+        showContactName: account.vendors?.show_contact_name ?? true,
+        showEmail: account.vendors?.show_email ?? true,
+        showPhone: account.vendors?.show_phone ?? true,
+        showWebsite: account.vendors?.show_website ?? true,
       });
 
       const listingSelect =
@@ -232,7 +244,10 @@ export default function VendorDashboardPage() {
     router.push("/");
   }
 
-  function updateProfileForm(field: keyof typeof profileForm, value: string) {
+  function updateProfileForm(
+    field: keyof typeof profileForm,
+    value: string | boolean,
+  ) {
     setProfileForm((currentForm) => ({
       ...currentForm,
       [field]: value,
@@ -304,6 +319,10 @@ export default function VendorDashboardPage() {
               website: result.vendor.website,
               notes: result.vendor.notes,
               profile_image_url: result.vendor.profile_image_url,
+              show_contact_name: result.vendor.show_contact_name,
+              show_email: result.vendor.show_email,
+              show_phone: result.vendor.show_phone,
+              show_website: result.vendor.show_website,
             },
           }
         : currentAccount,
@@ -315,6 +334,10 @@ export default function VendorDashboardPage() {
       website: result.vendor.website || "",
       notes: result.vendor.notes || "",
       profileImageUrl: result.vendor.profile_image_url || "",
+      showContactName: result.vendor.show_contact_name ?? true,
+      showEmail: result.vendor.show_email ?? true,
+      showPhone: result.vendor.show_phone ?? true,
+      showWebsite: result.vendor.show_website ?? true,
     });
     setProfileImageFile(null);
   }
@@ -646,6 +669,16 @@ export default function VendorDashboardPage() {
                 onChange={(e) => updateProfileForm("contactName", e.target.value)}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               />
+              <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={profileForm.showContactName}
+                  onChange={(e) =>
+                    updateProfileForm("showContactName", e.target.checked)
+                  }
+                />
+                Show on public profile
+              </label>
             </div>
 
             <div>
@@ -655,6 +688,30 @@ export default function VendorDashboardPage() {
                 onChange={(e) => updateProfileForm("phone", e.target.value)}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               />
+              <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={profileForm.showPhone}
+                  onChange={(e) =>
+                    updateProfileForm("showPhone", e.target.checked)
+                  }
+                />
+                Show on public profile
+              </label>
+            </div>
+
+            <div className="md:col-span-2">
+              <p className="mb-2 block font-medium">Email Privacy</p>
+              <label className="flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={profileForm.showEmail}
+                  onChange={(e) =>
+                    updateProfileForm("showEmail", e.target.checked)
+                  }
+                />
+                Show contact button using your account email
+              </label>
             </div>
 
             <div className="md:col-span-2">
@@ -665,6 +722,16 @@ export default function VendorDashboardPage() {
                 placeholder="https://..."
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               />
+              <label className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+                <input
+                  type="checkbox"
+                  checked={profileForm.showWebsite}
+                  onChange={(e) =>
+                    updateProfileForm("showWebsite", e.target.checked)
+                  }
+                />
+                Show on public profile
+              </label>
             </div>
 
             <div className="md:col-span-2">

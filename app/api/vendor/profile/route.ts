@@ -9,6 +9,10 @@ type VendorProfileRequest = {
   website?: string;
   notes?: string;
   profileImageUrl?: string;
+  showContactName?: boolean;
+  showEmail?: boolean;
+  showPhone?: boolean;
+  showWebsite?: boolean;
 };
 
 async function getUserId(request: Request) {
@@ -59,10 +63,14 @@ export async function PATCH(request: Request) {
       website: normalizeWebsiteUrl(body.website),
       notes: body.notes?.trim() || null,
       profile_image_url: body.profileImageUrl?.trim() || null,
+      show_contact_name: body.showContactName ?? true,
+      show_email: body.showEmail ?? true,
+      show_phone: body.showPhone ?? true,
+      show_website: body.showWebsite ?? true,
     })
     .eq("id", vendorLink.vendor_id)
     .select(
-      "id, business_name, contact_name, email, phone, website, notes, profile_image_url",
+      "id, business_name, contact_name, email, phone, website, notes, profile_image_url, show_contact_name, show_email, show_phone, show_website",
     )
     .single();
 
