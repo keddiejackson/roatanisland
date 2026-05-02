@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type VendorAccount = {
@@ -563,6 +563,25 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  const groupedBookings = useMemo(() => {
+    const groups = new Map<string, BookingRow[]>();
+
+    bookings.forEach((booking) => {
+      const group = groups.get(booking.tour_date) || [];
+      group.push(booking);
+      groups.set(booking.tour_date, group);
+    });
+
+    return [...groups.entries()]
+      .map(([date, dateBookings]) => ({
+        date,
+        bookings: dateBookings.sort((a, b) =>
+          a.tour_time.localeCompare(b.tour_time),
+        ),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [bookings]);
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
@@ -769,6 +788,46 @@ export default function VendorDashboardPage() {
               No booking requests yet.
             </div>
           ) : (
+            <>
+            <div className="mt-8 grid gap-4">
+              {groupedBookings.slice(0, 6).map((group) => (
+                <section
+                  key={group.date}
+                  className="rounded-2xl border border-gray-200 p-5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h3 className="text-lg font-bold text-[#0B3C5D]">
+                      {group.date}
+                    </h3>
+                    <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-semibold text-[#0B3C5D]">
+                      {group.bookings.length} request
+                      {group.bookings.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    {group.bookings.map((booking) => (
+                      <article
+                        key={booking.id}
+                        className="rounded-xl bg-[#F7F3EA] p-4"
+                      >
+                        <div className="flex flex-wrap justify-between gap-3">
+                          <p className="font-bold text-[#0B3C5D]">
+                            {booking.tour_time} - {booking.full_name}
+                          </p>
+                          <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold capitalize text-[#0B3C5D]">
+                            {booking.status || "new"}
+                          </span>
+                        </div>
+                        <p className="mt-2 text-sm text-gray-600">
+                          {booking.listing_name} - {booking.guests} guest
+                          {booking.guests === 1 ? "" : "s"}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
             <div className="mt-8 overflow-x-auto">
               <table className="min-w-[1100px] border-collapse">
                 <thead>
@@ -851,6 +910,7 @@ export default function VendorDashboardPage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </section>
 

@@ -17,6 +17,7 @@ type Listing = {
   is_featured: boolean | null;
   rating: number | null;
   reviews_count: number | null;
+  tour_times: string[] | null;
 };
 
 const categories = ["All", "Tours", "Hotels", "Transport"];
@@ -37,6 +38,10 @@ export default function Home() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [locationFilter, setLocationFilter] = useState("All");
+  const [minimumRating, setMinimumRating] = useState("All");
+  const [sortBy, setSortBy] = useState("Featured");
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
   const [leadPhone, setLeadPhone] = useState("");
@@ -59,31 +64,73 @@ export default function Home() {
   }, []);
 
   const filteredListings = useMemo(
-    () =>
-      listings
+    () => {
+      const priceLimit = maxPrice ? Number(maxPrice) : null;
+
+      return listings
         .filter((listing) => {
+          const listingRating = listing.rating ?? 5;
           const matchesSearch =
-            `${listing.title} ${listing.location} ${listing.description}`
+            `${listing.title} ${listing.location} ${listing.description} ${(listing.tour_times || []).join(" ")}`
               .toLowerCase()
               .includes(search.toLowerCase());
 
           const matchesCategory =
             category === "All" || listing.category === category;
+          const matchesLocation =
+            locationFilter === "All" || listing.location === locationFilter;
+          const matchesPrice =
+            !priceLimit || !listing.price || listing.price <= priceLimit;
+          const matchesRating =
+            minimumRating === "All" || listingRating >= Number(minimumRating);
 
-          return matchesSearch && matchesCategory;
+          return (
+            matchesSearch &&
+            matchesCategory &&
+            matchesLocation &&
+            matchesPrice &&
+            matchesRating
+          );
         })
         .sort((a, b) => {
+          if (sortBy === "Price low") {
+            return (a.price || 0) - (b.price || 0);
+          }
+
+          if (sortBy === "Price high") {
+            return (b.price || 0) - (a.price || 0);
+          }
+
+          if (sortBy === "Rating") {
+            return (b.rating || 5) - (a.rating || 5);
+          }
+
           if (Boolean(a.is_featured) === Boolean(b.is_featured)) {
-            return 0;
+            return (b.rating || 5) - (a.rating || 5);
           }
 
           return a.is_featured ? -1 : 1;
-        }),
-    [category, listings, search],
+        });
+    },
+    [category, listings, locationFilter, maxPrice, minimumRating, search, sortBy],
   );
 
   const featuredListings = useMemo(
     () => listings.filter((listing) => listing.is_featured).slice(0, 3),
+    [listings],
+  );
+
+  const locations = useMemo(
+    () => [
+      "All",
+      ...Array.from(
+        new Set(
+          listings
+            .map((listing) => listing.location)
+            .filter((location): location is string => Boolean(location)),
+        ),
+      ).sort(),
+    ],
     [listings],
   );
 
@@ -201,7 +248,7 @@ export default function Home() {
         className="relative z-10 mx-auto -mt-20 max-w-7xl px-5 sm:px-6"
       >
         <div className="rounded-2xl bg-white p-4 shadow-xl shadow-black/10 ring-1 ring-black/5">
-          <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+          <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
             <input
               type="text"
               placeholder="Search by tour, stay, transport, or location"
@@ -225,6 +272,48 @@ export default function Home() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 md:grid-cols-4">
+            <select
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+            >
+              {locations.map((location) => (
+                <option key={location} value={location}>
+                  {location === "All" ? "All locations" : location}
+                </option>
+              ))}
+            </select>
+            <input
+              type="number"
+              min="0"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              placeholder="Max price"
+              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+            />
+            <select
+              value={minimumRating}
+              onChange={(e) => setMinimumRating(e.target.value)}
+              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+            >
+              <option value="All">Any rating</option>
+              <option value="5">5 stars</option>
+              <option value="4">4+ stars</option>
+              <option value="3">3+ stars</option>
+            </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+            >
+              <option value="Featured">Featured first</option>
+              <option value="Rating">Highest rated</option>
+              <option value="Price low">Price low to high</option>
+              <option value="Price high">Price high to low</option>
+            </select>
           </div>
         </div>
       </section>
@@ -328,6 +417,10 @@ export default function Home() {
               onClick={() => {
                 setSearch("");
                 setCategory("All");
+                setLocationFilter("All");
+                setMaxPrice("");
+                setMinimumRating("All");
+                setSortBy("Featured");
               }}
               className="mt-4 rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
             >

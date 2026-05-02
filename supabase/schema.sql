@@ -160,6 +160,10 @@ create table if not exists public.bookings (
   listing_id uuid references public.listings(id) on delete set null,
   deposit_status text not null default 'not_requested',
   deposit_amount_cents integer,
+  booking_value_cents integer,
+  commission_rate numeric not null default 0.10,
+  commission_amount_cents integer,
+  commission_status text not null default 'unpaid' check (commission_status in ('unpaid', 'paid', 'waived')),
   stripe_checkout_session_id text,
   stripe_payment_intent_id text,
   paid_at timestamptz,
@@ -200,6 +204,17 @@ create table if not exists public.admin_activity_logs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.listing_reviews (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references public.listings(id) on delete cascade,
+  reviewer_name text not null,
+  reviewer_email text,
+  rating integer not null check (rating between 1 and 5),
+  comment text not null,
+  is_approved boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
 alter table public.bookings
 add column if not exists status text not null default 'new'
 check (status in ('new', 'confirmed', 'completed', 'cancelled'));
@@ -218,6 +233,19 @@ add column if not exists deposit_status text not null default 'not_requested';
 
 alter table public.bookings
 add column if not exists deposit_amount_cents integer;
+
+alter table public.bookings
+add column if not exists booking_value_cents integer;
+
+alter table public.bookings
+add column if not exists commission_rate numeric not null default 0.10;
+
+alter table public.bookings
+add column if not exists commission_amount_cents integer;
+
+alter table public.bookings
+add column if not exists commission_status text not null default 'unpaid'
+check (commission_status in ('unpaid', 'paid', 'waived'));
 
 alter table public.bookings
 add column if not exists stripe_checkout_session_id text;
@@ -243,6 +271,12 @@ add column if not exists actor_role text not null default 'system';
 alter table public.admin_activity_logs
 add column if not exists metadata jsonb not null default '{}'::jsonb;
 
+alter table public.listing_reviews
+add column if not exists reviewer_email text;
+
+alter table public.listing_reviews
+add column if not exists is_approved boolean not null default false;
+
 alter table public.admin_users enable row level security;
 alter table public.vendors enable row level security;
 alter table public.vendor_users enable row level security;
@@ -251,6 +285,7 @@ alter table public.bookings enable row level security;
 alter table public.analytics_events enable row level security;
 alter table public.app_errors enable row level security;
 alter table public.admin_activity_logs enable row level security;
+alter table public.listing_reviews enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select, insert on public.vendors to anon, authenticated;
@@ -261,6 +296,8 @@ grant insert on public.analytics_events to anon, authenticated;
 grant select on public.analytics_events to authenticated;
 grant select, update on public.app_errors to authenticated;
 grant select, insert on public.admin_activity_logs to authenticated;
+grant select, insert on public.listing_reviews to anon, authenticated;
+grant update, delete on public.listing_reviews to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
 grant select, update on public.bookings to authenticated;
@@ -506,6 +543,66 @@ on public.admin_activity_logs
 for insert
 to authenticated
 with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Anyone can submit reviews" on public.listing_reviews;
+create policy "Anyone can submit reviews"
+on public.listing_reviews
+for insert
+to anon, authenticated
+with check (is_approved = false);
+
+drop policy if exists "Anyone can view approved reviews" on public.listing_reviews;
+create policy "Anyone can view approved reviews"
+on public.listing_reviews
+for select
+to anon, authenticated
+using (is_approved = true);
+
+drop policy if exists "Admins can view all reviews" on public.listing_reviews;
+create policy "Admins can view all reviews"
+on public.listing_reviews
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can update reviews" on public.listing_reviews;
+create policy "Admins can update reviews"
+on public.listing_reviews
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can delete reviews" on public.listing_reviews;
+create policy "Admins can delete reviews"
+on public.listing_reviews
+for delete
+to authenticated
+using (
   exists (
     select 1
     from public.admin_users

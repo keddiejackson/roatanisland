@@ -12,6 +12,7 @@ type BookingUpdateRequest = {
   status?: BookingStatus;
   adminNotes?: string | null;
   sendEmail?: boolean;
+  commissionStatus?: "unpaid" | "paid" | "waived";
 };
 
 async function verifyAdmin(request: Request) {
@@ -85,6 +86,9 @@ export async function PATCH(
     .update({
       status: nextStatus,
       admin_notes: body.adminNotes || null,
+      ...(body.commissionStatus
+        ? { commission_status: body.commissionStatus }
+        : {}),
     })
     .eq("id", id)
     .select(

@@ -21,6 +21,9 @@ type BookingRow = {
   listing_id: string | null;
   deposit_status: string | null;
   deposit_amount_cents: number | null;
+  booking_value_cents: number | null;
+  commission_amount_cents: number | null;
+  commission_status: string | null;
 };
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -49,6 +52,17 @@ function formatDeposit(booking: BookingWithListingName) {
   return `${booking.deposit_status.replaceAll("_", " ")} ${amount}`.trim();
 }
 
+function formatMoney(cents: number | null) {
+  if (!cents) {
+    return "Not set";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
+}
+
 export default function AdminBookingsPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
@@ -58,6 +72,7 @@ export default function AdminBookingsPage() {
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
+  const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -145,6 +160,25 @@ export default function AdminBookingsPage() {
     [bookings, search, statusFilter],
   );
 
+  const groupedBookings = useMemo(() => {
+    const groups = new Map<string, BookingWithListingName[]>();
+
+    filteredBookings.forEach((booking) => {
+      const group = groups.get(booking.tour_date) || [];
+      group.push(booking);
+      groups.set(booking.tour_date, group);
+    });
+
+    return [...groups.entries()]
+      .map(([date, dateBookings]) => ({
+        date,
+        bookings: dateBookings.sort((a, b) =>
+          a.tour_time.localeCompare(b.tour_time),
+        ),
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [filteredBookings]);
+
   if (checkingAuth || !authorized) {
     return null;
   }
@@ -153,6 +187,7 @@ export default function AdminBookingsPage() {
     bookingId: string,
     changes: Pick<BookingWithListingName, "status" | "admin_notes">,
     sendEmail = false,
+    commissionStatus?: "unpaid" | "paid" | "waived",
   ) {
     setSavingBookingId(bookingId);
 
@@ -169,6 +204,7 @@ export default function AdminBookingsPage() {
         status: changes.status,
         adminNotes: changes.admin_notes,
         sendEmail,
+        commissionStatus,
       }),
     });
 
@@ -182,7 +218,15 @@ export default function AdminBookingsPage() {
 
     setBookings((currentBookings) =>
       currentBookings.map((booking) =>
-        booking.id === bookingId ? { ...booking, ...changes } : booking,
+        booking.id === bookingId
+          ? {
+              ...booking,
+              ...changes,
+              ...(commissionStatus
+                ? { commission_status: commissionStatus }
+                : {}),
+            }
+          : booking,
       ),
     );
     setSavingBookingId(null);
@@ -225,7 +269,7 @@ export default function AdminBookingsPage() {
             <p className="mt-8">No bookings found.</p>
           ) : (
             <>
-            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_220px_auto] lg:items-center">
+            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_220px_220px_auto] lg:items-center">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -245,6 +289,16 @@ export default function AdminBookingsPage() {
                 <option value="completed">Completed</option>
                 <option value="cancelled">Cancelled</option>
               </select>
+              <select
+                value={viewMode}
+                onChange={(e) =>
+                  setViewMode(e.target.value as "calendar" | "table")
+                }
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              >
+                <option value="calendar">Calendar view</option>
+                <option value="table">Table view</option>
+              </select>
               <p className="text-sm font-semibold text-[#0B3C5D]">
                 {filteredBookings.length} shown
               </p>
@@ -254,6 +308,58 @@ export default function AdminBookingsPage() {
               <p className="mt-8 rounded-xl border border-dashed border-gray-300 p-6 text-center text-gray-600">
                 No bookings match those filters.
               </p>
+            ) : viewMode === "calendar" ? (
+            <div className="mt-6 grid gap-5">
+              {groupedBookings.map((group) => (
+                <section
+                  key={group.date}
+                  className="rounded-2xl border border-gray-200 p-5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                    <h2 className="text-xl font-bold text-[#0B3C5D]">
+                      {group.date}
+                    </h2>
+                    <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-semibold text-[#0B3C5D]">
+                      {group.bookings.length} booking
+                      {group.bookings.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    {group.bookings.map((booking) => (
+                      <article
+                        key={booking.id}
+                        className="rounded-xl bg-[#F7F3EA] p-4"
+                      >
+                        <div className="flex flex-wrap justify-between gap-3">
+                          <div>
+                            <p className="font-bold text-[#0B3C5D]">
+                              {booking.tour_time} - {booking.full_name}
+                            </p>
+                            <p className="mt-1 text-sm text-gray-600">
+                              {booking.listing_name}
+                            </p>
+                          </div>
+                          <span className="h-fit rounded-full bg-white px-3 py-1 text-sm font-semibold capitalize text-[#0B3C5D]">
+                            {booking.status || "new"}
+                          </span>
+                        </div>
+                        <p className="mt-3 text-sm text-gray-600">
+                          {booking.guests} guest
+                          {booking.guests === 1 ? "" : "s"} - {booking.email}
+                        </p>
+                        {booking.guest_message || booking.vendor_note ? (
+                          <p className="mt-3 text-sm leading-6 text-gray-600">
+                            {booking.vendor_note ||
+                              booking.guest_message ||
+                              ""}
+                          </p>
+                        ) : null}
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
             ) : (
             <div className="mt-6 overflow-x-auto">
               <table className="min-w-[1100px] border-collapse">
@@ -268,6 +374,8 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Message</th>
                   <th className="px-4 py-3">Vendor Note</th>
                   <th className="px-4 py-3">Deposit</th>
+                  <th className="px-4 py-3">Value</th>
+                  <th className="px-4 py-3">Commission</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Notes</th>
                 </tr>
@@ -289,6 +397,32 @@ export default function AdminBookingsPage() {
                     </td>
                     <td className="px-4 py-3 capitalize">
                       {formatDeposit(booking)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {formatMoney(booking.booking_value_cents)}
+                    </td>
+                    <td className="px-4 py-3 capitalize">
+                      <p>{formatMoney(booking.commission_amount_cents)}</p>
+                      <select
+                        value={booking.commission_status || "unpaid"}
+                        onChange={(e) =>
+                          updateBooking(
+                            booking.id,
+                            {
+                              status: booking.status || "new",
+                              admin_notes: booking.admin_notes,
+                            },
+                            false,
+                            e.target.value as "unpaid" | "paid" | "waived",
+                          )
+                        }
+                        className="mt-2 rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none"
+                        disabled={savingBookingId === booking.id}
+                      >
+                        <option value="unpaid">Unpaid</option>
+                        <option value="paid">Paid</option>
+                        <option value="waived">Waived</option>
+                      </select>
                     </td>
                     <td className="px-4 py-3">
                       <select

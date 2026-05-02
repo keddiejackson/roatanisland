@@ -31,6 +31,8 @@ export async function POST(request: Request) {
   const body = (await request.json()) as BookingRequest;
   const guests = Number(body.guests);
   const guestMessage = body.guestMessage?.trim().slice(0, 1000) || null;
+  let estimatedBookingValueCents: number | null = null;
+  let estimatedCommissionCents: number | null = null;
 
   if (
     !body.fullName ||
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
   if (body.listingId) {
     const { data: listing, error: listingRulesError } = await supabaseServer
       .from("listings")
-      .select("max_guests, minimum_notice_hours")
+      .select("max_guests, minimum_notice_hours, price")
       .eq("id", body.listingId)
       .maybeSingle();
 
@@ -63,7 +65,13 @@ export async function POST(request: Request) {
     const listingRules = listing as {
       max_guests?: number | null;
       minimum_notice_hours?: number | null;
+      price?: number | null;
     } | null;
+
+    if (listingRules?.price) {
+      estimatedBookingValueCents = Math.round(listingRules.price * guests * 100);
+      estimatedCommissionCents = Math.round(estimatedBookingValueCents * 0.1);
+    }
 
     if (listingRules?.max_guests && guests > listingRules.max_guests) {
       return NextResponse.json(
@@ -99,6 +107,8 @@ export async function POST(request: Request) {
         guests,
         guest_message: guestMessage,
         listing_id: body.listingId || null,
+        booking_value_cents: estimatedBookingValueCents,
+        commission_amount_cents: estimatedCommissionCents,
       },
     ])
     .select(

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import ReviewForm from "@/app/listings/[id]/ReviewForm";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
@@ -25,6 +26,14 @@ type Vendor = {
   id: string;
   business_name: string;
   website: string | null;
+};
+
+type Review = {
+  id: string;
+  reviewer_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
 };
 
 function formatPrice(price: number | null) {
@@ -106,6 +115,7 @@ export default async function ListingPage({
   const { id } = await params;
   const listing = await getListing(id);
   let vendor: Vendor | null = null;
+  let reviews: Review[] = [];
 
   if (!listing) {
     return (
@@ -135,6 +145,16 @@ export default async function ListingPage({
 
     vendor = data as Vendor | null;
   }
+
+  const { data: reviewData } = await supabaseServer
+    .from("listing_reviews")
+    .select("id, reviewer_name, rating, comment, created_at")
+    .eq("listing_id", listing.id)
+    .eq("is_approved", true)
+    .order("created_at", { ascending: false })
+    .limit(12);
+
+  reviews = (reviewData as Review[]) || [];
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
@@ -300,6 +320,59 @@ export default async function ListingPage({
                   Your plans are confirmed after the operator follows up.
                 </p>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-8 rounded-2xl bg-white p-6 ring-1 ring-gray-200">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Guest reviews
+                </p>
+                <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                  What travelers say
+                </h2>
+              </div>
+              <p className="text-sm font-semibold text-[#0B3C5D]">
+                {listing.rating ?? 5}/5 from {listing.reviews_count ?? 0} review
+                {(listing.reviews_count ?? 0) === 1 ? "" : "s"}
+              </p>
+            </div>
+
+            {reviews.length === 0 ? (
+              <p className="mt-5 rounded-xl bg-[#F7F3EA] p-4 text-sm text-gray-600">
+                No approved reviews yet.
+              </p>
+            ) : (
+              <div className="mt-5 grid gap-4">
+                {reviews.map((review) => (
+                  <article key={review.id} className="rounded-xl bg-[#F7F3EA] p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="font-bold text-[#0B3C5D]">
+                        {review.reviewer_name}
+                      </h3>
+                      <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#0B3C5D]">
+                        {review.rating}/5
+                      </span>
+                    </div>
+                    <p className="mt-3 leading-7 text-gray-700">
+                      {review.comment}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="mt-8 rounded-2xl bg-white p-6 ring-1 ring-gray-200">
+            <h2 className="text-2xl font-bold text-[#0B3C5D]">
+              Leave a review
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              Reviews are checked before they appear publicly.
+            </p>
+            <div className="mt-5">
+              <ReviewForm listingId={listing.id} />
             </div>
           </div>
         </article>
