@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity-log";
 import { supabaseServer } from "@/lib/supabase-server";
 import { normalizeWebsiteUrl } from "@/lib/url";
 
@@ -15,7 +16,7 @@ type VendorProfileRequest = {
   showWebsite?: boolean;
 };
 
-async function getUserId(request: Request) {
+async function getUser(request: Request) {
   const token = request.headers
     .get("authorization")
     ?.replace(/^Bearer\s+/i, "");
@@ -25,13 +26,13 @@ async function getUserId(request: Request) {
   }
 
   const { data } = await supabaseServer.auth.getUser(token);
-  return data.user?.id || null;
+  return data.user ? { id: data.user.id, email: data.user.email || null } : null;
 }
 
 export async function PATCH(request: Request) {
-  const userId = await getUserId(request);
+  const user = await getUser(request);
 
-  if (!userId) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -47,7 +48,7 @@ export async function PATCH(request: Request) {
   const { data: vendorLink } = await supabaseServer
     .from("vendor_users")
     .select("vendor_id")
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (!vendorLink?.vendor_id) {
@@ -77,6 +78,21 @@ export async function PATCH(request: Request) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logActivity({
+    actorEmail: user.email,
+    actorRole: "vendor",
+    action: "vendor_profile_updated",
+    targetType: "vendor",
+    targetId: vendor.id,
+    targetLabel: vendor.business_name,
+    metadata: {
+      show_contact_name: vendor.show_contact_name,
+      show_email: vendor.show_email,
+      show_phone: vendor.show_phone,
+      show_website: vendor.show_website,
+    },
+  });
 
   return NextResponse.json({ vendor });
 }

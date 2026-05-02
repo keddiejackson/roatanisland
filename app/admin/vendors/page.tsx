@@ -37,6 +37,28 @@ const emptyForm: VendorForm = {
   notes: "",
 };
 
+async function logAdminActivity(input: {
+  action: string;
+  targetType: string;
+  targetId: string;
+  targetLabel: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const { data } = await supabase.auth.getUser();
+
+  await supabase.from("admin_activity_logs").insert([
+    {
+      actor_email: data.user?.email || null,
+      actor_role: "admin",
+      action: input.action,
+      target_type: input.targetType,
+      target_id: input.targetId,
+      target_label: input.targetLabel,
+      metadata: input.metadata || {},
+    },
+  ]);
+}
+
 export default function AdminVendorsPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
@@ -157,6 +179,15 @@ export default function AdminVendorsPage() {
     }
 
     setVendors((currentVendors) => [data as VendorRow, ...currentVendors]);
+    await logAdminActivity({
+      action: "vendor_created",
+      targetType: "vendor",
+      targetId: data.id,
+      targetLabel: data.business_name,
+      metadata: {
+        email: data.email,
+      },
+    });
     setForm(emptyForm);
   }
 
@@ -182,6 +213,15 @@ export default function AdminVendorsPage() {
           : currentVendor,
       ),
     );
+    await logAdminActivity({
+      action: nextActive ? "vendor_shown" : "vendor_hidden",
+      targetType: "vendor",
+      targetId: vendor.id,
+      targetLabel: vendor.business_name,
+      metadata: {
+        is_active: nextActive,
+      },
+    });
     setSavingVendorId(null);
   }
 

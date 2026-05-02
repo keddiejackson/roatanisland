@@ -4,6 +4,7 @@ import {
   sendAdminNotification,
   sendEmailNotification,
 } from "@/lib/notifications";
+import { logActivity } from "@/lib/activity-log";
 import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -219,6 +220,22 @@ export async function POST(request: Request) {
       ].join("\n"),
     });
   }
+
+  await logActivity({
+    actorEmail: booking.email,
+    actorRole: "guest",
+    action: "booking_submitted",
+    targetType: "booking",
+    targetId: booking.id,
+    targetLabel: `${booking.full_name} - ${listingTitle}`,
+    metadata: {
+      listing_id: booking.listing_id,
+      tour_date: booking.tour_date,
+      tour_time: booking.tour_time,
+      guests: booking.guests,
+      vendor_notified: Boolean(vendorEmail),
+    },
+  });
 
   return NextResponse.json({ bookingId: booking.id });
 }

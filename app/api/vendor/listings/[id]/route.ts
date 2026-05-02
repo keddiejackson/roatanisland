@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity-log";
 import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -15,7 +16,7 @@ type VendorListingUpdateRequest = {
   minimumNoticeHours?: number | string;
 };
 
-async function getUserId(request: Request) {
+async function getUser(request: Request) {
   const token = request.headers
     .get("authorization")
     ?.replace(/^Bearer\s+/i, "");
@@ -25,7 +26,7 @@ async function getUserId(request: Request) {
   }
 
   const { data } = await supabaseServer.auth.getUser(token);
-  return data.user?.id || null;
+  return data.user ? { id: data.user.id, email: data.user.email || null } : null;
 }
 
 function cleanTourTimes(times: unknown) {
@@ -47,9 +48,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const userId = await getUserId(request);
+  const user = await getUser(request);
 
-  if (!userId) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -88,7 +89,7 @@ export async function PATCH(
   const { data: vendorLink } = await supabaseServer
     .from("vendor_users")
     .select("vendor_id")
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (!vendorLink?.vendor_id) {
@@ -152,6 +153,19 @@ export async function PATCH(
       `Vendor ID: ${vendorLink.vendor_id}`,
       "This listing is now waiting for admin review.",
     ].join("\n"),
+  });
+
+  await logActivity({
+    actorEmail: user.email,
+    actorRole: "vendor",
+    action: "listing_edited",
+    targetType: "listing",
+    targetId: listing.id,
+    targetLabel: listing.title,
+    metadata: {
+      vendor_id: vendorLink.vendor_id,
+      status: "waiting_for_admin_review",
+    },
   });
 
   return NextResponse.json({ listing });

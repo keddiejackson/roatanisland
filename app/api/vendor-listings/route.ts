@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity-log";
 import { logAppError } from "@/lib/error-log";
 import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
 import {
@@ -47,11 +48,15 @@ async function getSessionFromRequest(request: Request) {
   const token = authorization?.replace(/^Bearer\s+/i, "");
 
   if (!token) {
-    return { token: null, userId: null };
+    return { token: null, userId: null, email: null };
   }
 
   const { data } = await supabaseServer.auth.getUser(token);
-  return { token, userId: data.user?.id ?? null };
+  return {
+    token,
+    userId: data.user?.id ?? null,
+    email: data.user?.email ?? null,
+  };
 }
 
 export async function POST(request: Request) {
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { token, userId } = await getSessionFromRequest(request);
+  const { token, userId, email } = await getSessionFromRequest(request);
   let vendorId = body.vendorId || null;
 
   if (vendorId && userId) {
@@ -227,6 +232,20 @@ export async function POST(request: Request) {
       },
     },
   ]);
+
+  await logActivity({
+    actorEmail: email || body.vendorEmail || null,
+    actorRole: userId ? "vendor" : "guest",
+    action: "listing_submitted",
+    targetType: "listing",
+    targetId: listing.id,
+    targetLabel: listing.title,
+    metadata: {
+      vendor_id: listing.vendor_id,
+      category: listing.category,
+      status: "waiting_for_admin_review",
+    },
+  });
 
   return NextResponse.json({ listingId: listing.id });
 }

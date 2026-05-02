@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logActivity } from "@/lib/activity-log";
 import { escapeHtml, sendEmailNotification } from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -9,7 +10,7 @@ type VendorBookingUpdateRequest = {
   vendorNote?: string;
 };
 
-async function getUserId(request: Request) {
+async function getUser(request: Request) {
   const token = request.headers
     .get("authorization")
     ?.replace(/^Bearer\s+/i, "");
@@ -19,7 +20,7 @@ async function getUserId(request: Request) {
   }
 
   const { data } = await supabaseServer.auth.getUser(token);
-  return data.user?.id || null;
+  return data.user ? { id: data.user.id, email: data.user.email || null } : null;
 }
 
 function statusSubject(status: VendorBookingStatus, listingTitle: string) {
@@ -38,9 +39,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const userId = await getUserId(request);
+  const user = await getUser(request);
 
-  if (!userId) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -59,7 +60,7 @@ export async function PATCH(
   const { data: vendorLink } = await supabaseServer
     .from("vendor_users")
     .select("vendor_id")
-    .eq("user_id", userId)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (!vendorLink?.vendor_id) {
@@ -144,6 +145,22 @@ export async function PATCH(
       },
     },
   ]);
+
+  await logActivity({
+    actorEmail: user.email,
+    actorRole: "vendor",
+    action: "booking_status_updated",
+    targetType: "booking",
+    targetId: updatedBooking.id,
+    targetLabel: `${updatedBooking.full_name} - ${listing.title}`,
+    metadata: {
+      status: nextStatus,
+      vendor_id: vendorLink.vendor_id,
+      listing_id: updatedBooking.listing_id,
+      emailed: true,
+      has_vendor_note: Boolean(updatedBooking.vendor_note),
+    },
+  });
 
   return NextResponse.json({ booking: updatedBooking });
 }

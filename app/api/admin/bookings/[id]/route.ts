@@ -3,6 +3,7 @@ import {
   escapeHtml,
   sendEmailNotification,
 } from "@/lib/notifications";
+import { logActivity } from "@/lib/activity-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -19,14 +20,14 @@ async function verifyAdmin(request: Request) {
     ?.replace(/^Bearer\s+/i, "");
 
   if (!token) {
-    return false;
+    return null;
   }
 
   const { data } = await supabaseServer.auth.getUser(token);
   const email = data.user?.email;
 
   if (!email) {
-    return false;
+    return null;
   }
 
   const { data: admin } = await supabaseServer
@@ -35,7 +36,7 @@ async function verifyAdmin(request: Request) {
     .eq("email", email.toLowerCase())
     .maybeSingle();
 
-  return Boolean(admin);
+  return admin ? email : null;
 }
 
 function statusSubject(status: BookingStatus, listingTitle: string) {
@@ -69,7 +70,9 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  if (!(await verifyAdmin(request))) {
+  const adminEmail = await verifyAdmin(request);
+
+  if (!adminEmail) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -149,6 +152,20 @@ export async function PATCH(
       },
     },
   ]);
+
+  await logActivity({
+    actorEmail: adminEmail,
+    actorRole: "admin",
+    action: "booking_status_updated",
+    targetType: "booking",
+    targetId: booking.id,
+    targetLabel: `${booking.full_name} - ${listingTitle}`,
+    metadata: {
+      status: nextStatus,
+      emailed: Boolean(body.sendEmail && nextStatus !== "new"),
+      listing_id: booking.listing_id,
+    },
+  });
 
   return NextResponse.json({ booking });
 }

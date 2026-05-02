@@ -70,6 +70,28 @@ function toDraft(listing: ListingRow): ListingDraft {
   };
 }
 
+async function logAdminActivity(input: {
+  action: string;
+  targetType: string;
+  targetId: string;
+  targetLabel: string;
+  metadata?: Record<string, unknown>;
+}) {
+  const { data } = await supabase.auth.getUser();
+
+  await supabase.from("admin_activity_logs").insert([
+    {
+      actor_email: data.user?.email || null,
+      actor_role: "admin",
+      action: input.action,
+      target_type: input.targetType,
+      target_id: input.targetId,
+      target_label: input.targetLabel,
+      metadata: input.metadata || {},
+    },
+  ]);
+}
+
 export default function AdminListingsPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
@@ -336,6 +358,17 @@ export default function AdminListingsPage() {
           : listing,
       ),
     );
+    await logAdminActivity({
+      action: "listing_updated",
+      targetType: "listing",
+      targetId: listingId,
+      targetLabel: draft.title,
+      metadata: {
+        is_active: draft.is_active,
+        is_featured: draft.is_featured,
+        vendor_id: draft.vendor_id || null,
+      },
+    });
     setSavingListingId(null);
   }
 

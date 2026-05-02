@@ -188,6 +188,18 @@ create table if not exists public.app_errors (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.admin_activity_logs (
+  id uuid primary key default gen_random_uuid(),
+  actor_email text,
+  actor_role text not null default 'system',
+  action text not null,
+  target_type text not null,
+  target_id text,
+  target_label text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
 alter table public.bookings
 add column if not exists status text not null default 'new'
 check (status in ('new', 'confirmed', 'completed', 'cancelled'));
@@ -222,6 +234,15 @@ add column if not exists metadata jsonb not null default '{}'::jsonb;
 alter table public.app_errors
 add column if not exists resolved boolean not null default false;
 
+alter table public.admin_activity_logs
+add column if not exists actor_email text;
+
+alter table public.admin_activity_logs
+add column if not exists actor_role text not null default 'system';
+
+alter table public.admin_activity_logs
+add column if not exists metadata jsonb not null default '{}'::jsonb;
+
 alter table public.admin_users enable row level security;
 alter table public.vendors enable row level security;
 alter table public.vendor_users enable row level security;
@@ -229,6 +250,7 @@ alter table public.listings enable row level security;
 alter table public.bookings enable row level security;
 alter table public.analytics_events enable row level security;
 alter table public.app_errors enable row level security;
+alter table public.admin_activity_logs enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select, insert on public.vendors to anon, authenticated;
@@ -238,6 +260,7 @@ grant select, insert on public.bookings to anon, authenticated;
 grant insert on public.analytics_events to anon, authenticated;
 grant select on public.analytics_events to authenticated;
 grant select, update on public.app_errors to authenticated;
+grant select, insert on public.admin_activity_logs to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
 grant select, update on public.bookings to authenticated;
@@ -456,6 +479,32 @@ using (
     where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
   )
 )
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can view activity logs" on public.admin_activity_logs;
+create policy "Admins can view activity logs"
+on public.admin_activity_logs
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can create activity logs" on public.admin_activity_logs;
+create policy "Admins can create activity logs"
+on public.admin_activity_logs
+for insert
+to authenticated
 with check (
   exists (
     select 1
