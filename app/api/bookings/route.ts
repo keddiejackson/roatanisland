@@ -13,6 +13,7 @@ type BookingRequest = {
   tourDate?: string;
   tourTime?: string;
   guests?: number | string;
+  guestMessage?: string;
   listingId?: string | null;
 };
 
@@ -28,6 +29,7 @@ function dateValueFromOffset(hours: number) {
 export async function POST(request: Request) {
   const body = (await request.json()) as BookingRequest;
   const guests = Number(body.guests);
+  const guestMessage = body.guestMessage?.trim().slice(0, 1000) || null;
 
   if (
     !body.fullName ||
@@ -94,10 +96,13 @@ export async function POST(request: Request) {
         tour_date: body.tourDate,
         tour_time: body.tourTime,
         guests,
+        guest_message: guestMessage,
         listing_id: body.listingId || null,
       },
     ])
-    .select("id, full_name, email, tour_date, tour_time, guests, listing_id")
+    .select(
+      "id, full_name, email, tour_date, tour_time, guests, guest_message, listing_id",
+    )
     .single();
 
   if (error) {
@@ -151,6 +156,11 @@ export async function POST(request: Request) {
       <p><strong>Date:</strong> ${escapeHtml(booking.tour_date)}</p>
       <p><strong>Time:</strong> ${escapeHtml(booking.tour_time)}</p>
       <p><strong>Guests:</strong> ${escapeHtml(booking.guests)}</p>
+      ${
+        booking.guest_message
+          ? `<p><strong>Guest message:</strong> ${escapeHtml(booking.guest_message)}</p>`
+          : ""
+      }
     `,
     text: [
       "New booking request",
@@ -160,6 +170,7 @@ export async function POST(request: Request) {
       `Date: ${booking.tour_date}`,
       `Time: ${booking.tour_time}`,
       `Guests: ${booking.guests}`,
+      booking.guest_message ? `Guest message: ${booking.guest_message}` : "",
     ].join("\n"),
   });
 
@@ -189,6 +200,11 @@ export async function POST(request: Request) {
         <p><strong>Date:</strong> ${escapeHtml(booking.tour_date)}</p>
         <p><strong>Time:</strong> ${escapeHtml(booking.tour_time)}</p>
         <p><strong>Guests:</strong> ${escapeHtml(booking.guests)}</p>
+        ${
+          booking.guest_message
+            ? `<p><strong>Guest message:</strong> ${escapeHtml(booking.guest_message)}</p>`
+            : ""
+        }
       `,
       text: [
         "New booking request",
@@ -199,6 +215,7 @@ export async function POST(request: Request) {
         `Date: ${booking.tour_date}`,
         `Time: ${booking.tour_time}`,
         `Guests: ${booking.guests}`,
+        booking.guest_message ? `Guest message: ${booking.guest_message}` : "",
       ].join("\n"),
     });
   }

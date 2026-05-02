@@ -41,6 +41,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   const [tourDate, setTourDate] = useState("");
   const [tourTime, setTourTime] = useState("");
   const [guests, setGuests] = useState("");
+  const [guestMessage, setGuestMessage] = useState("");
 
   useEffect(() => {
     async function fetchListing() {
@@ -122,6 +123,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
           tourDate,
           tourTime,
           guests,
+          guestMessage,
           listingId: listingId || null,
         }),
       });
@@ -320,6 +322,24 @@ export default function BookingForm({ listingId }: BookingFormProps) {
                 {guestWarning}
               </p>
             ) : null}
+          </div>
+
+          <div>
+            <label className="mb-2 block font-medium">
+              Message for the operator
+            </label>
+            <textarea
+              value={guestMessage}
+              onChange={(e) => setGuestMessage(e.target.value)}
+              placeholder="Hotel pickup, kids, questions, flexible times..."
+              rows={4}
+              maxLength={1000}
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              Optional. Share anything that helps the operator confirm your
+              request.
+            </p>
           </div>
 
           <button

@@ -33,6 +33,7 @@ type BookingRow = {
   tour_date: string;
   tour_time: string;
   guests: number;
+  guest_message: string | null;
   status: string | null;
   deposit_status: string | null;
 };
@@ -336,6 +337,7 @@ export default function VendorDashboardPage() {
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Time</th>
                     <th className="px-4 py-3">Guests</th>
+                    <th className="px-4 py-3">Message</th>
                     <th className="px-4 py-3">Status</th>
                   </tr>
                 </thead>
@@ -350,6 +352,9 @@ export default function VendorDashboardPage() {
                       <td className="px-4 py-3">{booking.tour_date}</td>
                       <td className="px-4 py-3">{booking.tour_time}</td>
                       <td className="px-4 py-3">{booking.guests}</td>
+                      <td className="max-w-72 px-4 py-3 text-sm text-gray-600">
+                        {booking.guest_message || "No message"}
+                      </td>
                       <td className="px-4 py-3 capitalize">
                         {booking.status || "new"}
                       </td>

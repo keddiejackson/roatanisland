@@ -133,6 +133,7 @@ create table if not exists public.bookings (
   tour_date date not null,
   tour_time text not null,
   guests integer not null check (guests > 0),
+  guest_message text,
   status text not null default 'new' check (status in ('new', 'confirmed', 'completed', 'cancelled')),
   admin_notes text,
   listing_id uuid references public.listings(id) on delete set null,
@@ -172,6 +173,9 @@ check (status in ('new', 'confirmed', 'completed', 'cancelled'));
 
 alter table public.bookings
 add column if not exists admin_notes text;
+
+alter table public.bookings
+add column if not exists guest_message text;
 
 alter table public.bookings
 add column if not exists deposit_status text not null default 'not_requested';
