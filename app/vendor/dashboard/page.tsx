@@ -21,14 +21,25 @@ type VendorAccount = {
 type ListingRow = {
   id: string;
   title: string;
+  description: string | null;
   category: string | null;
   location: string | null;
   price: number | null;
+  image_url: string | null;
   is_active: boolean | null;
   tour_times: string[] | null;
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
+};
+
+type ListingDraft = {
+  title: string;
+  description: string;
+  price: string;
+  location: string;
+  category: string;
+  imageUrl: string;
 };
 
 type BookingRow = {
@@ -59,6 +70,8 @@ export default function VendorDashboardPage() {
   const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [listings, setListings] = useState<ListingRow[]>([]);
+  const [listingDrafts, setListingDrafts] = useState<Record<string, ListingDraft>>({});
+  const [listingImageFiles, setListingImageFiles] = useState<Record<string, File | null>>({});
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
@@ -103,7 +116,7 @@ export default function VendorDashboardPage() {
       });
 
       const listingSelect =
-        "id, title, category, location, price, is_active, tour_times, availability_note, max_guests, minimum_notice_hours";
+        "id, title, description, category, location, price, image_url, is_active, tour_times, availability_note, max_guests, minimum_notice_hours";
       const listingResult = await supabase
         .from("listings")
         .select(listingSelect)
@@ -115,7 +128,7 @@ export default function VendorDashboardPage() {
       if (listingError?.code === "42703") {
         const fallback = await supabase
           .from("listings")
-          .select("id, title, category, location, price, is_active")
+          .select("id, title, description, category, location, price, image_url, is_active")
           .eq("vendor_id", account.vendor_id)
           .order("created_at", { ascending: false });
 
@@ -135,6 +148,21 @@ export default function VendorDashboardPage() {
       })) as ListingRow[];
 
       setListings(rows);
+      setListingDrafts(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            {
+              title: listing.title || "",
+              description: listing.description || "",
+              price: listing.price === null ? "" : String(listing.price),
+              location: listing.location || "",
+              category: listing.category || "Tours",
+              imageUrl: listing.image_url || "",
+            },
+          ]),
+        ),
+      );
       setListingTimes(
         Object.fromEntries(
           rows.map((listing) => [
@@ -298,6 +326,20 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function updateListingDraft(
+    listingId: string,
+    field: keyof ListingDraft,
+    value: string,
+  ) {
+    setListingDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [listingId]: {
+        ...currentDrafts[listingId],
+        [field]: value,
+      },
+    }));
+  }
+
   function updateAvailabilityNote(listingId: string, value: string) {
     setAvailabilityNotes((currentNotes) => ({
       ...currentNotes,
@@ -320,10 +362,15 @@ export default function VendorDashboardPage() {
   }
 
   async function saveListingTimes(listingId: string) {
+    const draft = listingDrafts[listingId];
     const times = (listingTimes[listingId] || "")
       .split("\n")
       .map((time) => time.trim())
       .filter(Boolean);
+
+    if (!draft) {
+      return;
+    }
 
     if (times.length === 0) {
       alert("Add at least one tour time.");
@@ -331,9 +378,38 @@ export default function VendorDashboardPage() {
     }
 
     const { data: sessionData } = await supabase.auth.getSession();
+    let finalImageUrl = draft.imageUrl;
     setSavingListingId(listingId);
 
-    const response = await fetch("/api/vendor/listing-times", {
+    const imageFile = listingImageFiles[listingId];
+
+    if (imageFile) {
+      const uploadForm = new FormData();
+      uploadForm.append("image", imageFile);
+      uploadForm.append("vendorId", vendorAccount?.vendor_id || "pending");
+
+      const uploadResponse = await fetch("/api/uploads/listing-image", {
+        method: "POST",
+        headers: {
+          ...(sessionData.session?.access_token
+            ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+            : {}),
+        },
+        body: uploadForm,
+      });
+
+      const uploadResult = await uploadResponse.json();
+
+      if (!uploadResponse.ok) {
+        setSavingListingId(null);
+        alert(uploadResult.error || "Unable to upload listing image.");
+        return;
+      }
+
+      finalImageUrl = uploadResult.imageUrl;
+    }
+
+    const response = await fetch(`/api/vendor/listings/${listingId}`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -342,7 +418,12 @@ export default function VendorDashboardPage() {
           : {}),
       },
       body: JSON.stringify({
-        listingId,
+        title: draft.title,
+        description: draft.description,
+        price: draft.price,
+        location: draft.location,
+        category: draft.category,
+        imageUrl: finalImageUrl,
         tourTimes: times,
         availabilityNote: availabilityNotes[listingId] || "",
         maxGuests: maxGuestsByListing[listingId] || "",
@@ -363,27 +444,52 @@ export default function VendorDashboardPage() {
         listing.id === listingId
           ? {
               ...listing,
-              tour_times: result.tourTimes,
-              availability_note: result.availabilityNote || null,
-              max_guests: result.maxGuests,
-              minimum_notice_hours: result.minimumNoticeHours,
+              title: result.listing.title,
+              description: result.listing.description,
+              price: result.listing.price,
+              location: result.listing.location,
+              category: result.listing.category,
+              image_url: result.listing.image_url,
+              tour_times: result.listing.tour_times,
+              availability_note: result.listing.availability_note || null,
+              max_guests: result.listing.max_guests,
+              minimum_notice_hours: result.listing.minimum_notice_hours,
+              is_active: false,
             }
           : listing,
       ),
     );
+    setListingDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [listingId]: {
+        title: result.listing.title || "",
+        description: result.listing.description || "",
+        price:
+          result.listing.price === null ? "" : String(result.listing.price),
+        location: result.listing.location || "",
+        category: result.listing.category || "Tours",
+        imageUrl: result.listing.image_url || "",
+      },
+    }));
+    setListingImageFiles((currentFiles) => ({
+      ...currentFiles,
+      [listingId]: null,
+    }));
     setAvailabilityNotes((currentNotes) => ({
       ...currentNotes,
-      [listingId]: result.availabilityNote || "",
+      [listingId]: result.listing.availability_note || "",
     }));
     setMaxGuestsByListing((currentValues) => ({
       ...currentValues,
-      [listingId]: result.maxGuests ? String(result.maxGuests) : "",
+      [listingId]: result.listing.max_guests
+        ? String(result.listing.max_guests)
+        : "",
     }));
     setNoticeHoursByListing((currentValues) => ({
       ...currentValues,
       [listingId]:
-        result.minimumNoticeHours !== null
-          ? String(result.minimumNoticeHours)
+        result.listing.minimum_notice_hours !== null
+          ? String(result.listing.minimum_notice_hours)
           : "",
     }));
   }
@@ -711,7 +817,14 @@ export default function VendorDashboardPage() {
             </div>
           ) : (
             <div className="mt-8 grid gap-4">
-              {listings.map((listing) => (
+              {listings.map((listing) => {
+                const draft = listingDrafts[listing.id];
+
+                if (!draft) {
+                  return null;
+                }
+
+                return (
                 <article
                   key={listing.id}
                   className="rounded-xl border border-gray-200 p-5"
@@ -726,6 +839,143 @@ export default function VendorDashboardPage() {
                         {listing.location || "Roatan"}
                         {listing.price ? ` - $${listing.price}` : ""}
                       </p>
+                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                        <div className="md:col-span-2">
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Title
+                          </label>
+                          <input
+                            value={draft.title}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "title",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                            required
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Description
+                          </label>
+                          <textarea
+                            value={draft.description}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "description",
+                                e.target.value,
+                              )
+                            }
+                            rows={4}
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            value={draft.price}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "price",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Location
+                          </label>
+                          <input
+                            value={draft.location}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "location",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Category
+                          </label>
+                          <select
+                            value={draft.category}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "category",
+                                e.target.value,
+                              )
+                            }
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          >
+                            <option value="Tours">Tours</option>
+                            <option value="Hotels">Hotels</option>
+                            <option value="Transport">Transport</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Listing Image
+                          </label>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif"
+                            onChange={(e) =>
+                              setListingImageFiles((currentFiles) => ({
+                                ...currentFiles,
+                                [listing.id]: e.target.files?.[0] || null,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                          {listingImageFiles[listing.id] ? (
+                            <p className="mt-2 text-sm text-gray-500">
+                              Selected: {listingImageFiles[listing.id]?.name}
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                            Image URL
+                          </label>
+                          <input
+                            value={draft.imageUrl}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "imageUrl",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="https://..."
+                            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                        </div>
+                      </div>
+
                       <div className="mt-4">
                         <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
                           Available tour times
@@ -806,12 +1056,13 @@ export default function VendorDashboardPage() {
                       >
                         {savingListingId === listing.id
                           ? "Saving..."
-                          : "Save times"}
+                          : "Save for review"}
                       </button>
                     </div>
                   </div>
                 </article>
-              ))}
+              );
+              })}
             </div>
           )}
         </section>
