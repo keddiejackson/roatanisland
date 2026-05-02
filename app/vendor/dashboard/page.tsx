@@ -48,6 +48,7 @@ export default function VendorDashboardPage() {
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
+  const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -263,6 +264,39 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  async function updateBookingStatus(
+    bookingId: string,
+    status: "confirmed" | "cancelled",
+  ) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    setSavingBookingId(bookingId);
+
+    const response = await fetch(`/api/vendor/bookings/${bookingId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    const result = await response.json();
+    setSavingBookingId(null);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to update booking.");
+      return;
+    }
+
+    setBookings((currentBookings) =>
+      currentBookings.map((booking) =>
+        booking.id === bookingId ? { ...booking, status } : booking,
+      ),
+    );
+  }
+
   if (loading) {
     return (
       <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
@@ -328,7 +362,7 @@ export default function VendorDashboardPage() {
             </div>
           ) : (
             <div className="mt-8 overflow-x-auto">
-              <table className="min-w-[900px] border-collapse">
+              <table className="min-w-[1100px] border-collapse">
                 <thead>
                   <tr className="border-b text-left">
                     <th className="px-4 py-3">Listing</th>
@@ -339,6 +373,7 @@ export default function VendorDashboardPage() {
                     <th className="px-4 py-3">Guests</th>
                     <th className="px-4 py-3">Message</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -357,6 +392,34 @@ export default function VendorDashboardPage() {
                       </td>
                       <td className="px-4 py-3 capitalize">
                         {booking.status || "new"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() =>
+                              updateBookingStatus(booking.id, "confirmed")
+                            }
+                            disabled={
+                              savingBookingId === booking.id ||
+                              booking.status === "confirmed"
+                            }
+                            className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                          >
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() =>
+                              updateBookingStatus(booking.id, "cancelled")
+                            }
+                            disabled={
+                              savingBookingId === booking.id ||
+                              booking.status === "cancelled"
+                            }
+                            className="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
