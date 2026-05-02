@@ -187,7 +187,7 @@ export default function AdminVendorsPage() {
 
   async function deleteVendor(vendor: VendorRow) {
     const confirmed = window.confirm(
-      `Delete "${vendor.business_name}" and all of their listings permanently? This cannot be undone.`,
+      `Permanent delete "${vendor.business_name}"?\n\nThis removes the vendor and all of their listings completely. This cannot be undone. Use "Hide vendor" instead if you only want to remove them from public view.`,
     );
 
     if (!confirmed) {
@@ -230,7 +230,7 @@ export default function AdminVendorsPage() {
               Vendor Onboarding
             </h1>
             <p className="mt-2 text-gray-600">
-              Add local operators once, then assign listings to them.
+              Add local operators, hide them from public view, or permanently delete old records.
             </p>
 
             {setupMessage ? (
@@ -314,7 +314,7 @@ export default function AdminVendorsPage() {
               <div>
                 <h2 className="text-2xl font-bold text-[#0B3C5D]">Vendors</h2>
                 <p className="mt-2 text-gray-600">
-                  Keep partner contact details handy for bookings and follow-up.
+                  Use Hide for reversible removal. Use Permanent delete only when the record should be gone.
                 </p>
               </div>
               <ExportCsvButton type="vendors" />
@@ -385,7 +385,9 @@ export default function AdminVendorsPage() {
                           disabled={savingVendorId === vendor.id}
                           className="rounded-xl border border-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#007B7B] disabled:opacity-50"
                         >
-                          {vendor.is_active === false ? "Activate" : "Deactivate"}
+                          {vendor.is_active === false
+                            ? "Show vendor"
+                            : "Hide vendor"}
                         </button>
                         <button
                           onClick={() => deleteVendor(vendor)}
@@ -394,7 +396,7 @@ export default function AdminVendorsPage() {
                         >
                           {deletingVendorId === vendor.id
                             ? "Deleting..."
-                            : "Delete"}
+                            : "Permanent delete"}
                         </button>
                       </div>
                     </div>

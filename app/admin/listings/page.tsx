@@ -341,7 +341,7 @@ export default function AdminListingsPage() {
 
   async function deleteListing(listing: ListingRow) {
     const confirmed = window.confirm(
-      `Delete "${listing.title}" permanently? This cannot be undone.`,
+      `Permanent delete "${listing.title}"?\n\nThis removes the listing completely and cannot be undone. Use "Hide from public site" instead if you only want to remove it from public view.`,
     );
 
     if (!confirmed) {
@@ -390,7 +390,7 @@ export default function AdminListingsPage() {
                 Admin Listings
               </h1>
               <p className="mt-2 text-gray-600">
-                Edit listings and choose which ones appear on the public site.
+                Hide listings from public view, edit details, or permanently delete old records.
               </p>
             </div>
             <ExportCsvButton type="listings" />
@@ -655,7 +655,7 @@ export default function AdminListingsPage() {
                               )
                             }
                           />
-                          Active on public site
+                          Show on public site
                         </label>
 
                         <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-2">
@@ -689,7 +689,7 @@ export default function AdminListingsPage() {
                         >
                           {deletingListingId === listing.id
                             ? "Deleting..."
-                            : "Delete"}
+                            : "Permanent delete"}
                         </button>
                       </div>
                     </div>
