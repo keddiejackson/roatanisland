@@ -79,6 +79,7 @@ export default function AdminListingsPage() {
   const [drafts, setDrafts] = useState<Record<string, ListingDraft>>({});
   const [loading, setLoading] = useState(true);
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
+  const [deletingListingId, setDeletingListingId] = useState<string | null>(null);
   const [setupMessage, setSetupMessage] = useState("");
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -336,6 +337,45 @@ export default function AdminListingsPage() {
       ),
     );
     setSavingListingId(null);
+  }
+
+  async function deleteListing(listing: ListingRow) {
+    const confirmed = window.confirm(
+      `Delete "${listing.title}" permanently? This cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    setDeletingListingId(listing.id);
+
+    const response = await fetch(`/api/admin/listings/${listing.id}`, {
+      method: "DELETE",
+      headers: {
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+    });
+
+    const result = await response.json();
+    setDeletingListingId(null);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to delete listing.");
+      return;
+    }
+
+    setListings((currentListings) =>
+      currentListings.filter((currentListing) => currentListing.id !== listing.id),
+    );
+    setDrafts((currentDrafts) => {
+      const nextDrafts = { ...currentDrafts };
+      delete nextDrafts[listing.id];
+      return nextDrafts;
+    });
   }
 
   return (
@@ -640,6 +680,16 @@ export default function AdminListingsPage() {
                           className="rounded-xl bg-[#00A8A8] px-5 py-2 font-semibold text-white disabled:opacity-50"
                         >
                           {savingListingId === listing.id ? "Saving..." : "Save"}
+                        </button>
+
+                        <button
+                          onClick={() => deleteListing(listing)}
+                          disabled={deletingListingId === listing.id}
+                          className="rounded-xl bg-red-500 px-5 py-2 font-semibold text-white disabled:opacity-50"
+                        >
+                          {deletingListingId === listing.id
+                            ? "Deleting..."
+                            : "Delete"}
                         </button>
                       </div>
                     </div>

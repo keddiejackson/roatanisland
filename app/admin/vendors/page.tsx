@@ -46,6 +46,7 @@ export default function AdminVendorsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingVendorId, setSavingVendorId] = useState<string | null>(null);
+  const [deletingVendorId, setDeletingVendorId] = useState<string | null>(null);
   const [setupMessage, setSetupMessage] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -182,6 +183,40 @@ export default function AdminVendorsPage() {
       ),
     );
     setSavingVendorId(null);
+  }
+
+  async function deleteVendor(vendor: VendorRow) {
+    const confirmed = window.confirm(
+      `Delete "${vendor.business_name}" and all of their listings permanently? This cannot be undone.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    setDeletingVendorId(vendor.id);
+
+    const response = await fetch(`/api/admin/vendors/${vendor.id}`, {
+      method: "DELETE",
+      headers: {
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+    });
+
+    const result = await response.json();
+    setDeletingVendorId(null);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to delete vendor.");
+      return;
+    }
+
+    setVendors((currentVendors) =>
+      currentVendors.filter((currentVendor) => currentVendor.id !== vendor.id),
+    );
   }
 
   return (
@@ -344,13 +379,24 @@ export default function AdminVendorsPage() {
                         </p>
                       </div>
 
-                      <button
-                        onClick={() => toggleVendor(vendor)}
-                        disabled={savingVendorId === vendor.id}
-                        className="rounded-xl border border-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#007B7B] disabled:opacity-50"
-                      >
-                        {vendor.is_active === false ? "Activate" : "Deactivate"}
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => toggleVendor(vendor)}
+                          disabled={savingVendorId === vendor.id}
+                          className="rounded-xl border border-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#007B7B] disabled:opacity-50"
+                        >
+                          {vendor.is_active === false ? "Activate" : "Deactivate"}
+                        </button>
+                        <button
+                          onClick={() => deleteVendor(vendor)}
+                          disabled={deletingVendorId === vendor.id}
+                          className="rounded-xl bg-red-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                        >
+                          {deletingVendorId === vendor.id
+                            ? "Deleting..."
+                            : "Delete"}
+                        </button>
+                      </div>
                     </div>
 
                     <div className="mt-4 grid gap-3 text-sm text-gray-600 md:grid-cols-3">
