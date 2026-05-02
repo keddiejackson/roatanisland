@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { normalizeWebsiteUrl } from "@/lib/url";
 
 type VendorProfileRequest = {
   businessName?: string;
@@ -55,7 +56,7 @@ export async function PATCH(request: Request) {
       business_name: body.businessName.trim(),
       contact_name: body.contactName?.trim() || null,
       phone: body.phone?.trim() || null,
-      website: body.website?.trim() || null,
+      website: normalizeWebsiteUrl(body.website),
       notes: body.notes?.trim() || null,
       profile_image_url: body.profileImageUrl?.trim() || null,
     })

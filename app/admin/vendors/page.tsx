@@ -6,6 +6,7 @@ import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
+import { normalizeWebsiteUrl } from "@/lib/url";
 
 type VendorRow = {
   id: string;
@@ -139,7 +140,7 @@ export default function AdminVendorsPage() {
           contact_name: form.contact_name || null,
           email: form.email || null,
           phone: form.phone || null,
-          website: form.website || null,
+          website: normalizeWebsiteUrl(form.website),
           notes: form.notes || null,
           is_active: true,
         },

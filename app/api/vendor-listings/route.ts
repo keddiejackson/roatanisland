@@ -5,6 +5,7 @@ import {
   createSupabaseUserClient,
   supabaseServer,
 } from "@/lib/supabase-server";
+import { normalizeWebsiteUrl } from "@/lib/url";
 
 type VendorListingRequest = {
   vendorId?: string | null;
@@ -123,7 +124,7 @@ export async function POST(request: Request) {
           contact_name: body.contactName || null,
           email: body.vendorEmail || null,
           phone: body.phone || null,
-          website: body.website || null,
+          website: normalizeWebsiteUrl(body.website),
           notes: body.vendorNotes || null,
           is_active: true,
         },

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { normalizeWebsiteUrl } from "@/lib/url";
 
 export default function VendorSignupPage() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export default function VendorSignupPage() {
         business_name: businessName,
         contact_name: contactName || null,
         phone: phone || null,
-        website: website || null,
+        website: normalizeWebsiteUrl(website),
       },
     );
 
