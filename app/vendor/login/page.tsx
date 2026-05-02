@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { normalizeWebsiteUrl } from "@/lib/url";
 
 export default function VendorLoginPage() {
   const router = useRouter();
@@ -11,6 +12,49 @@ export default function VendorLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  async function finishVendorSetupIfNeeded() {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+
+    if (!user) {
+      return;
+    }
+
+    const { data: existingVendor } = await supabase
+      .from("vendor_users")
+      .select("vendor_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (existingVendor?.vendor_id) {
+      return;
+    }
+
+    const metadata = user.user_metadata || {};
+    const businessName =
+      typeof metadata.vendor_business_name === "string"
+        ? metadata.vendor_business_name
+        : "";
+
+    if (!businessName) {
+      return;
+    }
+
+    await supabase.rpc("create_vendor_account", {
+      business_name: businessName,
+      contact_name:
+        typeof metadata.vendor_contact_name === "string"
+          ? metadata.vendor_contact_name
+          : null,
+      phone:
+        typeof metadata.vendor_phone === "string" ? metadata.vendor_phone : null,
+      website:
+        typeof metadata.vendor_website === "string"
+          ? normalizeWebsiteUrl(metadata.vendor_website)
+          : null,
+    });
+  }
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,6 +72,8 @@ export default function VendorLoginPage() {
       setError(loginError.message);
       return;
     }
+
+    await finishVendorSetupIfNeeded();
 
     router.push("/vendor/dashboard");
     router.refresh();

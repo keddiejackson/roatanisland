@@ -15,21 +15,40 @@ export default function VendorSignupPage() {
   const [website, setWebsite] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSignup(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
 
     const { data: authData, error: signupError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/vendor/login`,
+        data: {
+          vendor_business_name: businessName,
+          vendor_contact_name: contactName || null,
+          vendor_phone: phone || null,
+          vendor_website: normalizeWebsiteUrl(website),
+        },
+      },
     });
 
     if (signupError || !authData.user) {
       setError(signupError?.message || "Unable to create vendor account.");
       setLoading(false);
+      return;
+    }
+
+    if (!authData.session) {
+      setLoading(false);
+      setSuccess(
+        "Check your email to confirm your account. After confirmation, you will be sent to vendor login.",
+      );
       return;
     }
 
@@ -140,6 +159,11 @@ export default function VendorSignupPage() {
 
             {error ? (
               <p className="text-sm text-red-600 md:col-span-2">{error}</p>
+            ) : null}
+            {success ? (
+              <p className="rounded-xl bg-green-100 p-4 text-sm text-green-800 md:col-span-2">
+                {success}
+              </p>
             ) : null}
 
             <button
