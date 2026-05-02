@@ -34,6 +34,7 @@ type BookingRow = {
   tour_time: string;
   guests: number;
   guest_message: string | null;
+  vendor_note: string | null;
   status: string | null;
   deposit_status: string | null;
 };
@@ -43,6 +44,7 @@ export default function VendorDashboardPage() {
   const [vendorAccount, setVendorAccount] = useState<VendorAccount | null>(null);
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
@@ -153,7 +155,16 @@ export default function VendorDashboardPage() {
 
       if (bookingsResponse.ok) {
         const bookingsResult = await bookingsResponse.json();
-        setBookings((bookingsResult.bookings as BookingRow[]) || []);
+        const bookingRows = (bookingsResult.bookings as BookingRow[]) || [];
+        setBookings(bookingRows);
+        setVendorNotes(
+          Object.fromEntries(
+            bookingRows.map((booking) => [
+              booking.id,
+              booking.vendor_note || "",
+            ]),
+          ),
+        );
       }
 
       setLoading(false);
@@ -279,7 +290,10 @@ export default function VendorDashboardPage() {
           ? { Authorization: `Bearer ${sessionData.session.access_token}` }
           : {}),
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        status,
+        vendorNote: vendorNotes[bookingId] || "",
+      }),
     });
 
     const result = await response.json();
@@ -292,9 +306,19 @@ export default function VendorDashboardPage() {
 
     setBookings((currentBookings) =>
       currentBookings.map((booking) =>
-        booking.id === bookingId ? { ...booking, status } : booking,
+        booking.id === bookingId
+          ? {
+              ...booking,
+              status,
+              vendor_note: result.booking?.vendor_note || null,
+            }
+          : booking,
       ),
     );
+    setVendorNotes((currentNotes) => ({
+      ...currentNotes,
+      [bookingId]: result.booking?.vendor_note || "",
+    }));
   }
 
   if (loading) {
@@ -372,6 +396,7 @@ export default function VendorDashboardPage() {
                     <th className="px-4 py-3">Time</th>
                     <th className="px-4 py-3">Guests</th>
                     <th className="px-4 py-3">Message</th>
+                    <th className="px-4 py-3">Your note</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
@@ -389,6 +414,22 @@ export default function VendorDashboardPage() {
                       <td className="px-4 py-3">{booking.guests}</td>
                       <td className="max-w-72 px-4 py-3 text-sm text-gray-600">
                         {booking.guest_message || "No message"}
+                      </td>
+                      <td className="px-4 py-3">
+                        <textarea
+                          value={vendorNotes[booking.id] || ""}
+                          onChange={(e) =>
+                            setVendorNotes((currentNotes) => ({
+                              ...currentNotes,
+                              [booking.id]: e.target.value,
+                            }))
+                          }
+                          rows={2}
+                          maxLength={1000}
+                          placeholder="Pickup details or confirmation note"
+                          className="min-w-60 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                          disabled={savingBookingId === booking.id}
+                        />
                       </td>
                       <td className="px-4 py-3 capitalize">
                         {booking.status || "new"}

@@ -49,7 +49,7 @@ export async function GET(request: Request) {
   const { data: bookings, error } = await supabaseServer
     .from("bookings")
     .select(
-      "id, full_name, email, tour_date, tour_time, guests, guest_message, status, listing_id, deposit_status, created_at",
+      "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, listing_id, deposit_status, created_at",
     )
     .in("listing_id", listingIds)
     .order("created_at", { ascending: false })

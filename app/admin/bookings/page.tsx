@@ -15,6 +15,7 @@ type BookingRow = {
   tour_time: string;
   guests: number;
   guest_message: string | null;
+  vendor_note: string | null;
   status: BookingStatus | null;
   admin_notes: string | null;
   listing_id: string | null;
@@ -132,6 +133,7 @@ export default function AdminBookingsPage() {
           booking.tour_date,
           booking.tour_time,
           booking.guest_message || "",
+          booking.vendor_note || "",
           booking.admin_notes || "",
         ]
           .join(" ")
@@ -264,6 +266,7 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Time</th>
                   <th className="px-4 py-3">Guests</th>
                   <th className="px-4 py-3">Message</th>
+                  <th className="px-4 py-3">Vendor Note</th>
                   <th className="px-4 py-3">Deposit</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Notes</th>
@@ -280,6 +283,9 @@ export default function AdminBookingsPage() {
                     <td className="px-4 py-3">{booking.guests}</td>
                     <td className="max-w-72 px-4 py-3 text-sm text-gray-600">
                       {booking.guest_message || "No message"}
+                    </td>
+                    <td className="max-w-72 px-4 py-3 text-sm text-gray-600">
+                      {booking.vendor_note || "No vendor note"}
                     </td>
                     <td className="px-4 py-3 capitalize">
                       {formatDeposit(booking)}

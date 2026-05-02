@@ -6,6 +6,7 @@ type VendorBookingStatus = "confirmed" | "cancelled";
 
 type VendorBookingUpdateRequest = {
   status?: VendorBookingStatus;
+  vendorNote?: string;
 };
 
 async function getUserId(request: Request) {
@@ -46,6 +47,7 @@ export async function PATCH(
   const { id } = await context.params;
   const body = (await request.json()) as VendorBookingUpdateRequest;
   const nextStatus = body.status;
+  const vendorNote = body.vendorNote?.trim().slice(0, 1000) || null;
 
   if (nextStatus !== "confirmed" && nextStatus !== "cancelled") {
     return NextResponse.json(
@@ -87,9 +89,11 @@ export async function PATCH(
 
   const { data: updatedBooking, error } = await supabaseServer
     .from("bookings")
-    .update({ status: nextStatus })
+    .update({ status: nextStatus, vendor_note: vendorNote })
     .eq("id", id)
-    .select("id, full_name, email, tour_date, tour_time, guests, status, listing_id")
+    .select(
+      "id, full_name, email, tour_date, tour_time, guests, status, vendor_note, listing_id",
+    )
     .single();
 
   if (error) {
@@ -106,6 +110,11 @@ export async function PATCH(
       <p><strong>Date:</strong> ${escapeHtml(updatedBooking.tour_date)}</p>
       <p><strong>Time:</strong> ${escapeHtml(updatedBooking.tour_time)}</p>
       <p><strong>Guests:</strong> ${escapeHtml(updatedBooking.guests)}</p>
+      ${
+        updatedBooking.vendor_note
+          ? `<p><strong>Note from operator:</strong> ${escapeHtml(updatedBooking.vendor_note)}</p>`
+          : ""
+      }
     `,
     text: [
       statusMessage(nextStatus),
@@ -114,7 +123,12 @@ export async function PATCH(
       `Date: ${updatedBooking.tour_date}`,
       `Time: ${updatedBooking.tour_time}`,
       `Guests: ${updatedBooking.guests}`,
-    ].join("\n"),
+      updatedBooking.vendor_note
+        ? `Note from operator: ${updatedBooking.vendor_note}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
   });
 
   await supabaseServer.from("analytics_events").insert([
@@ -126,6 +140,7 @@ export async function PATCH(
       metadata: {
         status: nextStatus,
         emailed: true,
+        has_vendor_note: Boolean(updatedBooking.vendor_note),
       },
     },
   ]);
