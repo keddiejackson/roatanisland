@@ -9,6 +9,12 @@ type VendorAccount = {
   vendor_id: string;
   vendors: {
     business_name: string;
+    contact_name: string | null;
+    email: string | null;
+    phone: string | null;
+    website: string | null;
+    notes: string | null;
+    profile_image_url: string | null;
   } | null;
 };
 
@@ -42,6 +48,16 @@ type BookingRow = {
 export default function VendorDashboardPage() {
   const router = useRouter();
   const [vendorAccount, setVendorAccount] = useState<VendorAccount | null>(null);
+  const [profileForm, setProfileForm] = useState({
+    businessName: "",
+    contactName: "",
+    phone: "",
+    website: "",
+    notes: "",
+    profileImageUrl: "",
+  });
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
@@ -64,7 +80,9 @@ export default function VendorDashboardPage() {
 
       const { data: accountData, error: accountError } = await supabase
         .from("vendor_users")
-        .select("vendor_id, vendors(business_name)")
+        .select(
+          "vendor_id, vendors(business_name, contact_name, email, phone, website, notes, profile_image_url)",
+        )
         .eq("user_id", userData.user.id)
         .single();
 
@@ -75,6 +93,14 @@ export default function VendorDashboardPage() {
 
       const account = accountData as unknown as VendorAccount;
       setVendorAccount(account);
+      setProfileForm({
+        businessName: account.vendors?.business_name || "",
+        contactName: account.vendors?.contact_name || "",
+        phone: account.vendors?.phone || "",
+        website: account.vendors?.website || "",
+        notes: account.vendors?.notes || "",
+        profileImageUrl: account.vendors?.profile_image_url || "",
+      });
 
       const listingSelect =
         "id, title, category, location, price, is_active, tour_times, availability_note, max_guests, minimum_notice_hours";
@@ -176,6 +202,93 @@ export default function VendorDashboardPage() {
   async function logout() {
     await supabase.auth.signOut();
     router.push("/");
+  }
+
+  function updateProfileForm(field: keyof typeof profileForm, value: string) {
+    setProfileForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }));
+  }
+
+  async function saveVendorProfile(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const { data: sessionData } = await supabase.auth.getSession();
+    let finalProfileImageUrl = profileForm.profileImageUrl;
+    setSavingProfile(true);
+
+    if (profileImageFile) {
+      const uploadForm = new FormData();
+      uploadForm.append("image", profileImageFile);
+
+      const uploadResponse = await fetch("/api/uploads/vendor-profile-image", {
+        method: "POST",
+        headers: {
+          ...(sessionData.session?.access_token
+            ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+            : {}),
+        },
+        body: uploadForm,
+      });
+
+      const uploadResult = await uploadResponse.json();
+
+      if (!uploadResponse.ok) {
+        setSavingProfile(false);
+        alert(uploadResult.error || "Unable to upload profile picture.");
+        return;
+      }
+
+      finalProfileImageUrl = uploadResult.imageUrl;
+    }
+
+    const response = await fetch("/api/vendor/profile", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        ...profileForm,
+        profileImageUrl: finalProfileImageUrl,
+      }),
+    });
+
+    const result = await response.json();
+    setSavingProfile(false);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to save profile.");
+      return;
+    }
+
+    setVendorAccount((currentAccount) =>
+      currentAccount
+        ? {
+            ...currentAccount,
+            vendors: {
+              business_name: result.vendor.business_name,
+              contact_name: result.vendor.contact_name,
+              email: result.vendor.email,
+              phone: result.vendor.phone,
+              website: result.vendor.website,
+              notes: result.vendor.notes,
+              profile_image_url: result.vendor.profile_image_url,
+            },
+          }
+        : currentAccount,
+    );
+    setProfileForm({
+      businessName: result.vendor.business_name || "",
+      contactName: result.vendor.contact_name || "",
+      phone: result.vendor.phone || "",
+      website: result.vendor.website || "",
+      notes: result.vendor.notes || "",
+      profileImageUrl: result.vendor.profile_image_url || "",
+    });
+    setProfileImageFile(null);
   }
 
   function updateListingTimes(listingId: string, value: string) {
@@ -359,15 +472,113 @@ export default function VendorDashboardPage() {
         </header>
 
         <section className="rounded-2xl bg-white p-8 shadow">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
-            Vendor dashboard
-          </p>
-          <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
-            {vendorAccount?.vendors?.business_name || "Your Business"}
-          </h1>
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+            <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D8EFEC] text-3xl font-bold text-[#0B3C5D]">
+              {profileForm.profileImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profileForm.profileImageUrl}
+                  alt={profileForm.businessName || "Vendor profile"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                (profileForm.businessName || "V").slice(0, 1)
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Vendor dashboard
+              </p>
+              <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+                {vendorAccount?.vendors?.business_name || "Your Business"}
+              </h1>
+              <p className="mt-2 text-gray-600">
+                Track bookings, manage listings, and update your public profile.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+          <h2 className="text-2xl font-bold text-[#0B3C5D]">
+            Public Vendor Profile
+          </h2>
           <p className="mt-2 text-gray-600">
-            Track submitted listings and add new experiences for admin review.
+            These details appear on your public vendor page.
           </p>
+
+          <form onSubmit={saveVendorProfile} className="mt-6 grid gap-5 md:grid-cols-2">
+            <div className="md:col-span-2">
+              <label className="mb-2 block font-medium">Profile Picture</label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={(e) => setProfileImageFile(e.target.files?.[0] || null)}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+              />
+              {profileImageFile ? (
+                <p className="mt-2 text-sm text-gray-500">
+                  Selected: {profileImageFile.name}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="mb-2 block font-medium">Business Name</label>
+              <input
+                value={profileForm.businessName}
+                onChange={(e) => updateProfileForm("businessName", e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block font-medium">Contact Name</label>
+              <input
+                value={profileForm.contactName}
+                onChange={(e) => updateProfileForm("contactName", e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block font-medium">Phone</label>
+              <input
+                value={profileForm.phone}
+                onChange={(e) => updateProfileForm("phone", e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="mb-2 block font-medium">Website</label>
+              <input
+                value={profileForm.website}
+                onChange={(e) => updateProfileForm("website", e.target.value)}
+                placeholder="https://..."
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="mb-2 block font-medium">About / Notes</label>
+              <textarea
+                value={profileForm.notes}
+                onChange={(e) => updateProfileForm("notes", e.target.value)}
+                rows={4}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
+            >
+              {savingProfile ? "Saving profile..." : "Save Profile"}
+            </button>
+          </form>
         </section>
 
         <section className="mt-8 rounded-2xl bg-white p-8 shadow">

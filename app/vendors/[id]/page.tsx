@@ -9,6 +9,7 @@ type Vendor = {
   contact_name: string | null;
   website: string | null;
   notes: string | null;
+  profile_image_url: string | null;
   is_active: boolean | null;
 };
 
@@ -38,7 +39,9 @@ function formatPrice(price: number | null) {
 async function getVendor(id: string) {
   const { data } = await supabaseServer
     .from("vendors")
-    .select("id, business_name, contact_name, website, notes, is_active")
+    .select(
+      "id, business_name, contact_name, website, notes, profile_image_url, is_active",
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -76,6 +79,9 @@ export async function generateMetadata({
       title: vendor.business_name,
       description,
       type: "profile",
+      images: vendor.profile_image_url
+        ? [{ url: vendor.profile_image_url, alt: vendor.business_name }]
+        : undefined,
     },
   };
 }
@@ -133,27 +139,41 @@ export default async function VendorProfilePage({
             </Link>
           </header>
 
-          <div className="py-16">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
-              Local operator
-            </p>
-            <h1 className="mt-3 text-4xl font-bold sm:text-6xl">
-              {vendor.business_name}
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">
-              {vendor.notes ||
-                "Browse active listings from this Roatan operator."}
-            </p>
-            {vendor.website ? (
-              <a
-                href={vendor.website}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-6 inline-block rounded-xl bg-white px-5 py-3 font-semibold text-[#0B3C5D]"
-              >
-                Visit Website
-              </a>
+          <div className="flex flex-col gap-8 py-16 lg:flex-row lg:items-center">
+            {vendor.profile_image_url ? (
+              <div className="relative h-40 w-40 shrink-0 overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/20">
+                <Image
+                  src={vendor.profile_image_url}
+                  alt={vendor.business_name}
+                  fill
+                  sizes="160px"
+                  unoptimized
+                  className="object-cover"
+                />
+              </div>
             ) : null}
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
+                Local operator
+              </p>
+              <h1 className="mt-3 text-4xl font-bold sm:text-6xl">
+                {vendor.business_name}
+              </h1>
+              <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">
+                {vendor.notes ||
+                  "Browse active listings from this Roatan operator."}
+              </p>
+              {vendor.website ? (
+                <a
+                  href={vendor.website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-6 inline-block rounded-xl bg-white px-5 py-3 font-semibold text-[#0B3C5D]"
+                >
+                  Visit Website
+                </a>
+              ) : null}
+            </div>
           </div>
         </div>
       </section>

@@ -79,7 +79,7 @@ async function fetchRows(type: ExportType) {
   const { data, error } = await supabaseServer
     .from("vendors")
     .select(
-      "id, business_name, contact_name, email, phone, website, notes, is_active, created_at",
+      "id, business_name, contact_name, email, phone, website, notes, profile_image_url, is_active, created_at",
     )
     .order("created_at", { ascending: false });
 
