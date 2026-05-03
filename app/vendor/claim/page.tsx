@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-export default function VendorClaimPage() {
+function VendorClaimContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
@@ -144,5 +144,19 @@ export default function VendorClaimPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function VendorClaimPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
+          <div className="mx-auto max-w-2xl">Loading invite...</div>
+        </main>
+      }
+    >
+      <VendorClaimContent />
+    </Suspense>
   );
 }
