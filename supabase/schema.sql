@@ -242,6 +242,43 @@ create table if not exists public.vendor_invites (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.site_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.promo_codes (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique,
+  description text,
+  discount_percent integer check (discount_percent between 1 and 100),
+  discount_amount_cents integer,
+  is_active boolean not null default true,
+  expires_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.listing_addons (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references public.listings(id) on delete cascade,
+  name text not null,
+  price_cents integer not null default 0,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.listing_reports (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid references public.listings(id) on delete set null,
+  reporter_name text,
+  reporter_email text,
+  reason text not null,
+  details text,
+  status text not null default 'new' check (status in ('new', 'reviewing', 'resolved')),
+  created_at timestamptz not null default now()
+);
+
 alter table public.bookings
 add column if not exists status text not null default 'new'
 check (status in ('new', 'confirmed', 'completed', 'cancelled'));
@@ -283,6 +320,15 @@ add column if not exists stripe_payment_intent_id text;
 alter table public.bookings
 add column if not exists paid_at timestamptz;
 
+alter table public.bookings
+add column if not exists promo_code text;
+
+alter table public.bookings
+add column if not exists discount_amount_cents integer;
+
+alter table public.bookings
+add column if not exists selected_addons jsonb not null default '[]'::jsonb;
+
 alter table public.analytics_events
 add column if not exists metadata jsonb not null default '{}'::jsonb;
 
@@ -310,6 +356,13 @@ add column if not exists accepted_at timestamptz;
 alter table public.vendor_invites
 add column if not exists expires_at timestamptz not null default (now() + interval '14 days');
 
+alter table public.promo_codes
+add column if not exists is_active boolean not null default true;
+
+alter table public.listing_reports
+add column if not exists status text not null default 'new'
+check (status in ('new', 'reviewing', 'resolved'));
+
 alter table public.admin_users enable row level security;
 alter table public.vendors enable row level security;
 alter table public.vendor_users enable row level security;
@@ -320,6 +373,10 @@ alter table public.app_errors enable row level security;
 alter table public.admin_activity_logs enable row level security;
 alter table public.listing_reviews enable row level security;
 alter table public.vendor_invites enable row level security;
+alter table public.site_settings enable row level security;
+alter table public.promo_codes enable row level security;
+alter table public.listing_addons enable row level security;
+alter table public.listing_reports enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select, insert on public.vendors to anon, authenticated;
@@ -333,6 +390,14 @@ grant select, insert on public.admin_activity_logs to authenticated;
 grant select, insert on public.listing_reviews to anon, authenticated;
 grant update, delete on public.listing_reviews to authenticated;
 grant select, insert, update on public.vendor_invites to authenticated;
+grant select on public.site_settings to anon, authenticated;
+grant insert, update on public.site_settings to authenticated;
+grant select on public.promo_codes to anon, authenticated;
+grant insert, update, delete on public.promo_codes to authenticated;
+grant select, insert, update, delete on public.listing_addons to authenticated;
+grant select on public.listing_addons to anon, authenticated;
+grant insert on public.listing_reports to anon, authenticated;
+grant select, update on public.listing_reports to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
 grant select, update on public.bookings to authenticated;
@@ -397,6 +462,142 @@ on public.vendor_invites
 for select
 to authenticated
 using (lower(email) = lower(auth.jwt() ->> 'email'));
+
+drop policy if exists "Anyone can view site settings" on public.site_settings;
+create policy "Anyone can view site settings"
+on public.site_settings
+for select
+to anon, authenticated
+using (true);
+
+drop policy if exists "Admins can manage site settings" on public.site_settings;
+create policy "Admins can manage site settings"
+on public.site_settings
+for all
+to authenticated
+using (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Anyone can view active promo codes" on public.promo_codes;
+create policy "Anyone can view active promo codes"
+on public.promo_codes
+for select
+to anon, authenticated
+using (is_active = true);
+
+drop policy if exists "Admins can manage promo codes" on public.promo_codes;
+create policy "Admins can manage promo codes"
+on public.promo_codes
+for all
+to authenticated
+using (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Anyone can view active listing addons" on public.listing_addons;
+create policy "Anyone can view active listing addons"
+on public.listing_addons
+for select
+to anon, authenticated
+using (is_active = true);
+
+drop policy if exists "Vendors can manage own listing addons" on public.listing_addons;
+create policy "Vendors can manage own listing addons"
+on public.listing_addons
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.listings
+    join public.vendor_users on vendor_users.vendor_id = listings.vendor_id
+    where listings.id = listing_addons.listing_id
+      and vendor_users.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.listings
+    join public.vendor_users on vendor_users.vendor_id = listings.vendor_id
+    where listings.id = listing_addons.listing_id
+      and vendor_users.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Admins can manage listing addons" on public.listing_addons;
+create policy "Admins can manage listing addons"
+on public.listing_addons
+for all
+to authenticated
+using (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Anyone can submit listing reports" on public.listing_reports;
+create policy "Anyone can submit listing reports"
+on public.listing_reports
+for insert
+to anon, authenticated
+with check (true);
+
+drop policy if exists "Admins can view listing reports" on public.listing_reports;
+create policy "Admins can view listing reports"
+on public.listing_reports
+for select
+to authenticated
+using (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can update listing reports" on public.listing_reports;
+create policy "Admins can update listing reports"
+on public.listing_reports
+for update
+to authenticated
+using (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
 
 drop policy if exists "Vendors can view own vendor profile" on public.vendors;
 create policy "Vendors can view own vendor profile"

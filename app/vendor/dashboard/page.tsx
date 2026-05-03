@@ -65,6 +65,13 @@ type BookingRow = {
   deposit_status: string | null;
 };
 
+type AddonRow = {
+  id: string;
+  listing_id: string;
+  name: string;
+  price_cents: number;
+};
+
 export default function VendorDashboardPage() {
   const router = useRouter();
   const [vendorAccount, setVendorAccount] = useState<VendorAccount | null>(null);
@@ -86,6 +93,8 @@ export default function VendorDashboardPage() {
   const [listingDrafts, setListingDrafts] = useState<Record<string, ListingDraft>>({});
   const [listingImageFiles, setListingImageFiles] = useState<Record<string, File | null>>({});
   const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [addons, setAddons] = useState<AddonRow[]>([]);
+  const [addonForms, setAddonForms] = useState<Record<string, { name: string; priceCents: string }>>({});
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
   const [blockedDates, setBlockedDates] = useState<Record<string, string>>({});
@@ -226,6 +235,16 @@ export default function VendorDashboardPage() {
           ]),
         ),
       );
+      const listingIds = rows.map((listing) => listing.id);
+      const addonsResult =
+        listingIds.length === 0
+          ? { data: [] }
+          : await supabase
+              .from("listing_addons")
+              .select("id, listing_id, name, price_cents")
+              .in("listing_id", listingIds);
+      const addonsData = addonsResult.data;
+      setAddons((addonsData as AddonRow[]) || []);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const bookingsResponse = await fetch("/api/vendor/bookings", {
@@ -604,6 +623,28 @@ export default function VendorDashboardPage() {
       ...currentNotes,
       [bookingId]: result.booking?.vendor_note || "",
     }));
+  }
+
+  async function addAddon(listingId: string) {
+    const form = addonForms[listingId] || { name: "", priceCents: "" };
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/vendor/listing-addons", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({ listingId, ...form }),
+    });
+    const result = await response.json();
+    if (!response.ok) {
+      alert(result.error || "Unable to add add-on.");
+      return;
+    }
+    setAddons((current) => [...current, result.addon as AddonRow]);
+    setAddonForms((current) => ({ ...current, [listingId]: { name: "", priceCents: "" } }));
   }
 
   const groupedBookings = useMemo(() => {
@@ -1295,6 +1336,56 @@ export default function VendorDashboardPage() {
                             placeholder="24"
                             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
                           />
+                        </div>
+                      </div>
+                      <div className="mt-4 rounded-xl bg-[#F7F3EA] p-4">
+                        <p className="font-semibold text-[#0B3C5D]">Add-ons</p>
+                        <div className="mt-3 grid gap-2">
+                          {addons
+                            .filter((addon) => addon.listing_id === listing.id)
+                            .map((addon) => (
+                              <p key={addon.id} className="text-sm text-gray-600">
+                                {addon.name} - ${(addon.price_cents / 100).toFixed(2)}
+                              </p>
+                            ))}
+                        </div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_120px_auto]">
+                          <input
+                            value={addonForms[listing.id]?.name || ""}
+                            onChange={(e) =>
+                              setAddonForms((current) => ({
+                                ...current,
+                                [listing.id]: {
+                                  ...(current[listing.id] || { name: "", priceCents: "" }),
+                                  name: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Pickup, lunch, private upgrade"
+                            className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
+                          />
+                          <input
+                            type="number"
+                            value={addonForms[listing.id]?.priceCents || ""}
+                            onChange={(e) =>
+                              setAddonForms((current) => ({
+                                ...current,
+                                [listing.id]: {
+                                  ...(current[listing.id] || { name: "", priceCents: "" }),
+                                  priceCents: e.target.value,
+                                },
+                              }))
+                            }
+                            placeholder="Cents"
+                            className="rounded-xl border border-gray-300 px-3 py-2 text-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => addAddon(listing.id)}
+                            className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-semibold text-white"
+                          >
+                            Add
+                          </button>
                         </div>
                       </div>
                     </div>

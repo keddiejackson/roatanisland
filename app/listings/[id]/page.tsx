@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import ReviewForm from "@/app/listings/[id]/ReviewForm";
+import ReportListingForm from "@/app/listings/[id]/ReportListingForm";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
@@ -463,6 +464,7 @@ export default async function ListingPage({
             Submit your preferred date and group size. The local operator will
             confirm availability before your plans are final.
           </p>
+          <ReportListingForm listingId={listing.id} />
         </aside>
       </section>
     </main>

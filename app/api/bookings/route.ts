@@ -16,6 +16,8 @@ type BookingRequest = {
   guests?: number | string;
   guestMessage?: string;
   listingId?: string | null;
+  promoCode?: string;
+  selectedAddonIds?: string[];
 };
 
 function dateValueFromOffset(hours: number) {
@@ -33,6 +35,8 @@ export async function POST(request: Request) {
   const guestMessage = body.guestMessage?.trim().slice(0, 1000) || null;
   let estimatedBookingValueCents: number | null = null;
   let estimatedCommissionCents: number | null = null;
+  let discountAmountCents: number | null = null;
+  let selectedAddons: { id: string; name: string; price_cents: number }[] = [];
 
   if (
     !body.fullName ||
@@ -71,6 +75,46 @@ export async function POST(request: Request) {
 
     if (listingRules?.price) {
       estimatedBookingValueCents = Math.round(listingRules.price * guests * 100);
+    }
+
+    if (Array.isArray(body.selectedAddonIds) && body.selectedAddonIds.length > 0) {
+      const { data: addonRows } = await supabaseServer
+        .from("listing_addons")
+        .select("id, name, price_cents")
+        .eq("listing_id", body.listingId)
+        .eq("is_active", true)
+        .in("id", body.selectedAddonIds);
+
+      selectedAddons =
+        (addonRows as { id: string; name: string; price_cents: number }[]) || [];
+      estimatedBookingValueCents =
+        (estimatedBookingValueCents || 0) +
+        selectedAddons.reduce((total, addon) => total + addon.price_cents, 0);
+    }
+
+    if (body.promoCode?.trim() && estimatedBookingValueCents) {
+      const { data: promo } = await supabaseServer
+        .from("promo_codes")
+        .select("code, discount_percent, discount_amount_cents")
+        .eq("code", body.promoCode.trim().toUpperCase())
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (promo?.discount_percent) {
+        discountAmountCents = Math.round(
+          estimatedBookingValueCents * (promo.discount_percent / 100),
+        );
+      } else if (promo?.discount_amount_cents) {
+        discountAmountCents = promo.discount_amount_cents;
+      }
+
+      if (discountAmountCents) {
+        discountAmountCents = Math.min(discountAmountCents, estimatedBookingValueCents);
+        estimatedBookingValueCents -= discountAmountCents;
+      }
+    }
+
+    if (estimatedBookingValueCents) {
       estimatedCommissionCents = Math.round(estimatedBookingValueCents * 0.1);
     }
 
@@ -151,6 +195,9 @@ export async function POST(request: Request) {
         listing_id: body.listingId || null,
         booking_value_cents: estimatedBookingValueCents,
         commission_amount_cents: estimatedCommissionCents,
+        promo_code: body.promoCode?.trim().toUpperCase() || null,
+        discount_amount_cents: discountAmountCents,
+        selected_addons: selectedAddons,
       },
     ])
     .select(

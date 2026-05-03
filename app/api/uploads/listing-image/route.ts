@@ -21,7 +21,8 @@ function cleanFileName(name: string) {
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const image = formData.get("image");
+  const images = formData.getAll("image");
+  const image = images[0];
   const vendorId = String(formData.get("vendorId") || "pending");
 
   if (!(image instanceof File)) {
@@ -46,35 +47,43 @@ export async function POST(request: Request) {
   }
 
   const safeVendorId = vendorId.replace(/[^a-zA-Z0-9-]/g, "") || "pending";
-  const filePath = `${safeVendorId}/${crypto.randomUUID()}-${cleanFileName(
-    image.name,
-  )}`;
+  const imageUrls: string[] = [];
 
-  const { error } = await supabaseServer.storage
-    .from(bucketName)
-    .upload(filePath, image, {
-      contentType: image.type,
-      upsert: false,
-    });
+  for (const uploadImage of images) {
+    if (!(uploadImage instanceof File)) {
+      continue;
+    }
 
-  if (error) {
-    console.error("Listing image upload failed:", error.message);
-    await logAppError({
-      source: "listing_image_upload",
-      message: error.message,
-      details: {
-        vendorId,
-        fileName: image.name,
-        fileType: image.type,
-        fileSize: image.size,
-      },
-    });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const filePath = `${safeVendorId}/${crypto.randomUUID()}-${cleanFileName(
+      uploadImage.name,
+    )}`;
+    const { error } = await supabaseServer.storage
+      .from(bucketName)
+      .upload(filePath, uploadImage, {
+        contentType: uploadImage.type,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Listing image upload failed:", error.message);
+      await logAppError({
+        source: "listing_image_upload",
+        message: error.message,
+        details: {
+          vendorId,
+          fileName: uploadImage.name,
+          fileType: uploadImage.type,
+          fileSize: uploadImage.size,
+        },
+      });
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    const { data } = supabaseServer.storage
+      .from(bucketName)
+      .getPublicUrl(filePath);
+    imageUrls.push(data.publicUrl);
   }
 
-  const { data } = supabaseServer.storage
-    .from(bucketName)
-    .getPublicUrl(filePath);
-
-  return NextResponse.json({ imageUrl: data.publicUrl });
+  return NextResponse.json({ imageUrl: imageUrls[0], imageUrls });
 }

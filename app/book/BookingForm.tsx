@@ -9,6 +9,7 @@ type BookingFormProps = {
 };
 
 type ListingSummary = {
+  id?: string;
   title: string;
   price: number | null;
   location: string | null;
@@ -17,6 +18,12 @@ type ListingSummary = {
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
+};
+
+type Addon = {
+  id: string;
+  name: string;
+  price_cents: number;
 };
 
 const DEFAULT_TOUR_TIMES = ["10:30 AM", "4:30 PM Sunset Cruise"];
@@ -36,6 +43,8 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   const [depositLoading, setDepositLoading] = useState(false);
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [listing, setListing] = useState<ListingSummary | null>(null);
+  const [addons, setAddons] = useState<Addon[]>([]);
+  const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -43,6 +52,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   const [tourTime, setTourTime] = useState("");
   const [guests, setGuests] = useState("");
   const [guestMessage, setGuestMessage] = useState("");
+  const [promoCode, setPromoCode] = useState("");
 
   useEffect(() => {
     async function fetchListing() {
@@ -59,7 +69,14 @@ export default function BookingForm({ listingId }: BookingFormProps) {
         .single();
 
       if (!error && data) {
-        setListing(data as ListingSummary);
+        setListing({ ...(data as ListingSummary), id: listingId });
+        const addonsResult = await supabase
+          .from("listing_addons")
+          .select("id, name, price_cents")
+          .eq("listing_id", listingId)
+          .eq("is_active", true)
+          .order("created_at", { ascending: true });
+        setAddons((addonsResult.data as Addon[]) || []);
         return;
       }
 
@@ -84,6 +101,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             availability_note: null,
             max_guests: null,
             minimum_notice_hours: null,
+            id: listingId,
           });
         }
       }
@@ -130,6 +148,8 @@ export default function BookingForm({ listingId }: BookingFormProps) {
           tourTime,
           guests,
           guestMessage,
+          promoCode,
+          selectedAddonIds,
           listingId: listingId || null,
         }),
       });
@@ -369,6 +389,49 @@ export default function BookingForm({ listingId }: BookingFormProps) {
               Optional. Share anything that helps the operator confirm your
               request.
             </p>
+          </div>
+
+          {addons.length > 0 ? (
+            <div>
+              <p className="mb-2 block font-medium">Add-ons</p>
+              <div className="grid gap-2">
+                {addons.map((addon) => (
+                  <label
+                    key={addon.id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-gray-300 px-4 py-3"
+                  >
+                    <span>
+                      <input
+                        type="checkbox"
+                        checked={selectedAddonIds.includes(addon.id)}
+                        onChange={(e) =>
+                          setSelectedAddonIds((current) =>
+                            e.target.checked
+                              ? [...current, addon.id]
+                              : current.filter((id) => id !== addon.id),
+                          )
+                        }
+                        className="mr-3"
+                      />
+                      {addon.name}
+                    </span>
+                    <span className="font-semibold text-[#0B3C5D]">
+                      ${(addon.price_cents / 100).toFixed(2)}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div>
+            <label className="mb-2 block font-medium">Promo Code</label>
+            <input
+              value={promoCode}
+              onChange={(e) => setPromoCode(e.target.value)}
+              placeholder="Optional"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+            />
           </div>
 
           <button

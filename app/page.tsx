@@ -212,6 +212,18 @@ export default function Home() {
                 Vendors
               </Link>
               <Link
+                href="/map"
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              >
+                Map
+              </Link>
+              <Link
+                href="/account"
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              >
+                My Bookings
+              </Link>
+              <Link
                 href="/vendor/login"
                 className="hidden rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25 sm:inline-block"
               >
