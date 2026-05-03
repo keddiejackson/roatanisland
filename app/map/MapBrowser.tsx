@@ -70,19 +70,6 @@ const areaButtons = [
   "Camp Bay",
 ];
 
-const areaBoundaryStyles: Record<
-  string,
-  { left: string; top: string; width: string; height: string; rotate: string }
-> = {
-  "West Bay": { left: "13%", top: "56%", width: "17%", height: "14%", rotate: "-10deg" },
-  "West End": { left: "22%", top: "46%", width: "18%", height: "14%", rotate: "-12deg" },
-  "Sandy Bay": { left: "34%", top: "38%", width: "18%", height: "13%", rotate: "-8deg" },
-  "Coxen Hole": { left: "43%", top: "43%", width: "17%", height: "13%", rotate: "-7deg" },
-  "French Harbour": { left: "58%", top: "38%", width: "22%", height: "14%", rotate: "-6deg" },
-  "Oak Ridge": { left: "74%", top: "35%", width: "16%", height: "13%", rotate: "-4deg" },
-  "Camp Bay": { left: "83%", top: "25%", width: "14%", height: "12%", rotate: "4deg" },
-};
-
 function formatPrice(price: number | null) {
   if (!price) return "Ask";
 
@@ -636,25 +623,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             />
           ))}
           <div className="absolute inset-0 bg-[#071F2F]/10" />
-          <div className="pointer-events-none absolute inset-0 z-[1]">
-            {Object.entries(areaBoundaryStyles).map(([area, style]) => (
-              <span
-                key={area}
-                style={{
-                  left: style.left,
-                  top: style.top,
-                  width: style.width,
-                  height: style.height,
-                  transform: `rotate(${style.rotate})`,
-                }}
-                className="absolute rounded-[2rem] border border-[#D6B56D]/70 bg-[#D6B56D]/10 shadow-[0_0_35px_rgba(214,181,109,0.35)]"
-              >
-                <span className="absolute -top-8 left-3 rounded-full bg-[#071F2F]/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#FFF6DA]">
-                  {area}
-                </span>
-              </span>
-            ))}
-          </div>
 
           <div className="absolute left-4 top-4 z-20 grid gap-2">
             <button
