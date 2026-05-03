@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { MapListing } from "@/app/map/page";
 import {
   appleDirectionsUrl,
@@ -61,6 +61,19 @@ const areaButtons = [
   "Oak Ridge",
   "Camp Bay",
 ];
+
+const areaBoundaryStyles: Record<
+  string,
+  { left: string; top: string; width: string; height: string; rotate: string }
+> = {
+  "West Bay": { left: "13%", top: "56%", width: "17%", height: "14%", rotate: "-10deg" },
+  "West End": { left: "22%", top: "46%", width: "18%", height: "14%", rotate: "-12deg" },
+  "Sandy Bay": { left: "34%", top: "38%", width: "18%", height: "13%", rotate: "-8deg" },
+  "Coxen Hole": { left: "43%", top: "43%", width: "17%", height: "13%", rotate: "-7deg" },
+  "French Harbour": { left: "58%", top: "38%", width: "22%", height: "14%", rotate: "-6deg" },
+  "Oak Ridge": { left: "74%", top: "35%", width: "16%", height: "13%", rotate: "-4deg" },
+  "Camp Bay": { left: "83%", top: "25%", width: "14%", height: "12%", rotate: "4deg" },
+};
 
 function formatPrice(price: number | null) {
   if (!price) return "Ask";
@@ -182,13 +195,50 @@ function getTiles(center: typeof roatanCenter, zoom: number) {
   return tiles;
 }
 
+function readInitialMapState(listings: MapListing[]) {
+  if (typeof window === "undefined") {
+    return {
+      category: "All",
+      location: "All",
+      search: "",
+      selectedId: listings[0]?.id || "",
+      center: roatanCenter,
+      zoom: 12,
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const category = params.get("category");
+  const location = params.get("area") || "All";
+  const search = params.get("search") || "";
+  const selectedId = params.get("selected") || listings[0]?.id || "";
+  const selectedListing = listings.find((listing) => listing.id === selectedId);
+  const selectedPin = selectedListing ? listingToPin(selectedListing) : null;
+  const requestedZoom = Number(params.get("zoom"));
+
+  return {
+    category: category && categories.includes(category) ? category : "All",
+    location,
+    search,
+    selectedId,
+    center: selectedPin
+      ? { latitude: selectedPin.latitudeValue, longitude: selectedPin.longitudeValue }
+      : location === "All"
+        ? roatanCenter
+        : findAreaPosition(location),
+    zoom: zoomLevels.includes(requestedZoom) ? requestedZoom : 12,
+  };
+}
+
 export default function MapBrowser({ listings }: { listings: MapListing[] }) {
-  const [category, setCategory] = useState("All");
-  const [location, setLocation] = useState("All");
-  const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState(listings[0]?.id || "");
-  const [center, setCenter] = useState(roatanCenter);
-  const [zoom, setZoom] = useState(12);
+  const initialMapState = useMemo(() => readInitialMapState(listings), [listings]);
+  const [category, setCategory] = useState(initialMapState.category);
+  const [location, setLocation] = useState(initialMapState.location);
+  const [search, setSearch] = useState(initialMapState.search);
+  const [selectedId, setSelectedId] = useState(initialMapState.selectedId);
+  const [center, setCenter] = useState(initialMapState.center);
+  const [zoom, setZoom] = useState(initialMapState.zoom);
+  const [fullMap, setFullMap] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -205,14 +255,30 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       "All",
       ...Array.from(
         new Set(
-          listings
-            .map((listing) => listing.location)
-            .filter((value): value is string => Boolean(value)),
+          [
+            ...areaButtons.filter((area) => area !== "All"),
+            ...listings
+              .map((listing) => listing.location)
+              .filter((value): value is string => Boolean(value)),
+          ],
         ),
       ).sort(),
     ],
     [listings],
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (category !== "All") params.set("category", category);
+    if (location !== "All") params.set("area", location);
+    if (search.trim()) params.set("search", search.trim());
+    if (selectedId) params.set("selected", selectedId);
+    if (zoom !== 12) params.set("zoom", String(zoom));
+
+    const query = params.toString();
+    const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+    window.history.replaceState(null, "", nextUrl);
+  }, [category, location, search, selectedId, zoom]);
 
   const suggestions = useMemo(() => {
     if (!search.trim()) return [];
@@ -231,12 +297,31 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       .slice(0, 6);
   }, [listings, locations, search]);
 
+  const areaCounts = useMemo(() => {
+    return Object.fromEntries(
+      areaButtons.map((area) => {
+        if (area === "All") {
+          return [area, listings.length];
+        }
+
+        const normalizedArea = area.toLowerCase();
+        const count = listings.filter((listing) =>
+          (listing.location || "").toLowerCase().includes(normalizedArea),
+        ).length;
+
+        return [area, count];
+      }),
+    ) as Record<string, number>;
+  }, [listings]);
+
   const filteredListings = useMemo(() => {
     const rows = listings.filter((listing) => {
         const matchesCategory =
           category === "All" || listing.category === category;
         const matchesLocation =
-          location === "All" || listing.location === location;
+          location === "All" ||
+          listing.location === location ||
+          (listing.location || "").toLowerCase().includes(location.toLowerCase());
         const matchesSearch = [
           listing.title,
           listing.location || "",
@@ -343,15 +428,37 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }
 
   return (
-    <section className="grid gap-6 lg:grid-cols-[1fr_380px]">
-      <div className="rounded-2xl bg-white p-4 shadow sm:p-5">
+    <section
+      className={
+        fullMap
+          ? "fixed inset-0 z-50 grid gap-4 overflow-auto bg-[#071F2F] p-3 text-[#17324D] sm:p-5 lg:grid-cols-[1fr_420px]"
+          : "grid gap-6 lg:grid-cols-[1fr_380px]"
+      }
+    >
+      <div className="rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-4 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
+        <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] p-4 text-white sm:flex-row sm:items-center">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
+              Roatan atlas
+            </p>
+            <h2 className="mt-1 text-2xl font-bold">Explore by coast, cove, and crew</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFullMap((current) => !current)}
+            className="min-h-11 rounded-xl border border-[#D6B56D]/50 px-4 text-sm font-semibold text-[#FFF6DA] hover:bg-white/10"
+          >
+            {fullMap ? "Close full map" : "Open full map"}
+          </button>
+        </div>
+
         <div className="grid gap-3 md:grid-cols-[1fr_150px_190px_auto]">
           <div className="relative">
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search map"
-              className="min-h-12 w-full rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              className="min-h-12 w-full rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
             />
             {suggestions.length > 0 ? (
               <div className="absolute left-0 right-0 top-14 z-40 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5">
@@ -376,7 +483,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
           >
             {categories.map((item) => (
               <option key={item} value={item}>
@@ -387,7 +494,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <select
             value={location}
             onChange={(e) => focusArea(e.target.value)}
-            className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
           >
             {locations.map((item) => (
               <option key={item} value={item}>
@@ -398,13 +505,13 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <button
             type="button"
             onClick={useNearMe}
-            className="min-h-12 rounded-xl bg-[#0B3C5D] px-4 text-sm font-semibold text-white"
+            className="min-h-12 rounded-xl bg-[#0B3C5D] px-4 text-sm font-semibold text-white shadow-lg shadow-[#0B3C5D]/15"
           >
             Near me
           </button>
         </div>
         {locationMessage ? (
-          <p className="mt-3 rounded-xl bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+          <p className="mt-3 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
             {locationMessage}
           </p>
         ) : null}
@@ -417,17 +524,22 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               onClick={() => focusArea(area)}
               className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
                 location === area || (area === "All" && location === "All")
-                  ? "bg-[#0B3C5D] text-white"
-                  : "bg-[#EEF7F6] text-[#0B3C5D]"
+                  ? "bg-[#0B3C5D] text-white shadow-lg shadow-[#0B3C5D]/15"
+                  : "border border-[#D6B56D]/25 bg-[#FFF8E8] text-[#0B3C5D]"
               }`}
             >
               {area}
+              <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-xs text-[#0B3C5D]">
+                {areaCounts[area] || 0}
+              </span>
             </button>
           ))}
         </div>
 
         <div
-          className="relative mt-5 min-h-[560px] cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner active:cursor-grabbing"
+          className={`relative mt-5 cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner ring-1 ring-[#071F2F]/10 active:cursor-grabbing ${
+            fullMap ? "min-h-[calc(100vh-260px)]" : "min-h-[560px]"
+          }`}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);
             dragRef.current = {
@@ -467,7 +579,26 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               className="absolute h-64 w-64 bg-cover"
             />
           ))}
-          <div className="absolute inset-0 bg-[#0B3C5D]/5" />
+          <div className="absolute inset-0 bg-[#071F2F]/10" />
+          <div className="pointer-events-none absolute inset-0 z-[1]">
+            {Object.entries(areaBoundaryStyles).map(([area, style]) => (
+              <span
+                key={area}
+                style={{
+                  left: style.left,
+                  top: style.top,
+                  width: style.width,
+                  height: style.height,
+                  transform: `rotate(${style.rotate})`,
+                }}
+                className="absolute rounded-[2rem] border border-[#D6B56D]/70 bg-[#D6B56D]/10 shadow-[0_0_35px_rgba(214,181,109,0.35)]"
+              >
+                <span className="absolute -top-8 left-3 rounded-full bg-[#071F2F]/90 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#FFF6DA]">
+                  {area}
+                </span>
+              </span>
+            ))}
+          </div>
 
           <div className="absolute left-4 top-4 z-20 grid gap-2">
             <button

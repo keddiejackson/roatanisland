@@ -250,7 +250,7 @@ export default function AdminDashboardPage() {
                       Review pending listings
                     </Link>
                     <Link
-                      href="/admin/listings"
+                      href="/admin/map-cleanup"
                       className="rounded-xl bg-[#F7F3EA] px-4 py-3 font-semibold text-[#0B3C5D]"
                     >
                       Clean up map pins
