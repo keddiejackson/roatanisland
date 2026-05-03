@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import PinPicker from "@/app/map/PinPicker";
 import { supabase } from "@/lib/supabase";
 
 type VendorAccount = {
@@ -39,6 +40,8 @@ type ListingRow = {
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type ListingDraft = {
@@ -49,6 +52,8 @@ type ListingDraft = {
   category: string;
   imageUrl: string;
   galleryImageUrls: string;
+  latitude: string;
+  longitude: string;
 };
 
 type BookingRow = {
@@ -156,7 +161,7 @@ export default function VendorDashboardPage() {
       });
 
       const listingSelectWithAvailability =
-        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, approval_status, approval_note, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours";
+        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, approval_status, approval_note, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, latitude, longitude";
       const listingResult = await supabase
         .from("listings")
         .select(listingSelectWithAvailability)
@@ -199,10 +204,12 @@ export default function VendorDashboardPage() {
               description: listing.description || "",
               price: listing.price === null ? "" : String(listing.price),
               location: listing.location || "",
-              category: listing.category || "Tours",
-              imageUrl: listing.image_url || "",
-              galleryImageUrls: (listing.gallery_image_urls || []).join("\n"),
-            },
+            category: listing.category || "Tours",
+            imageUrl: listing.image_url || "",
+            galleryImageUrls: (listing.gallery_image_urls || []).join("\n"),
+            latitude: listing.latitude == null ? "" : String(listing.latitude),
+            longitude: listing.longitude == null ? "" : String(listing.longitude),
+          },
           ]),
         ),
       );
@@ -447,6 +454,29 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  async function findListingMapPin(listingId: string) {
+    const draft = listingDrafts[listingId];
+    if (!draft) return;
+
+    const query = [draft.title, draft.location, "Roatan"].filter(Boolean).join(", ");
+    const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert(result.error || "Unable to find a map pin.");
+      return;
+    }
+
+    setListingDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [listingId]: {
+        ...currentDrafts[listingId],
+        latitude: String(result.latitude),
+        longitude: String(result.longitude),
+      },
+    }));
+  }
+
   async function saveListingTimes(listingId: string) {
     const draft = listingDrafts[listingId];
     const times = (listingTimes[listingId] || "")
@@ -528,6 +558,8 @@ export default function VendorDashboardPage() {
         availabilityNote: availabilityNotes[listingId] || "",
         maxGuests: maxGuestsByListing[listingId] || "",
         minimumNoticeHours: noticeHoursByListing[listingId] || "",
+        latitude: draft.latitude,
+        longitude: draft.longitude,
       }),
     });
 
@@ -574,6 +606,8 @@ export default function VendorDashboardPage() {
         category: result.listing.category || "Tours",
         imageUrl: result.listing.image_url || "",
         galleryImageUrls: (result.listing.gallery_image_urls || []).join("\n"),
+        latitude: result.listing.latitude == null ? "" : String(result.listing.latitude),
+        longitude: result.listing.longitude == null ? "" : String(result.listing.longitude),
       },
     }));
     setBlockedDates((currentDates) => ({
@@ -1392,6 +1426,59 @@ export default function VendorDashboardPage() {
                             Add one image URL per line for the public gallery.
                           </p>
                         </div>
+                      </div>
+
+                      <div className="mt-4 rounded-xl bg-[#F7F3EA] p-4">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-sm font-semibold text-[#0B3C5D]">
+                            Map Pin
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => findListingMapPin(listing.id)}
+                            className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-semibold text-white"
+                          >
+                            Find map pin
+                          </button>
+                        </div>
+                        <div className="mb-3 grid gap-3 sm:grid-cols-2">
+                          <input
+                            type="number"
+                            step="any"
+                            value={draft.latitude}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "latitude",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Latitude"
+                            className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                          <input
+                            type="number"
+                            step="any"
+                            value={draft.longitude}
+                            onChange={(e) =>
+                              updateListingDraft(
+                                listing.id,
+                                "longitude",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Longitude"
+                            className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                        </div>
+                        <PinPicker
+                          latitude={draft.latitude}
+                          longitude={draft.longitude}
+                          onChange={(coords) => {
+                            updateListingDraft(listing.id, "latitude", coords.latitude);
+                            updateListingDraft(listing.id, "longitude", coords.longitude);
+                          }}
+                        />
                       </div>
 
                       <div className="mt-4">

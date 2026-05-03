@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import type { MapListing } from "@/app/map/page";
+import { appleMapsUrl, googleMapsUrl } from "@/lib/map";
 
 type Pin = MapListing & {
   latitudeValue: number;
@@ -63,6 +64,14 @@ function formatPrice(price: number | null) {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(price);
+}
+
+function pinLabel(pin: Pin) {
+  if (pin.price) {
+    return formatPrice(pin.price);
+  }
+
+  return pin.category || "Listing";
 }
 
 function findAreaPosition(location: string | null) {
@@ -407,7 +416,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               >
                 {cluster.pins.length > 1
                   ? `${cluster.pins.length} places`
-                  : primaryPin.category || "Listing"}
+                  : pinLabel(primaryPin)}
               </button>
             );
           })}
@@ -431,7 +440,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
       <aside className="grid gap-4 lg:max-h-[730px] lg:overflow-y-auto">
         {selectedPin ? (
-          <article className="rounded-2xl bg-white p-5 shadow ring-2 ring-[#00A8A8]/25">
+          <article className="sticky bottom-3 z-30 rounded-2xl bg-white p-5 shadow ring-2 ring-[#00A8A8]/25 lg:static">
             <div className="relative h-48 overflow-hidden rounded-xl bg-[#D8EFEC]">
               {selectedPin.image_url ? (
                 <Image
@@ -503,6 +512,34 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               >
                 Book
               </Link>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <a
+                href={googleMapsUrl({
+                  latitude: selectedPin.latitudeValue,
+                  longitude: selectedPin.longitudeValue,
+                  location: selectedPin.location,
+                  title: selectedPin.title,
+                })}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-center text-sm font-semibold text-[#0B3C5D]"
+              >
+                Google Maps
+              </a>
+              <a
+                href={appleMapsUrl({
+                  latitude: selectedPin.latitudeValue,
+                  longitude: selectedPin.longitudeValue,
+                  location: selectedPin.location,
+                  title: selectedPin.title,
+                })}
+                target="_blank"
+                rel="noreferrer"
+                className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-center text-sm font-semibold text-[#0B3C5D]"
+              >
+                Apple Maps
+              </a>
             </div>
           </article>
         ) : null}

@@ -16,6 +16,8 @@ type VendorListingUpdateRequest = {
   availabilityNote?: string;
   maxGuests?: number | string;
   minimumNoticeHours?: number | string;
+  latitude?: number | string;
+  longitude?: number | string;
 };
 
 async function getUser(request: Request) {
@@ -75,6 +77,8 @@ export async function PATCH(
   const minimumNoticeHours = body.minimumNoticeHours
     ? Number(body.minimumNoticeHours)
     : null;
+  const latitude = body.latitude ? Number(body.latitude) : null;
+  const longitude = body.longitude ? Number(body.longitude) : null;
 
   if (
     !body.title?.trim() ||
@@ -136,6 +140,8 @@ export async function PATCH(
       availability_note: body.availabilityNote?.trim() || null,
       max_guests: maxGuests,
       minimum_notice_hours: minimumNoticeHours,
+      latitude,
+      longitude,
       is_active: false,
       approval_status: "pending",
       approval_note: null,
@@ -143,7 +149,7 @@ export async function PATCH(
     })
     .eq("id", id)
     .select(
-      "id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, is_active, approval_status, approval_note",
+      "id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, latitude, longitude, is_active, approval_status, approval_note",
     )
     .single();
 

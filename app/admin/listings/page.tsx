@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
+import PinPicker from "@/app/map/PinPicker";
 import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 
@@ -298,6 +299,29 @@ export default function AdminListingsPage() {
       [listingId]: {
         ...currentDrafts[listingId],
         [field]: value,
+      },
+    }));
+  }
+
+  async function findMapPin(listingId: string) {
+    const draft = drafts[listingId];
+    if (!draft) return;
+
+    const query = [draft.title, draft.location, "Roatan"].filter(Boolean).join(", ");
+    const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert(result.error || "Unable to find a map pin.");
+      return;
+    }
+
+    setDrafts((currentDrafts) => ({
+      ...currentDrafts,
+      [listingId]: {
+        ...currentDrafts[listingId],
+        latitude: String(result.latitude),
+        longitude: String(result.longitude),
       },
     }));
   }
@@ -715,6 +739,29 @@ export default function AdminListingsPage() {
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
                         />
                       </div>
+                    </div>
+                    <div className="mt-4 rounded-xl bg-[#F7F3EA] p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-semibold text-[#0B3C5D]">
+                          Map Pin
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => findMapPin(listing.id)}
+                          disabled={Boolean(setupMessage)}
+                          className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                        >
+                          Find map pin
+                        </button>
+                      </div>
+                      <PinPicker
+                        latitude={draft.latitude}
+                        longitude={draft.longitude}
+                        onChange={(coords) => {
+                          updateDraft(listing.id, "latitude", coords.latitude);
+                          updateDraft(listing.id, "longitude", coords.longitude);
+                        }}
+                      />
                     </div>
 
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">

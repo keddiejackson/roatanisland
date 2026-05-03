@@ -4,6 +4,12 @@ import type { Metadata } from "next";
 import ListingGallery from "@/app/listings/[id]/ListingGallery";
 import ReviewForm from "@/app/listings/[id]/ReviewForm";
 import ReportListingForm from "@/app/listings/[id]/ReportListingForm";
+import {
+  appleMapsUrl,
+  distanceMiles,
+  findAreaPosition,
+  googleMapsUrl,
+} from "@/lib/map";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
@@ -23,6 +29,8 @@ type Listing = {
   is_active: boolean | null;
   rating: number | null;
   reviews_count: number | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type Vendor = {
@@ -39,6 +47,18 @@ type Review = {
   photo_urls: string[] | null;
   created_at: string;
 };
+
+type NearbyListing = Pick<
+  Listing,
+  | "id"
+  | "title"
+  | "price"
+  | "location"
+  | "image_url"
+  | "category"
+  | "latitude"
+  | "longitude"
+>;
 
 function formatPrice(price: number | null) {
   if (!price) {
@@ -120,6 +140,7 @@ export default async function ListingPage({
   const listing = await getListing(id);
   let vendor: Vendor | null = null;
   let reviews: Review[] = [];
+  let nearbyListings: (NearbyListing & { distanceLabel: string })[] = [];
   const galleryImages = [
     listing?.image_url || "",
     ...((listing?.gallery_image_urls || []) as string[]),
@@ -163,6 +184,36 @@ export default async function ListingPage({
     .limit(12);
 
   reviews = (reviewData as Review[]) || [];
+
+  const { data: nearbyData } = await supabaseServer
+    .from("listings")
+    .select("id, title, price, location, image_url, category, latitude, longitude")
+    .eq("is_active", true)
+    .neq("id", listing.id)
+    .limit(24);
+
+  const listingPoint =
+    listing.latitude !== null && listing.longitude !== null
+      ? { latitude: listing.latitude, longitude: listing.longitude }
+      : findAreaPosition(listing.location);
+
+  nearbyListings = (((nearbyData as NearbyListing[]) || [])
+    .map((nearby) => {
+      const nearbyPoint =
+        nearby.latitude !== null && nearby.longitude !== null
+          ? { latitude: nearby.latitude, longitude: nearby.longitude }
+          : findAreaPosition(nearby.location);
+      const distance = distanceMiles(listingPoint, nearbyPoint);
+
+      return {
+        ...nearby,
+        distance,
+        distanceLabel:
+          distance < 0.5 ? "Nearby" : `${distance.toFixed(1)} miles away`,
+      };
+    })
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, 3)) as (NearbyListing & { distanceLabel: string })[];
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
@@ -307,6 +358,50 @@ export default async function ListingPage({
             </div>
           ) : null}
 
+          {nearbyListings.length > 0 ? (
+            <div className="mt-8 rounded-2xl bg-white p-6 ring-1 ring-gray-200">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Nearby
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                More experiences in this area
+              </h2>
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                {nearbyListings.map((nearby) => (
+                  <Link
+                    key={nearby.id}
+                    href={`/listings/${nearby.id}`}
+                    className="overflow-hidden rounded-xl bg-[#F7F3EA] transition hover:-translate-y-0.5 hover:shadow"
+                  >
+                    <div className="relative h-36 bg-[#D8EFEC]">
+                      {nearby.image_url ? (
+                        <Image
+                          src={nearby.image_url}
+                          alt={nearby.title}
+                          fill
+                          sizes="220px"
+                          unoptimized
+                          className="object-cover"
+                        />
+                      ) : null}
+                    </div>
+                    <div className="p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
+                        {nearby.category || "Listing"}
+                      </p>
+                      <h3 className="mt-1 font-bold text-[#0B3C5D]">
+                        {nearby.title}
+                      </h3>
+                      <p className="mt-2 text-sm text-gray-600">
+                        {nearby.distanceLabel} - {formatPrice(nearby.price)}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-8 rounded-2xl bg-[#F7F3EA] p-6">
             <h2 className="text-xl font-bold text-[#0B3C5D]">
               Before you book
@@ -427,6 +522,34 @@ export default async function ListingPage({
               Book This Experience
             </button>
           </Link>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <a
+              href={googleMapsUrl({
+                latitude: listing.latitude,
+                longitude: listing.longitude,
+                location: listing.location,
+                title: listing.title,
+              })}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-center text-sm font-semibold text-[#0B3C5D]"
+            >
+              Google Maps
+            </a>
+            <a
+              href={appleMapsUrl({
+                latitude: listing.latitude,
+                longitude: listing.longitude,
+                location: listing.location,
+                title: listing.title,
+              })}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-center text-sm font-semibold text-[#0B3C5D]"
+            >
+              Apple Maps
+            </a>
+          </div>
 
           <div className="mt-6 rounded-xl bg-[#F7F3EA] p-4">
             <p className="text-sm font-semibold text-[#0B3C5D]">
