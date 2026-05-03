@@ -36,6 +36,15 @@ type MapCollection = {
   zoom: number;
 };
 
+type PickupPoint = {
+  id: string;
+  label: string;
+  kind: string;
+  latitude: number;
+  longitude: number;
+  note: string;
+};
+
 const luxuryLayers = [
   "All",
   "Tours",
@@ -79,6 +88,57 @@ const areaButtons = [
   "French Harbour",
   "Oak Ridge",
   "Camp Bay",
+];
+
+const pickupPoints: PickupPoint[] = [
+  {
+    id: "airport",
+    label: "Roatan Airport",
+    kind: "Airport",
+    latitude: 16.3169,
+    longitude: -86.5229,
+    note: "Best for arrival-day plans and quick transfers after landing.",
+  },
+  {
+    id: "coxen-hole",
+    label: "Coxen Hole Port",
+    kind: "Cruise port",
+    latitude: 16.317,
+    longitude: -86.536,
+    note: "Good for visitors arriving at the Port of Roatan in Coxen Hole.",
+  },
+  {
+    id: "mahogany-bay",
+    label: "Mahogany Bay",
+    kind: "Cruise port",
+    latitude: 16.325,
+    longitude: -86.503,
+    note: "Good for visitors arriving at the Mahogany Bay cruise terminal.",
+  },
+  {
+    id: "west-bay",
+    label: "West Bay",
+    kind: "Hotel area",
+    latitude: 16.274,
+    longitude: -86.599,
+    note: "Useful for beach resorts and guests staying around West Bay.",
+  },
+  {
+    id: "west-end",
+    label: "West End",
+    kind: "Hotel area",
+    latitude: 16.305,
+    longitude: -86.594,
+    note: "Useful for West End stays, restaurants, dive shops, and nightlife.",
+  },
+  {
+    id: "french-harbour",
+    label: "French Harbour",
+    kind: "Hotel area",
+    latitude: 16.354,
+    longitude: -86.455,
+    note: "Helpful for mid-island and east-side pickup planning.",
+  },
 ];
 
 const mapCollections: MapCollection[] = [
@@ -160,6 +220,18 @@ function pinLabel(pin: Pin) {
   }
 
   return pin.category || "Listing";
+}
+
+function driveEstimateLabel(miles: number) {
+  const minutes = Math.max(3, Math.round((miles / 18) * 60));
+  return `${miles.toFixed(1)} mi - about ${minutes} min`;
+}
+
+function pickupFitLabel(miles: number) {
+  if (miles <= 4) return "Easy pickup";
+  if (miles <= 10) return "Good pickup range";
+  if (miles <= 18) return "Plan extra drive time";
+  return "Longer island transfer";
 }
 
 function findAreaPosition(location: string | null) {
@@ -336,6 +408,7 @@ function readInitialMapState(listings: MapListing[]) {
   const search = params.get("search") || "";
   const collectionId = params.get("collection") || "";
   const collection = mapCollections.find((item) => item.id === collectionId);
+  const pickupId = params.get("pickup") || "";
   const selectedId = params.get("selected") || listings[0]?.id || "";
   const selectedListing = listings.find((listing) => listing.id === selectedId);
   const selectedPin = selectedListing ? listingToPin(selectedListing) : null;
@@ -356,6 +429,9 @@ function readInitialMapState(listings: MapListing[]) {
     zoom: zoomLevels.includes(requestedZoom) ? requestedZoom : 12,
     collectionId: collection?.id || "",
     tripIds: readSavedTripIds(listings),
+    pickupId: pickupPoints.some((point) => point.id === pickupId)
+      ? pickupId
+      : "",
   };
 }
 
@@ -374,6 +450,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     initialMapState.tripIds,
   );
   const [tripMessage, setTripMessage] = useState("");
+  const [pickupId, setPickupId] = useState(initialMapState.pickupId);
   const [fullMap, setFullMap] = useState(false);
   const [hoveredId, setHoveredId] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -415,11 +492,12 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     if (selectedId) params.set("selected", selectedId);
     if (zoom !== 12) params.set("zoom", String(zoom));
     if (savedTripIds.length > 0) params.set("trip", savedTripIds.join(","));
+    if (pickupId) params.set("pickup", pickupId);
 
     const query = params.toString();
     const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     window.history.replaceState(null, "", nextUrl);
-  }, [activeCollectionId, category, location, savedTripIds, search, selectedId, zoom]);
+  }, [activeCollectionId, category, location, pickupId, savedTripIds, search, selectedId, zoom]);
 
   useEffect(() => {
     localStorage.setItem("roatan-trip-plan", JSON.stringify(savedTripIds));
@@ -462,6 +540,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const activeCollection =
     mapCollections.find((collection) => collection.id === activeCollectionId) ||
     null;
+  const selectedPickup =
+    pickupPoints.find((point) => point.id === pickupId) || null;
   const collectionCounts = useMemo(() => {
     return Object.fromEntries(
       mapCollections.map((collection) => [
@@ -496,6 +576,23 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         return matchesCategory && matchesLocation && matchesSearch && matchesCollection;
       });
 
+    if (selectedPickup) {
+      return [...rows].sort((a, b) => {
+        const firstPin = listingToPin(a);
+        const secondPin = listingToPin(b);
+        return (
+          distanceMiles(selectedPickup, {
+            latitude: firstPin.latitudeValue,
+            longitude: firstPin.longitudeValue,
+          }) -
+          distanceMiles(selectedPickup, {
+            latitude: secondPin.latitudeValue,
+            longitude: secondPin.longitudeValue,
+          })
+        );
+      });
+    }
+
     if (!userLocation) {
       return rows;
     }
@@ -514,7 +611,15 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         })
       );
     });
-  }, [activeCollection, category, listings, location, search, userLocation]);
+  }, [
+    activeCollection,
+    category,
+    listings,
+    location,
+    search,
+    selectedPickup,
+    userLocation,
+  ]);
 
   const pins = useMemo(
     () => filteredListings.map((listing) => listingToPin(listing)),
@@ -714,13 +819,31 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }
 
   function pinDistanceLabel(pin: Pin) {
+    if (selectedPickup) {
+      const miles = distanceMiles(selectedPickup, {
+        latitude: pin.latitudeValue,
+        longitude: pin.longitudeValue,
+      });
+      return driveEstimateLabel(miles);
+    }
+
     if (!userLocation) return pin.hasExactPin ? "Exact pin" : "Area pin";
     const miles = distanceMiles(userLocation, {
       latitude: pin.latitudeValue,
       longitude: pin.longitudeValue,
     });
-    const minutes = Math.max(1, Math.round((miles / 20) * 60));
-    return `${miles.toFixed(1)} mi - about ${minutes} min`;
+    return driveEstimateLabel(miles);
+  }
+
+  function pickupNoteForPin(pin: Pin) {
+    if (!selectedPickup) return "";
+
+    const miles = distanceMiles(selectedPickup, {
+      latitude: pin.latitudeValue,
+      longitude: pin.longitudeValue,
+    });
+
+    return `${pickupFitLabel(miles)} from ${selectedPickup.label}.`;
   }
 
   return (
@@ -817,6 +940,70 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             {locationMessage}
           </p>
         ) : null}
+
+        <div className="mt-4 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3">
+          <div className="grid gap-3 md:grid-cols-[1fr_240px_auto] md:items-end">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
+                Pickup checker
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
+                Sort the map by distance from a cruise port, hotel area, or the airport.
+              </p>
+            </div>
+            <select
+              value={pickupId}
+              onChange={(event) => {
+                const nextPickup =
+                  pickupPoints.find((point) => point.id === event.target.value) ||
+                  null;
+                setPickupId(event.target.value);
+                if (nextPickup) {
+                  setCenter({
+                    latitude: nextPickup.latitude,
+                    longitude: nextPickup.longitude,
+                  });
+                  setZoom(13);
+                }
+              }}
+              className="min-h-12 rounded-xl border border-[#00A8A8]/25 bg-white px-4 outline-none focus:border-[#00A8A8]"
+            >
+              <option value="">Choose pickup point</option>
+              {pickupPoints.map((point) => (
+                <option key={point.id} value={point.id}>
+                  {point.label}
+                </option>
+              ))}
+            </select>
+            {selectedPickup ? (
+              <button
+                type="button"
+                onClick={() => setPickupId("")}
+                className="min-h-12 rounded-xl bg-white px-4 text-sm font-semibold text-[#0B3C5D] shadow-sm"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          {selectedPickup ? (
+            <div className="mt-3 rounded-xl bg-white p-4 text-sm text-[#0B3C5D]">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="font-bold">
+                  {selectedPickup.label}{" "}
+                  <span className="font-medium text-gray-500">
+                    {selectedPickup.kind}
+                  </span>
+                </p>
+                <p className="font-semibold text-[#007B7B]">
+                  Closest listings shown first
+                </p>
+              </div>
+              <p className="mt-2 leading-6 text-gray-600">
+                {selectedPickup.note}
+              </p>
+            </div>
+          ) : null}
+        </div>
 
         <div className="mt-4 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -991,6 +1178,31 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             />
           ) : null}
 
+          {selectedPickup ? (
+            <div
+              style={{
+                left: `calc(50% + ${
+                  latLonToWorld(
+                    selectedPickup.latitude,
+                    selectedPickup.longitude,
+                    zoom,
+                  ).x - centerWorld.x
+                }px)`,
+                top: `calc(50% + ${
+                  latLonToWorld(
+                    selectedPickup.latitude,
+                    selectedPickup.longitude,
+                    zoom,
+                  ).y - centerWorld.y
+                }px)`,
+              }}
+              className="absolute z-20 -translate-x-1/2 -translate-y-full rounded-full bg-[#D6B56D] px-3 py-2 text-xs font-black text-[#071F2F] shadow-lg ring-4 ring-white"
+              title={selectedPickup.label}
+            >
+              Pickup
+            </div>
+          ) : null}
+
           {zoom >= 12
             ? areaButtons
                 .filter((area) => area !== "All")
@@ -1134,7 +1346,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </span>
           <span className="inline-flex items-center gap-2">
             <span className="h-3 w-3 rounded-full bg-[#D6B56D]" />
-            Hovered place
+            Pickup / hovered
           </span>
           <span className="font-semibold text-[#0B3C5D]">
             {filteredListings.length} listing
@@ -1329,15 +1541,28 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               </div>
               <div className="rounded-xl bg-[#F7F3EA] p-3">
                 <p className="text-gray-500">
-                  {userLocation ? "Distance" : "Price"}
+                  {selectedPickup
+                    ? "From pickup"
+                    : userLocation
+                      ? "Distance"
+                      : "Price"}
                 </p>
                 <p className="font-bold text-[#0B3C5D]">
-                  {userLocation
+                  {selectedPickup || userLocation
                     ? pinDistanceLabel(selectedPin)
                     : formatPrice(selectedPin.price)}
                 </p>
               </div>
             </div>
+            {selectedPickup ? (
+              <div className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3 text-sm text-[#0B3C5D]">
+                <p className="font-bold">Pickup logistics</p>
+                <p className="mt-1 leading-6 text-gray-600">
+                  {pickupNoteForPin(selectedPin)} Confirm exact pickup with the
+                  vendor before booking.
+                </p>
+              </div>
+            ) : null}
             {selectedCluster && selectedCluster.pins.length > 1 ? (
               <div className="mt-4 rounded-xl bg-[#EEF7F6] p-3">
                 <p className="text-sm font-bold text-[#0B3C5D]">
@@ -1481,14 +1706,20 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                   }`}
                 >
                   {pin.location || "Roatan"} -{" "}
-                  {userLocation ? pinDistanceLabel(pin) : formatPrice(pin.price)}
+                  {selectedPickup || userLocation
+                    ? pinDistanceLabel(pin)
+                    : formatPrice(pin.price)}
                 </p>
                 <p
                   className={`mt-1 text-xs font-semibold ${
                     selectedPin?.id === pin.id ? "text-[#9EE8E3]" : "text-[#007B7B]"
                   }`}
                 >
-                  {pin.hasExactPin ? "Exact pin" : "Area pin"}
+                  {selectedPickup
+                    ? pickupNoteForPin(pin)
+                    : pin.hasExactPin
+                      ? "Exact pin"
+                      : "Area pin"}
                 </p>
               </div>
             </div>
