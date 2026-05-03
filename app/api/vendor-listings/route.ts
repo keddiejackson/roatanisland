@@ -28,6 +28,8 @@ type VendorListingRequest = {
   availabilityNote?: string;
   maxGuests?: number | string;
   minimumNoticeHours?: number | string;
+  latitude?: number | string;
+  longitude?: number | string;
 };
 
 function cleanTourTimes(times: unknown) {
@@ -80,6 +82,8 @@ export async function POST(request: Request) {
   const minimumNoticeHours = body.minimumNoticeHours
     ? Number(body.minimumNoticeHours)
     : null;
+  const latitude = body.latitude ? Number(body.latitude) : null;
+  const longitude = body.longitude ? Number(body.longitude) : null;
 
   if (
     !body.title ||
@@ -101,6 +105,16 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json(
       { error: "Please check the capacity and notice settings." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    (latitude !== null && !Number.isFinite(latitude)) ||
+    (longitude !== null && !Number.isFinite(longitude))
+  ) {
+    return NextResponse.json(
+      { error: "Please check the map pin coordinates." },
       { status: 400 },
     );
   }
@@ -194,6 +208,8 @@ export async function POST(request: Request) {
         availability_note: body.availabilityNote?.trim() || null,
         max_guests: maxGuests,
         minimum_notice_hours: minimumNoticeHours,
+        latitude,
+        longitude,
         is_active: false,
         approval_status: "pending",
         approval_note: null,

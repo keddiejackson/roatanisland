@@ -12,12 +12,19 @@ import { supabase } from "@/lib/supabase";
 type CleanupListing = {
   id: string;
   title: string;
+  description: string | null;
   location: string | null;
   category: string | null;
+  price: number | null;
   image_url: string | null;
+  gallery_image_urls: string[] | null;
+  rating: number | null;
+  reviews_count: number | null;
   latitude: number | null;
   longitude: number | null;
   is_active: boolean | null;
+  approval_status: string | null;
+  vendor_id: string | null;
 };
 
 type PinDraft = {
@@ -29,6 +36,36 @@ function hasExactPin(listing: CleanupListing) {
   return listing.latitude !== null && listing.longitude !== null;
 }
 
+function qualityScore(listing: CleanupListing) {
+  const checks = [
+    hasExactPin(listing),
+    Boolean(listing.image_url),
+    (listing.gallery_image_urls || []).length > 0,
+    Boolean(listing.price),
+    Boolean(listing.vendor_id),
+    (listing.description || "").trim().length >= 120,
+    (listing.reviews_count || 0) > 0,
+    listing.is_active !== false,
+  ];
+
+  return Math.round(
+    (checks.filter(Boolean).length / checks.length) * 100,
+  );
+}
+
+function qualityIssues(listing: CleanupListing) {
+  return [
+    !hasExactPin(listing) ? "Missing exact pin" : "",
+    !listing.image_url ? "Missing main photo" : "",
+    (listing.gallery_image_urls || []).length === 0 ? "No gallery" : "",
+    !listing.price ? "Missing price" : "",
+    !listing.vendor_id ? "No vendor linked" : "",
+    (listing.description || "").trim().length < 120 ? "Short description" : "",
+    (listing.reviews_count || 0) === 0 ? "No reviews" : "",
+    listing.is_active === false ? "Not live" : "",
+  ].filter(Boolean);
+}
+
 export default function AdminMapCleanupPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
@@ -37,7 +74,7 @@ export default function AdminMapCleanupPage() {
   const [drafts, setDrafts] = useState<Record<string, PinDraft>>({});
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [pinFilter, setPinFilter] = useState("Needs pin");
+  const [pinFilter, setPinFilter] = useState("Needs attention");
   const [statusMessage, setStatusMessage] = useState("");
   const [busyListingId, setBusyListingId] = useState<string | null>(null);
 
@@ -62,7 +99,7 @@ export default function AdminMapCleanupPage() {
     async function fetchListings() {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, title, location, category, image_url, latitude, longitude, is_active")
+        .select("id, title, description, location, category, price, image_url, gallery_image_urls, rating, reviews_count, latitude, longitude, is_active, approval_status, vendor_id")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -101,8 +138,11 @@ export default function AdminMapCleanupPage() {
       const exactPin = hasExactPin(listing);
       const matchesFilter =
         pinFilter === "All" ||
+        (pinFilter === "Needs attention" && qualityScore(listing) < 100) ||
         (pinFilter === "Needs pin" && !exactPin) ||
-        (pinFilter === "Exact pins" && exactPin);
+        (pinFilter === "Exact pins" && exactPin) ||
+        (pinFilter === "Low score" && qualityScore(listing) < 70) ||
+        (pinFilter === "Not live" && listing.is_active === false);
 
       return matchesSearch && matchesFilter;
     });
@@ -110,6 +150,14 @@ export default function AdminMapCleanupPage() {
 
   const needsPinCount = listings.filter((listing) => !hasExactPin(listing)).length;
   const exactPinCount = listings.length - needsPinCount;
+  const lowScoreCount = listings.filter((listing) => qualityScore(listing) < 70).length;
+  const averageScore =
+    listings.length === 0
+      ? 100
+      : Math.round(
+          listings.reduce((total, listing) => total + qualityScore(listing), 0) /
+            listings.length,
+        );
 
   async function findPin(listing: CleanupListing) {
     setBusyListingId(listing.id);
@@ -189,13 +237,13 @@ export default function AdminMapCleanupPage() {
             </p>
             <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
               <div>
-                <h1 className="text-3xl font-bold">Map Cleanup</h1>
+                <h1 className="text-3xl font-bold">Map QA Dashboard</h1>
                 <p className="mt-2 max-w-2xl text-white/70">
-                  Find missing pins, check them visually, and save exact listing
-                  locations so the public map feels polished.
+                  Find weak map data, fix exact pins, and spot listings that
+                  need photos, prices, vendors, reviews, or stronger details.
                 </p>
               </div>
-              <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
                 <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
                   <p className="text-2xl font-bold">{listings.length}</p>
                   <p className="text-xs text-white/65">Listings</p>
@@ -208,11 +256,36 @@ export default function AdminMapCleanupPage() {
                   <p className="text-2xl font-bold">{exactPinCount}</p>
                   <p className="text-xs text-white/65">Exact pins</p>
                 </div>
+                <div className="rounded-2xl border border-white/10 bg-white/10 p-4">
+                  <p className="text-2xl font-bold">{averageScore}%</p>
+                  <p className="text-xs text-white/65">Avg score</p>
+                </div>
               </div>
             </div>
           </div>
 
           <div className="bg-[#FFFDF7] p-5 sm:p-8">
+            <div className="mb-5 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-[#D6B56D]/25 bg-white p-4">
+                <p className="text-sm text-gray-600">Needs exact pin</p>
+                <p className="mt-1 text-3xl font-bold text-[#0B3C5D]">
+                  {needsPinCount}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#D6B56D]/25 bg-white p-4">
+                <p className="text-sm text-gray-600">Low score</p>
+                <p className="mt-1 text-3xl font-bold text-[#0B3C5D]">
+                  {lowScoreCount}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-[#D6B56D]/25 bg-white p-4">
+                <p className="text-sm text-gray-600">Ready listings</p>
+                <p className="mt-1 text-3xl font-bold text-[#0B3C5D]">
+                  {listings.filter((listing) => qualityScore(listing) === 100).length}
+                </p>
+              </div>
+            </div>
+
             <div className="grid gap-3 md:grid-cols-[1fr_180px]">
               <input
                 value={search}
@@ -225,7 +298,10 @@ export default function AdminMapCleanupPage() {
                 onChange={(event) => setPinFilter(event.target.value)}
                 className="min-h-12 rounded-xl border border-[#D6B56D]/35 px-4 outline-none focus:border-[#00A8A8]"
               >
+                <option>Needs attention</option>
                 <option>Needs pin</option>
+                <option>Low score</option>
+                <option>Not live</option>
                 <option>Exact pins</option>
                 <option>All</option>
               </select>
@@ -252,6 +328,8 @@ export default function AdminMapCleanupPage() {
                   const draft = drafts[listing.id] || { latitude: "", longitude: "" };
                   const exactPin = hasExactPin(listing);
                   const busy = busyListingId === listing.id;
+                  const score = qualityScore(listing);
+                  const issues = qualityIssues(listing);
 
                   return (
                     <article
@@ -293,6 +371,40 @@ export default function AdminMapCleanupPage() {
                         >
                           {exactPin ? "Exact pin saved" : "Needs exact pin"}
                         </span>
+                        <div className="mt-3 rounded-xl bg-[#F7F3EA] p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-sm font-bold text-[#0B3C5D]">
+                              Quality score
+                            </p>
+                            <p className="text-lg font-bold text-[#0B3C5D]">
+                              {score}%
+                            </p>
+                          </div>
+                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                            <div
+                              style={{ width: `${score}%` }}
+                              className={`h-full ${
+                                score >= 90
+                                  ? "bg-[#00A8A8]"
+                                  : score >= 70
+                                    ? "bg-[#D6B56D]"
+                                    : "bg-red-500"
+                              }`}
+                            />
+                          </div>
+                          {issues.length > 0 ? (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {issues.map((issue) => (
+                                <span
+                                  key={issue}
+                                  className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-[#0B3C5D]"
+                                >
+                                  {issue}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
 
                       <div className="grid gap-4">

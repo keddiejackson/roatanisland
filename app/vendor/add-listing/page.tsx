@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import PinPicker from "@/app/map/PinPicker";
 import { supabase } from "@/lib/supabase";
 
 type VendorAccount = {
@@ -29,6 +30,8 @@ export default function AddListingPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [location, setLocation] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [category, setCategory] = useState("Tours");
   const [tourTimes, setTourTimes] = useState(
     "10:30 AM\n4:30 PM Sunset Cruise",
@@ -125,6 +128,8 @@ export default function AddListingPage() {
         description,
         price,
         location,
+        latitude,
+        longitude,
         category,
         imageUrl: finalImageUrl,
         galleryImageUrls: [
@@ -157,6 +162,26 @@ export default function AddListingPage() {
     }
 
     setSubmitted(true);
+  }
+
+  async function findListingMapPin() {
+    const query = [title, location, "Roatan"].filter(Boolean).join(", ");
+
+    if (!query.trim()) {
+      alert("Add a title and location first.");
+      return;
+    }
+
+    const response = await fetch(`/api/geocode?q=${encodeURIComponent(query)}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      alert(result.error || "Unable to find a map pin.");
+      return;
+    }
+
+    setLatitude(String(result.latitude));
+    setLongitude(String(result.longitude));
   }
 
   return (
@@ -340,6 +365,55 @@ export default function AddListingPage() {
                     />
                   </div>
 
+                  <div className="md:col-span-2 rounded-2xl bg-[#F7F3EA] p-5">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                      <div>
+                        <h3 className="font-bold text-[#0B3C5D]">
+                          Map pin
+                        </h3>
+                        <p className="mt-1 text-sm text-gray-600">
+                          Drop the pin as close as possible to where guests meet,
+                          check in, or start the experience.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={findListingMapPin}
+                        className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-semibold text-white"
+                      >
+                        Find pin
+                      </button>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <input
+                        type="number"
+                        step="any"
+                        value={latitude}
+                        onChange={(e) => setLatitude(e.target.value)}
+                        placeholder="Latitude"
+                        className="rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                      />
+                      <input
+                        type="number"
+                        step="any"
+                        value={longitude}
+                        onChange={(e) => setLongitude(e.target.value)}
+                        placeholder="Longitude"
+                        className="rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                      />
+                    </div>
+                    <div className="mt-4">
+                      <PinPicker
+                        latitude={latitude}
+                        longitude={longitude}
+                        onChange={(coords) => {
+                          setLatitude(coords.latitude);
+                          setLongitude(coords.longitude);
+                        }}
+                      />
+                    </div>
+                  </div>
+
                   <div>
                     <label className="mb-2 block font-medium">Category</label>
                     <select
@@ -351,6 +425,9 @@ export default function AddListingPage() {
                       <option value="Tours">Tours</option>
                       <option value="Hotels">Hotels</option>
                       <option value="Transport">Transport</option>
+                      <option value="Food">Food</option>
+                      <option value="Beaches">Beaches</option>
+                      <option value="Private Charters">Private Charters</option>
                     </select>
                   </div>
 

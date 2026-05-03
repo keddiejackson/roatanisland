@@ -253,7 +253,7 @@ export default function AdminDashboardPage() {
                       href="/admin/map-cleanup"
                       className="rounded-xl bg-[#F7F3EA] px-4 py-3 font-semibold text-[#0B3C5D]"
                     >
-                      Clean up map pins
+                      Improve map quality
                     </Link>
                     <Link
                       href="/admin/reviews"
