@@ -2,23 +2,25 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { MapListing } from "@/app/map/page";
 
 type Pin = MapListing & {
-  left: number;
-  top: number;
+  latitudeValue: number;
+  longitudeValue: number;
   hasExactPin: boolean;
 };
 
-const categories = ["All", "Tours", "Hotels", "Transport"];
-
-const bounds = {
-  north: 16.48,
-  south: 16.22,
-  west: -86.65,
-  east: -86.25,
+type Cluster = {
+  id: string;
+  pins: Pin[];
+  latitude: number;
+  longitude: number;
 };
+
+const categories = ["All", "Tours", "Hotels", "Transport"];
+const zoomLevels = [11, 12, 13, 14];
+const roatanCenter = { latitude: 16.34, longitude: -86.48 };
 
 const areaPositions: Record<string, { latitude: number; longitude: number }> = {
   "west bay": { latitude: 16.274, longitude: -86.599 },
@@ -39,8 +41,19 @@ const areaPositions: Record<string, { latitude: number; longitude: number }> = {
   camp: { latitude: 16.413, longitude: -86.332 },
   "camp bay": { latitude: 16.413, longitude: -86.332 },
   "punta gorda": { latitude: 16.402, longitude: -86.377 },
-  roatan: { latitude: 16.34, longitude: -86.48 },
+  roatan: roatanCenter,
 };
+
+const areaButtons = [
+  "All",
+  "West Bay",
+  "West End",
+  "Sandy Bay",
+  "Coxen Hole",
+  "French Harbour",
+  "Oak Ridge",
+  "Camp Bay",
+];
 
 function formatPrice(price: number | null) {
   if (!price) return "Ask";
@@ -61,31 +74,97 @@ function findAreaPosition(location: string | null) {
   return match?.[1] || areaPositions.roatan;
 }
 
-function toPosition(latitude: number, longitude: number) {
-  const left = ((longitude - bounds.west) / (bounds.east - bounds.west)) * 100;
-  const top = ((bounds.north - latitude) / (bounds.north - bounds.south)) * 100;
-
-  return {
-    left: Math.min(Math.max(left, 5), 95),
-    top: Math.min(Math.max(top, 7), 93),
-  };
-}
-
-function pinForListing(listing: MapListing, index: number): Pin {
+function listingToPin(listing: MapListing): Pin {
   const hasExactPin = listing.latitude !== null && listing.longitude !== null;
   const fallback = findAreaPosition(listing.location);
-  const basePosition = hasExactPin
-    ? toPosition(Number(listing.latitude), Number(listing.longitude))
-    : toPosition(fallback.latitude, fallback.longitude);
-  const offsetX = ((index % 3) - 1) * 2.5;
-  const offsetY = (Math.floor(index / 3) % 3) * 2.2;
 
   return {
     ...listing,
     hasExactPin,
-    left: Math.min(Math.max(basePosition.left + offsetX, 5), 95),
-    top: Math.min(Math.max(basePosition.top + offsetY, 7), 93),
+    latitudeValue: hasExactPin ? Number(listing.latitude) : fallback.latitude,
+    longitudeValue: hasExactPin ? Number(listing.longitude) : fallback.longitude,
   };
+}
+
+function latLonToWorld(latitude: number, longitude: number, zoom: number) {
+  const sinLatitude = Math.sin((latitude * Math.PI) / 180);
+  const scale = 256 * 2 ** zoom;
+
+  return {
+    x: ((longitude + 180) / 360) * scale,
+    y:
+      (0.5 -
+        Math.log((1 + sinLatitude) / (1 - sinLatitude)) / (4 * Math.PI)) *
+      scale,
+  };
+}
+
+function worldToLatLon(x: number, y: number, zoom: number) {
+  const scale = 256 * 2 ** zoom;
+  const longitude = (x / scale) * 360 - 180;
+  const n = Math.PI - (2 * Math.PI * y) / scale;
+  const latitude = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+
+  return { latitude, longitude };
+}
+
+function clusterPins(pins: Pin[], zoom: number) {
+  const clusters: Cluster[] = [];
+  const threshold = zoom >= 14 ? 34 : zoom >= 13 ? 44 : 58;
+
+  pins.forEach((pin) => {
+    const point = latLonToWorld(pin.latitudeValue, pin.longitudeValue, zoom);
+    const match = clusters.find((cluster) => {
+      const clusterPoint = latLonToWorld(
+        cluster.latitude,
+        cluster.longitude,
+        zoom,
+      );
+      return (
+        Math.hypot(point.x - clusterPoint.x, point.y - clusterPoint.y) < threshold
+      );
+    });
+
+    if (match) {
+      match.pins.push(pin);
+      match.latitude =
+        match.pins.reduce((total, item) => total + item.latitudeValue, 0) /
+        match.pins.length;
+      match.longitude =
+        match.pins.reduce((total, item) => total + item.longitudeValue, 0) /
+        match.pins.length;
+      return;
+    }
+
+    clusters.push({
+      id: pin.id,
+      pins: [pin],
+      latitude: pin.latitudeValue,
+      longitude: pin.longitudeValue,
+    });
+  });
+
+  return clusters;
+}
+
+function getTiles(center: typeof roatanCenter, zoom: number) {
+  const centerWorld = latLonToWorld(center.latitude, center.longitude, zoom);
+  const centerTileX = Math.floor(centerWorld.x / 256);
+  const centerTileY = Math.floor(centerWorld.y / 256);
+  const tiles: { x: number; y: number; left: number; top: number }[] = [];
+
+  for (let x = centerTileX - 3; x <= centerTileX + 3; x += 1) {
+    for (let y = centerTileY - 3; y <= centerTileY + 3; y += 1) {
+      tiles.push({
+        x,
+        y,
+        left: x * 256 - centerWorld.x,
+        top: y * 256 - centerWorld.y,
+      });
+    }
+  }
+
+  return tiles;
 }
 
 export default function MapBrowser({ listings }: { listings: MapListing[] }) {
@@ -93,6 +172,13 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [location, setLocation] = useState("All");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState(listings[0]?.id || "");
+  const [center, setCenter] = useState(roatanCenter);
+  const [zoom, setZoom] = useState(12);
+  const dragRef = useRef<{
+    x: number;
+    y: number;
+    centerWorld: { x: number; y: number };
+  } | null>(null);
 
   const locations = useMemo(
     () => [
@@ -131,12 +217,41 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   );
 
   const pins = useMemo(
-    () =>
-      filteredListings.map((listing, index) => pinForListing(listing, index)),
+    () => filteredListings.map((listing) => listingToPin(listing)),
     [filteredListings],
   );
+  const clusters = useMemo(() => clusterPins(pins, zoom), [pins, zoom]);
   const selectedPin =
     pins.find((pin) => pin.id === selectedId) || pins[0] || null;
+  const selectedCluster = selectedPin
+    ? clusters.find((cluster) =>
+        cluster.pins.some((pin) => pin.id === selectedPin.id),
+      )
+    : null;
+  const centerWorld = latLonToWorld(center.latitude, center.longitude, zoom);
+  const tiles = getTiles(center, zoom);
+
+  function zoomMap(direction: 1 | -1) {
+    const currentIndex = zoomLevels.indexOf(zoom);
+    const nextIndex = Math.min(
+      Math.max(currentIndex + direction, 0),
+      zoomLevels.length - 1,
+    );
+    setZoom(zoomLevels[nextIndex]);
+  }
+
+  function focusArea(area: string) {
+    setLocation(area);
+    const nextCenter = area === "All" ? roatanCenter : findAreaPosition(area);
+    setCenter(nextCenter);
+    setZoom(area === "All" ? 12 : 13);
+  }
+
+  function focusPin(pin: Pin) {
+    setSelectedId(pin.id);
+    setCenter({ latitude: pin.latitudeValue, longitude: pin.longitudeValue });
+    setZoom((currentZoom) => Math.max(currentZoom, 13));
+  }
 
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_380px]">
@@ -161,7 +276,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </select>
           <select
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
+            onChange={(e) => focusArea(e.target.value)}
             className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
           >
             {locations.map((item) => (
@@ -172,32 +287,86 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </select>
         </div>
 
-        <div className="relative mt-5 min-h-[520px] overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_82%,#0E6F69_0_10%,transparent_11%),linear-gradient(135deg,#5EB7AD_0%,#5EB7AD_22%,#F1DFA9_22%,#F1DFA9_35%,#2A8C76_35%,#2A8C76_68%,#69BEB7_68%,#69BEB7_100%)]" />
-          <div className="absolute left-[6%] top-[38%] h-[15%] w-[88%] -rotate-6 rounded-full bg-[#F8E8B8]/90 shadow-lg" />
-          <div className="absolute left-[12%] top-[33%] h-[8%] w-[70%] -rotate-6 rounded-full bg-[#D9A95E]/30 blur-sm" />
-          <div className="absolute bottom-[18%] right-[10%] h-[14%] w-[22%] rounded-full bg-[#F8E8B8]/80" />
-
-          {[
-            ["West Bay", "8%", "49%"],
-            ["West End", "16%", "42%"],
-            ["Coxen Hole", "31%", "46%"],
-            ["French Harbour", "52%", "41%"],
-            ["Oak Ridge", "76%", "33%"],
-            ["Camp Bay", "88%", "25%"],
-          ].map(([label, left, top]) => (
-            <span
-              key={label}
-              style={{ left, top }}
-              className="absolute rounded-full bg-white/75 px-3 py-1 text-xs font-bold text-[#0B3C5D] shadow-sm"
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {areaButtons.map((area) => (
+            <button
+              key={area}
+              type="button"
+              onClick={() => focusArea(area)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
+                location === area || (area === "All" && location === "All")
+                  ? "bg-[#0B3C5D] text-white"
+                  : "bg-[#EEF7F6] text-[#0B3C5D]"
+              }`}
             >
-              {label}
-            </span>
+              {area}
+            </button>
           ))}
+        </div>
+
+        <div
+          className="relative mt-5 min-h-[560px] cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner active:cursor-grabbing"
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            dragRef.current = {
+              x: event.clientX,
+              y: event.clientY,
+              centerWorld,
+            };
+          }}
+          onPointerMove={(event) => {
+            if (!dragRef.current) return;
+
+            const deltaX = event.clientX - dragRef.current.x;
+            const deltaY = event.clientY - dragRef.current.y;
+            setCenter(
+              worldToLatLon(
+                dragRef.current.centerWorld.x - deltaX,
+                dragRef.current.centerWorld.y - deltaY,
+                zoom,
+              ),
+            );
+          }}
+          onPointerUp={() => {
+            dragRef.current = null;
+          }}
+          onPointerCancel={() => {
+            dragRef.current = null;
+          }}
+        >
+          {tiles.map((tile) => (
+            <div
+              key={`${zoom}-${tile.x}-${tile.y}`}
+              style={{
+                left: `calc(50% + ${tile.left}px)`,
+                top: `calc(50% + ${tile.top}px)`,
+                backgroundImage: `url(https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png)`,
+              }}
+              className="absolute h-64 w-64 bg-cover"
+            />
+          ))}
+          <div className="absolute inset-0 bg-[#0B3C5D]/5" />
+
+          <div className="absolute left-4 top-4 z-20 grid gap-2">
+            <button
+              type="button"
+              onClick={() => zoomMap(1)}
+              className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => zoomMap(-1)}
+              className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
+            >
+              -
+            </button>
+          </div>
 
           {pins.length === 0 ? (
-            <div className="absolute inset-0 flex items-center justify-center p-8 text-center">
-              <div className="rounded-2xl bg-white/90 p-6 shadow">
+            <div className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center">
+              <div className="rounded-2xl bg-white/95 p-6 shadow">
                 <p className="font-bold text-[#0B3C5D]">No matches here yet</p>
                 <p className="mt-2 text-sm text-gray-600">
                   Try clearing the filters or searching another area.
@@ -206,24 +375,42 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             </div>
           ) : null}
 
-          {pins.map((pin) => (
-            <button
-              key={pin.id}
-              type="button"
-              onClick={() => setSelectedId(pin.id)}
-              style={{ left: `${pin.left}%`, top: `${pin.top}%` }}
-              className={`absolute z-10 -translate-x-1/2 -translate-y-full rounded-full px-3 py-2 text-xs font-bold shadow-lg ring-4 ring-white/80 transition hover:scale-105 ${
-                selectedPin?.id === pin.id
-                  ? "bg-[#00A8A8] text-white"
-                  : pin.hasExactPin
-                    ? "bg-[#0B3C5D] text-white"
-                    : "bg-white text-[#0B3C5D]"
-              }`}
-              title={pin.hasExactPin ? "Exact map pin" : "Area pin"}
-            >
-              {pin.category || "Listing"}
-            </button>
-          ))}
+          {clusters.map((cluster) => {
+            const point = latLonToWorld(cluster.latitude, cluster.longitude, zoom);
+            const left = point.x - centerWorld.x;
+            const top = point.y - centerWorld.y;
+            const primaryPin = cluster.pins[0];
+            const isSelected = selectedCluster?.id === cluster.id;
+
+            return (
+              <button
+                key={cluster.id}
+                type="button"
+                onClick={() => {
+                  focusPin(primaryPin);
+                  if (cluster.pins.length > 1) {
+                    setZoom((currentZoom) => Math.min(currentZoom + 1, 14));
+                  }
+                }}
+                style={{
+                  left: `calc(50% + ${left}px)`,
+                  top: `calc(50% + ${top}px)`,
+                }}
+                className={`absolute z-10 -translate-x-1/2 -translate-y-full rounded-full px-3 py-2 text-xs font-bold shadow-lg ring-4 ring-white/80 transition hover:scale-105 ${
+                  isSelected
+                    ? "bg-[#00A8A8] text-white"
+                    : primaryPin.hasExactPin
+                      ? "bg-[#0B3C5D] text-white"
+                      : "bg-white text-[#0B3C5D]"
+                }`}
+                title={primaryPin.hasExactPin ? "Exact map pin" : "Area pin"}
+              >
+                {cluster.pins.length > 1
+                  ? `${cluster.pins.length} places`
+                  : primaryPin.category || "Listing"}
+              </button>
+            );
+          })}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
@@ -242,7 +429,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         </div>
       </div>
 
-      <aside className="grid gap-4 lg:max-h-[680px] lg:overflow-y-auto">
+      <aside className="grid gap-4 lg:max-h-[730px] lg:overflow-y-auto">
         {selectedPin ? (
           <article className="rounded-2xl bg-white p-5 shadow ring-2 ring-[#00A8A8]/25">
             <div className="relative h-48 overflow-hidden rounded-xl bg-[#D8EFEC]">
@@ -284,6 +471,25 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 </p>
               </div>
             </div>
+            {selectedCluster && selectedCluster.pins.length > 1 ? (
+              <div className="mt-4 rounded-xl bg-[#EEF7F6] p-3">
+                <p className="text-sm font-bold text-[#0B3C5D]">
+                  Same area
+                </p>
+                <div className="mt-2 grid gap-2">
+                  {selectedCluster.pins.map((pin) => (
+                    <button
+                      key={pin.id}
+                      type="button"
+                      onClick={() => focusPin(pin)}
+                      className="rounded-lg bg-white px-3 py-2 text-left text-sm font-semibold text-[#0B3C5D]"
+                    >
+                      {pin.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             <div className="mt-4 flex gap-2">
               <Link
                 href={`/listings/${selectedPin.id}`}
@@ -305,7 +511,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <button
             key={pin.id}
             type="button"
-            onClick={() => setSelectedId(pin.id)}
+            onClick={() => focusPin(pin)}
             className={`rounded-2xl p-4 text-left shadow transition ${
               selectedPin?.id === pin.id
                 ? "bg-[#0B3C5D] text-white"
