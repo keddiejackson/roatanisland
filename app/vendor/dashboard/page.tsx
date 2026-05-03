@@ -32,6 +32,8 @@ type ListingRow = {
   image_url: string | null;
   gallery_image_urls: string[] | null;
   is_active: boolean | null;
+  approval_status: string | null;
+  approval_note: string | null;
   tour_times: string[] | null;
   blocked_dates: string[] | null;
   availability_note: string | null;
@@ -132,7 +134,7 @@ export default function VendorDashboardPage() {
       });
 
       const listingSelectWithAvailability =
-        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours";
+        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, approval_status, approval_note, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours";
       const listingResult = await supabase
         .from("listings")
         .select(listingSelectWithAvailability)
@@ -512,6 +514,8 @@ export default function VendorDashboardPage() {
               max_guests: result.listing.max_guests,
               minimum_notice_hours: result.listing.minimum_notice_hours,
               is_active: false,
+              approval_status: result.listing.approval_status || "pending",
+              approval_note: result.listing.approval_note || null,
             }
           : listing,
       ),
@@ -1299,11 +1303,22 @@ export default function VendorDashboardPage() {
                         className={`rounded-full px-3 py-1 text-sm font-semibold ${
                           listing.is_active
                             ? "bg-green-100 text-green-700"
+                            : listing.approval_status === "rejected"
+                              ? "bg-red-100 text-red-700"
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
-                        {listing.is_active ? "Live" : "Waiting for review"}
+                        {listing.is_active
+                          ? "Live"
+                          : listing.approval_status === "rejected"
+                            ? "Needs changes"
+                            : "Waiting for review"}
                       </span>
+                      {listing.approval_note ? (
+                        <p className="max-w-56 rounded-xl bg-yellow-100 p-3 text-sm text-yellow-900">
+                          {listing.approval_note}
+                        </p>
+                      ) : null}
                       <button
                         onClick={() => saveListingTimes(listing.id)}
                         disabled={savingListingId === listing.id}

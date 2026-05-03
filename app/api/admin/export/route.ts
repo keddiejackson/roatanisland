@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
 
-type ExportType = "bookings" | "listings" | "vendors";
+type ExportType =
+  | "bookings"
+  | "listings"
+  | "vendors"
+  | "reviews"
+  | "activity"
+  | "vendor_invites";
 
 async function verifyAdmin(request: Request) {
   const token = request.headers
@@ -65,8 +71,47 @@ async function fetchRows(type: ExportType) {
     const { data, error } = await supabaseServer
       .from("listings")
       .select(
-        "id, vendor_id, title, description, price, location, category, tour_times, availability_note, max_guests, minimum_notice_hours, is_active, is_featured, image_url, created_at",
+        "id, vendor_id, title, description, price, location, category, tour_times, availability_note, max_guests, minimum_notice_hours, approval_status, approval_note, is_active, is_featured, image_url, created_at",
       )
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
+  if (type === "reviews") {
+    const { data, error } = await supabaseServer
+      .from("listing_reviews")
+      .select("id, listing_id, reviewer_name, reviewer_email, rating, comment, is_approved, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
+  if (type === "activity") {
+    const { data, error } = await supabaseServer
+      .from("admin_activity_logs")
+      .select("id, actor_email, actor_role, action, target_type, target_id, target_label, metadata, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
+  if (type === "vendor_invites") {
+    const { data, error } = await supabaseServer
+      .from("vendor_invites")
+      .select("id, vendor_id, email, accepted_at, expires_at, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -98,7 +143,17 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const type = url.searchParams.get("type") as ExportType | null;
 
-  if (!type || !["bookings", "listings", "vendors"].includes(type)) {
+  if (
+    !type ||
+    ![
+      "bookings",
+      "listings",
+      "vendors",
+      "reviews",
+      "activity",
+      "vendor_invites",
+    ].includes(type)
+  ) {
     return NextResponse.json({ error: "Unknown export type." }, { status: 400 });
   }
 

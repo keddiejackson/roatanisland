@@ -69,6 +69,7 @@ export default function AdminVendorsPage() {
   const [saving, setSaving] = useState(false);
   const [savingVendorId, setSavingVendorId] = useState<string | null>(null);
   const [deletingVendorId, setDeletingVendorId] = useState<string | null>(null);
+  const [invitingVendorId, setInvitingVendorId] = useState<string | null>(null);
   const [setupMessage, setSetupMessage] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -259,6 +260,43 @@ export default function AdminVendorsPage() {
     );
   }
 
+  async function inviteVendor(vendor: VendorRow) {
+    const email = window.prompt(
+      "Send invite to which email?",
+      vendor.email || "",
+    );
+
+    if (!email) {
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    setInvitingVendorId(vendor.id);
+
+    const response = await fetch("/api/admin/vendor-invites", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        vendorId: vendor.id,
+        email,
+      }),
+    });
+    const result = await response.json();
+    setInvitingVendorId(null);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to send invite.");
+      return;
+    }
+
+    alert("Vendor invite sent.");
+  }
+
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
       <div className="mx-auto max-w-7xl">
@@ -428,6 +466,15 @@ export default function AdminVendorsPage() {
                           {vendor.is_active === false
                             ? "Show vendor"
                             : "Hide vendor"}
+                        </button>
+                        <button
+                          onClick={() => inviteVendor(vendor)}
+                          disabled={invitingVendorId === vendor.id}
+                          className="rounded-xl border border-[#0B3C5D] px-4 py-2 text-sm font-semibold text-[#0B3C5D] disabled:opacity-50"
+                        >
+                          {invitingVendorId === vendor.id
+                            ? "Sending..."
+                            : "Invite"}
                         </button>
                         <button
                           onClick={() => deleteVendor(vendor)}

@@ -195,6 +195,8 @@ export async function POST(request: Request) {
         max_guests: maxGuests,
         minimum_notice_hours: minimumNoticeHours,
         is_active: false,
+        approval_status: "pending",
+        approval_note: null,
       },
     ])
     .select("id, title, price, location, category, vendor_id")

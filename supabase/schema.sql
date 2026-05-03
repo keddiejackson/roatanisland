@@ -121,6 +121,8 @@ create table if not exists public.listings (
   max_guests integer,
   minimum_notice_hours integer,
   is_active boolean not null default true,
+  approval_status text not null default 'approved' check (approval_status in ('pending', 'approved', 'rejected')),
+  approval_note text,
   is_featured boolean not null default false,
   rating numeric default 5,
   reviews_count integer default 0,
@@ -132,6 +134,13 @@ add column if not exists is_active boolean not null default true;
 
 alter table public.listings
 add column if not exists is_featured boolean not null default false;
+
+alter table public.listings
+add column if not exists approval_status text not null default 'approved'
+check (approval_status in ('pending', 'approved', 'rejected'));
+
+alter table public.listings
+add column if not exists approval_note text;
 
 alter table public.listings
 add column if not exists vendor_id uuid references public.vendors(id) on delete set null;
@@ -223,6 +232,16 @@ create table if not exists public.listing_reviews (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.vendor_invites (
+  id uuid primary key default gen_random_uuid(),
+  vendor_id uuid not null references public.vendors(id) on delete cascade,
+  email text not null,
+  token text not null unique default encode(gen_random_bytes(24), 'hex'),
+  accepted_at timestamptz,
+  expires_at timestamptz not null default (now() + interval '14 days'),
+  created_at timestamptz not null default now()
+);
+
 alter table public.bookings
 add column if not exists status text not null default 'new'
 check (status in ('new', 'confirmed', 'completed', 'cancelled'));
@@ -285,6 +304,12 @@ add column if not exists reviewer_email text;
 alter table public.listing_reviews
 add column if not exists is_approved boolean not null default false;
 
+alter table public.vendor_invites
+add column if not exists accepted_at timestamptz;
+
+alter table public.vendor_invites
+add column if not exists expires_at timestamptz not null default (now() + interval '14 days');
+
 alter table public.admin_users enable row level security;
 alter table public.vendors enable row level security;
 alter table public.vendor_users enable row level security;
@@ -294,6 +319,7 @@ alter table public.analytics_events enable row level security;
 alter table public.app_errors enable row level security;
 alter table public.admin_activity_logs enable row level security;
 alter table public.listing_reviews enable row level security;
+alter table public.vendor_invites enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select, insert on public.vendors to anon, authenticated;
@@ -306,6 +332,7 @@ grant select, update on public.app_errors to authenticated;
 grant select, insert on public.admin_activity_logs to authenticated;
 grant select, insert on public.listing_reviews to anon, authenticated;
 grant update, delete on public.listing_reviews to authenticated;
+grant select, insert, update on public.vendor_invites to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
 grant select, update on public.bookings to authenticated;
@@ -343,6 +370,33 @@ using (
     where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
   )
 );
+
+drop policy if exists "Admins can manage vendor invites" on public.vendor_invites;
+create policy "Admins can manage vendor invites"
+on public.vendor_invites
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Vendors can view their invite" on public.vendor_invites;
+create policy "Vendors can view their invite"
+on public.vendor_invites
+for select
+to authenticated
+using (lower(email) = lower(auth.jwt() ->> 'email'));
 
 drop policy if exists "Vendors can view own vendor profile" on public.vendors;
 create policy "Vendors can view own vendor profile"

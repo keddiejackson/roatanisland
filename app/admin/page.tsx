@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
+import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 
@@ -24,6 +25,7 @@ type Listing = {
   id: string;
   title: string;
   is_active: boolean | null;
+  approval_status: string | null;
 };
 
 type Vendor = {
@@ -76,7 +78,7 @@ export default function AdminDashboardPage() {
             .select("id, full_name, tour_date, tour_time, guests, status, listing_id, commission_amount_cents, commission_status, created_at")
             .order("tour_date", { ascending: true })
             .limit(200),
-          supabase.from("listings").select("id, title, is_active"),
+          supabase.from("listings").select("id, title, is_active, approval_status"),
           supabase.from("vendors").select("id, is_active"),
           supabase.from("listing_reviews").select("id, is_approved"),
         ]);
@@ -108,6 +110,9 @@ export default function AdminDashboardPage() {
       upcomingBookings,
       pendingListings: listings.filter((listing) => listing.is_active === false)
         .length,
+      reviewQueue: listings.filter(
+        (listing) => (listing.approval_status || "approved") === "pending",
+      ).length,
       activeListings: listings.filter((listing) => listing.is_active !== false)
         .length,
       activeVendors: vendors.filter((vendor) => vendor.is_active !== false).length,
@@ -158,6 +163,7 @@ export default function AdminDashboardPage() {
                   ["New bookings", summary.newBookings],
                   ["Upcoming", summary.upcomingBookings.length],
                   ["Pending listings", summary.pendingListings],
+                  ["Review queue", summary.reviewQueue],
                   ["Active listings", summary.activeListings],
                   ["Active vendors", summary.activeVendors],
                   ["Pending reviews", summary.pendingReviews],
@@ -248,6 +254,20 @@ export default function AdminDashboardPage() {
                   </div>
                 </section>
               </div>
+
+              <section className="mt-8 rounded-2xl border border-gray-200 p-5">
+                <h2 className="text-xl font-bold text-[#0B3C5D]">
+                  Backup exports
+                </h2>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <ExportCsvButton type="bookings" />
+                  <ExportCsvButton type="listings" />
+                  <ExportCsvButton type="vendors" />
+                  <ExportCsvButton type="reviews" />
+                  <ExportCsvButton type="activity" />
+                  <ExportCsvButton type="vendor_invites" />
+                </div>
+              </section>
             </>
           )}
         </section>

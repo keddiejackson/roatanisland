@@ -137,11 +137,13 @@ export async function PATCH(
       max_guests: maxGuests,
       minimum_notice_hours: minimumNoticeHours,
       is_active: false,
+      approval_status: "pending",
+      approval_note: null,
       is_featured: false,
     })
     .eq("id", id)
     .select(
-      "id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, is_active",
+      "id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, is_active, approval_status, approval_note",
     )
     .single();
 

@@ -102,6 +102,40 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+
+    if (listingRules?.max_guests) {
+      const { data: existingBookings, error: existingBookingsError } =
+        await supabaseServer
+          .from("bookings")
+          .select("guests")
+          .eq("listing_id", body.listingId)
+          .eq("tour_date", body.tourDate)
+          .eq("tour_time", body.tourTime)
+          .in("status", ["new", "confirmed"]);
+
+      if (existingBookingsError) {
+        return NextResponse.json(
+          { error: existingBookingsError.message },
+          { status: 500 },
+        );
+      }
+
+      const reservedGuests = (
+        (existingBookings as { guests: number }[] | null) || []
+      ).reduce((total, booking) => total + booking.guests, 0);
+
+      if (reservedGuests + guests > listingRules.max_guests) {
+        return NextResponse.json(
+          {
+            error: `Only ${Math.max(
+              listingRules.max_guests - reservedGuests,
+              0,
+            )} seats remain for that date and time.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
   }
 
   const { data: booking, error } = await supabaseServer

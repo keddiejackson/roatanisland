@@ -194,6 +194,12 @@ export default function Home() {
                 Browse
               </a>
               <Link
+                href="/tours"
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              >
+                Tours
+              </Link>
+              <Link
                 href="/vendor/signup"
                 className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm transition hover:bg-[#EEF7F6]"
               >

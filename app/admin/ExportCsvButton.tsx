@@ -3,10 +3,18 @@
 import { supabase } from "@/lib/supabase";
 
 type ExportCsvButtonProps = {
-  type: "bookings" | "listings" | "vendors";
+  type:
+    | "bookings"
+    | "listings"
+    | "vendors"
+    | "reviews"
+    | "activity"
+    | "vendor_invites";
 };
 
 export default function ExportCsvButton({ type }: ExportCsvButtonProps) {
+  const label = type.replaceAll("_", " ");
+
   async function exportCsv() {
     const { data: sessionData } = await supabase.auth.getSession();
     const response = await fetch(`/api/admin/export?type=${type}`, {
@@ -40,7 +48,7 @@ export default function ExportCsvButton({ type }: ExportCsvButtonProps) {
       onClick={exportCsv}
       className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
     >
-      Export CSV
+      Export {label}
     </button>
   );
 }
