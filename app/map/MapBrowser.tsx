@@ -25,7 +25,15 @@ type Cluster = {
   longitude: number;
 };
 
-const categories = ["All", "Tours", "Hotels", "Transport"];
+const luxuryLayers = [
+  "All",
+  "Tours",
+  "Hotels",
+  "Transport",
+  "Food",
+  "Beaches",
+  "Private Charters",
+];
 const zoomLevels = [11, 12, 13, 14];
 const roatanCenter = { latitude: 16.34, longitude: -86.48 };
 
@@ -217,7 +225,7 @@ function readInitialMapState(listings: MapListing[]) {
   const requestedZoom = Number(params.get("zoom"));
 
   return {
-    category: category && categories.includes(category) ? category : "All",
+    category: category && luxuryLayers.includes(category) ? category : "All",
     location,
     search,
     selectedId,
@@ -239,6 +247,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [center, setCenter] = useState(initialMapState.center);
   const [zoom, setZoom] = useState(initialMapState.zoom);
   const [fullMap, setFullMap] = useState(false);
+  const [hoveredId, setHoveredId] = useState("");
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -249,6 +259,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     y: number;
     centerWorld: { x: number; y: number };
   } | null>(null);
+  const listingRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const locations = useMemo(
     () => [
@@ -288,7 +299,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         [
           ...areaButtons,
           ...locations,
-          ...categories,
+          ...luxuryLayers,
           ...listings.map((listing) => listing.title),
         ].filter((item) => item.toLowerCase().includes(searchValue)),
       ),
@@ -369,6 +380,33 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     : null;
   const centerWorld = latLonToWorld(center.latitude, center.longitude, zoom);
   const tiles = getTiles(center, zoom);
+  const nearbyPins = useMemo(() => {
+    if (!selectedPin) return [];
+
+    return pins
+      .filter((pin) => pin.id !== selectedPin.id)
+      .map((pin) => ({
+        pin,
+        miles: distanceMiles(
+          {
+            latitude: selectedPin.latitudeValue,
+            longitude: selectedPin.longitudeValue,
+          },
+          { latitude: pin.latitudeValue, longitude: pin.longitudeValue },
+        ),
+      }))
+      .sort((a, b) => a.miles - b.miles)
+      .slice(0, 3);
+  }, [pins, selectedPin]);
+
+  useEffect(() => {
+    if (!selectedId) return;
+
+    listingRefs.current[selectedId]?.scrollIntoView({
+      block: "nearest",
+      behavior: "smooth",
+    });
+  }, [selectedId]);
 
   function zoomMap(direction: 1 | -1) {
     const currentIndex = zoomLevels.indexOf(zoom);
@@ -388,6 +426,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
   function focusPin(pin: Pin) {
     setSelectedId(pin.id);
+    setMobileDrawerOpen(true);
     setCenter({ latitude: pin.latitudeValue, longitude: pin.longitudeValue });
     setZoom((currentZoom) => Math.max(currentZoom, 13));
   }
@@ -485,7 +524,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             onChange={(e) => setCategory(e.target.value)}
             className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
           >
-            {categories.map((item) => (
+            {luxuryLayers.map((item) => (
               <option key={item} value={item}>
                 {item === "All" ? "All categories" : item}
               </option>
@@ -515,6 +554,23 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             {locationMessage}
           </p>
         ) : null}
+
+        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+          {luxuryLayers.map((layer) => (
+            <button
+              key={layer}
+              type="button"
+              onClick={() => setCategory(layer)}
+              className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+                category === layer
+                  ? "bg-[#071F2F] text-[#FFF6DA] ring-1 ring-[#D6B56D]/60"
+                  : "border border-[#071F2F]/10 bg-white text-[#0B3C5D] hover:border-[#D6B56D]/60"
+              }`}
+            >
+              {layer === "All" ? "All layers" : layer}
+            </button>
+          ))}
+        </div>
 
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {areaButtons.map((area) => (
@@ -650,11 +706,14 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             const top = point.y - centerWorld.y;
             const primaryPin = cluster.pins[0];
             const isSelected = selectedCluster?.id === cluster.id;
+            const isHovered = cluster.pins.some((pin) => pin.id === hoveredId);
 
             return (
               <button
                 key={cluster.id}
                 type="button"
+                onMouseEnter={() => setHoveredId(primaryPin.id)}
+                onMouseLeave={() => setHoveredId("")}
                 onClick={() => {
                   focusPin(primaryPin);
                   if (cluster.pins.length > 1) {
@@ -665,12 +724,14 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                   left: `calc(50% + ${left}px)`,
                   top: `calc(50% + ${top}px)`,
                 }}
-                className={`absolute z-10 -translate-x-1/2 -translate-y-full rounded-full px-3 py-2 text-xs font-bold shadow-lg ring-4 ring-white/80 transition hover:scale-105 ${
+                className={`absolute z-10 -translate-x-1/2 -translate-y-full rounded-full px-3 py-2 text-xs font-bold shadow-lg ring-4 transition hover:scale-105 ${
                   isSelected
-                    ? "bg-[#00A8A8] text-white"
+                    ? "bg-[#00A8A8] text-white ring-[#D6B56D]"
+                    : isHovered
+                      ? "bg-[#D6B56D] text-[#071F2F] ring-white"
                     : primaryPin.hasExactPin
-                      ? "bg-[#0B3C5D] text-white"
-                      : "bg-white text-[#0B3C5D]"
+                      ? "bg-[#0B3C5D] text-white ring-white/80"
+                      : "bg-white text-[#0B3C5D] ring-white/80"
                 }`}
                 title={primaryPin.hasExactPin ? "Exact map pin" : "Area pin"}
               >
@@ -691,6 +752,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             <span className="h-3 w-3 rounded-full border border-[#0B3C5D] bg-white" />
             Area estimate
           </span>
+          <span className="inline-flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-[#D6B56D]" />
+            Hovered place
+          </span>
           <span className="font-semibold text-[#0B3C5D]">
             {filteredListings.length} listing
             {filteredListings.length === 1 ? "" : "s"}
@@ -698,9 +763,22 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         </div>
       </div>
 
-      <aside className="grid gap-4 lg:max-h-[730px] lg:overflow-y-auto">
+      <aside className="grid gap-4 lg:max-h-[760px] lg:overflow-y-auto">
         {selectedPin ? (
-          <article className="sticky bottom-3 z-30 rounded-2xl bg-white p-5 shadow ring-2 ring-[#00A8A8]/25 lg:static">
+          <article
+            className={`sticky bottom-3 z-30 overflow-hidden rounded-2xl bg-white shadow-2xl shadow-[#071F2F]/15 ring-2 ring-[#D6B56D]/35 lg:static ${
+              mobileDrawerOpen ? "max-h-[82vh]" : "max-h-28"
+            } transition-[max-height] duration-300`}
+          >
+            <button
+              type="button"
+              onClick={() => setMobileDrawerOpen((current) => !current)}
+              className="flex w-full items-center justify-center bg-[#071F2F] py-2 lg:hidden"
+              aria-label={mobileDrawerOpen ? "Collapse listing drawer" : "Open listing drawer"}
+            >
+              <span className="h-1.5 w-16 rounded-full bg-[#D6B56D]" />
+            </button>
+            <div className="max-h-[calc(82vh-44px)] overflow-y-auto p-5 lg:max-h-none lg:overflow-visible">
             <div className="relative h-48 overflow-hidden rounded-xl bg-[#D8EFEC]">
               {selectedPin.image_url ? (
                 <Image
@@ -723,6 +801,17 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
               {selectedPin.title}
             </h2>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold text-[#0B3C5D]">
+              <span className="rounded-full bg-[#FFF3D2] px-3 py-1">
+                {formatPrice(selectedPin.price)}
+              </span>
+              <span className="rounded-full bg-[#EEF7F6] px-3 py-1">
+                {selectedPin.rating ? `${selectedPin.rating.toFixed(1)} rated` : "New listing"}
+              </span>
+              <span className="rounded-full bg-[#F7F3EA] px-3 py-1">
+                {selectedPin.reviews_count || 0} reviews
+              </span>
+            </div>
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-600">
               {selectedPin.description || "Details coming soon."}
             </p>
@@ -758,6 +847,30 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                       className="rounded-lg bg-white px-3 py-2 text-left text-sm font-semibold text-[#0B3C5D]"
                     >
                       {pin.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {nearbyPins.length > 0 ? (
+              <div className="mt-4 rounded-xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-3">
+                <p className="text-sm font-bold text-[#0B3C5D]">
+                  Nearby picks
+                </p>
+                <div className="mt-2 grid gap-2">
+                  {nearbyPins.map(({ pin, miles }) => (
+                    <button
+                      key={pin.id}
+                      type="button"
+                      onMouseEnter={() => setHoveredId(pin.id)}
+                      onMouseLeave={() => setHoveredId("")}
+                      onClick={() => focusPin(pin)}
+                      className="rounded-lg bg-white px-3 py-2 text-left text-sm font-semibold text-[#0B3C5D] shadow-sm"
+                    >
+                      <span className="block">{pin.title}</span>
+                      <span className="text-xs font-medium text-gray-500">
+                        {miles.toFixed(1)} mi away
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -809,17 +922,25 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 Apple Maps
               </a>
             </div>
+            </div>
           </article>
         ) : null}
 
         {pins.map((pin) => (
           <button
             key={pin.id}
+            ref={(element) => {
+              listingRefs.current[pin.id] = element;
+            }}
             type="button"
+            onMouseEnter={() => setHoveredId(pin.id)}
+            onMouseLeave={() => setHoveredId("")}
             onClick={() => focusPin(pin)}
             className={`rounded-2xl p-4 text-left shadow transition ${
               selectedPin?.id === pin.id
                 ? "bg-[#0B3C5D] text-white"
+                : hoveredId === pin.id
+                  ? "bg-[#FFF3D2] text-[#17324D] ring-2 ring-[#D6B56D]"
                 : "bg-white text-[#17324D] hover:-translate-y-0.5"
             }`}
           >
