@@ -285,6 +285,37 @@ function getTiles(center: typeof roatanCenter, zoom: number) {
   return tiles;
 }
 
+function readSavedTripIds(listings: MapListing[]) {
+  if (typeof window === "undefined") return [];
+
+  const validIds = new Set(listings.map((listing) => listing.id));
+  const params = new URLSearchParams(window.location.search);
+  const tripFromUrl = params
+    .get("trip")
+    ?.split(",")
+    .map((id) => id.trim())
+    .filter((id) => validIds.has(id));
+
+  if (tripFromUrl?.length) {
+    return Array.from(new Set(tripFromUrl)).slice(0, 8);
+  }
+
+  try {
+    const saved = JSON.parse(localStorage.getItem("roatan-trip-plan") || "[]");
+    if (!Array.isArray(saved)) return [];
+
+    return Array.from(
+      new Set(
+        saved
+          .filter((id): id is string => typeof id === "string")
+          .filter((id) => validIds.has(id)),
+      ),
+    ).slice(0, 8);
+  } catch {
+    return [];
+  }
+}
+
 function readInitialMapState(listings: MapListing[]) {
   if (typeof window === "undefined") {
     return {
@@ -295,6 +326,7 @@ function readInitialMapState(listings: MapListing[]) {
       center: roatanCenter,
       zoom: 12,
       collectionId: "",
+      tripIds: [],
     };
   }
 
@@ -323,6 +355,7 @@ function readInitialMapState(listings: MapListing[]) {
         : findAreaPosition(location),
     zoom: zoomLevels.includes(requestedZoom) ? requestedZoom : 12,
     collectionId: collection?.id || "",
+    tripIds: readSavedTripIds(listings),
   };
 }
 
@@ -337,6 +370,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [activeCollectionId, setActiveCollectionId] = useState(
     initialMapState.collectionId,
   );
+  const [savedTripIds, setSavedTripIds] = useState<string[]>(
+    initialMapState.tripIds,
+  );
+  const [tripMessage, setTripMessage] = useState("");
   const [fullMap, setFullMap] = useState(false);
   const [hoveredId, setHoveredId] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -377,11 +414,16 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     if (search.trim()) params.set("search", search.trim());
     if (selectedId) params.set("selected", selectedId);
     if (zoom !== 12) params.set("zoom", String(zoom));
+    if (savedTripIds.length > 0) params.set("trip", savedTripIds.join(","));
 
     const query = params.toString();
     const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     window.history.replaceState(null, "", nextUrl);
-  }, [activeCollectionId, category, location, search, selectedId, zoom]);
+  }, [activeCollectionId, category, location, savedTripIds, search, selectedId, zoom]);
+
+  useEffect(() => {
+    localStorage.setItem("roatan-trip-plan", JSON.stringify(savedTripIds));
+  }, [savedTripIds]);
 
   const suggestions = useMemo(() => {
     if (!search.trim()) return [];
@@ -488,6 +530,44 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     : null;
   const centerWorld = latLonToWorld(center.latitude, center.longitude, zoom);
   const tiles = getTiles(center, zoom);
+  const savedTripPins = useMemo(
+    () =>
+      savedTripIds
+        .map((id) => listings.find((listing) => listing.id === id))
+        .filter((listing): listing is MapListing => Boolean(listing))
+        .map((listing) => listingToPin(listing)),
+    [listings, savedTripIds],
+  );
+  const tripDistanceMiles = useMemo(() => {
+    return savedTripPins.reduce((total, pin, index) => {
+      const previousPin = savedTripPins[index - 1];
+      if (!previousPin) return total;
+
+      return (
+        total +
+        distanceMiles(
+          {
+            latitude: previousPin.latitudeValue,
+            longitude: previousPin.longitudeValue,
+          },
+          { latitude: pin.latitudeValue, longitude: pin.longitudeValue },
+        )
+      );
+    }, 0);
+  }, [savedTripPins]);
+  const tripRoutePoints = useMemo(
+    () =>
+      savedTripPins.map((pin) => {
+        const point = latLonToWorld(pin.latitudeValue, pin.longitudeValue, zoom);
+
+        return {
+          id: pin.id,
+          x: point.x - centerWorld.x,
+          y: point.y - centerWorld.y,
+        };
+      }),
+    [centerWorld.x, centerWorld.y, savedTripPins, zoom],
+  );
   const nearbyPins = useMemo(() => {
     if (!selectedPin) return [];
 
@@ -557,6 +637,55 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     setSearch("");
     setCenter(roatanCenter);
     setZoom(12);
+  }
+
+  function toggleTripStop(pin: Pin) {
+    setTripMessage("");
+    if (savedTripIds.includes(pin.id)) {
+      setSavedTripIds((currentIds) => currentIds.filter((id) => id !== pin.id));
+      return;
+    }
+
+    if (savedTripIds.length >= 8) {
+      setTripMessage("Trip plan can hold up to 8 stops.");
+      return;
+    }
+
+    setSavedTripIds((currentIds) => [...currentIds, pin.id]);
+  }
+
+  function moveTripStop(pinId: string, direction: -1 | 1) {
+    setSavedTripIds((currentIds) => {
+      const currentIndex = currentIds.indexOf(pinId);
+      const nextIndex = currentIndex + direction;
+
+      if (currentIndex < 0 || nextIndex < 0 || nextIndex >= currentIds.length) {
+        return currentIds;
+      }
+
+      const nextIds = [...currentIds];
+      [nextIds[currentIndex], nextIds[nextIndex]] = [
+        nextIds[nextIndex],
+        nextIds[currentIndex],
+      ];
+      return nextIds;
+    });
+  }
+
+  async function shareTripPlan() {
+    if (savedTripIds.length === 0) {
+      setTripMessage("Save at least one place first.");
+      return;
+    }
+
+    const url = window.location.href;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setTripMessage("Trip link copied.");
+    } catch {
+      setTripMessage(url);
+    }
   }
 
   function useNearMe() {
@@ -896,6 +1025,50 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 })
             : null}
 
+          {tripRoutePoints.length > 1 ? (
+            <div className="pointer-events-none absolute inset-0 z-[9]">
+              {tripRoutePoints.slice(1).map((point, index) => {
+                const previousPoint = tripRoutePoints[index];
+                const deltaX = point.x - previousPoint.x;
+                const deltaY = point.y - previousPoint.y;
+                const length = Math.hypot(deltaX, deltaY);
+                const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
+
+                return (
+                  <span
+                    key={`${previousPoint.id}-${point.id}`}
+                    style={{
+                      left: `calc(50% + ${previousPoint.x}px)`,
+                      top: `calc(50% + ${previousPoint.y}px)`,
+                      width: `${length}px`,
+                      transform: `rotate(${angle}deg)`,
+                    }}
+                    className="absolute h-1 origin-left rounded-full bg-[#D6B56D] shadow-[0_0_18px_rgba(214,181,109,0.65)]"
+                  />
+                );
+              })}
+            </div>
+          ) : null}
+
+          {tripRoutePoints.map((point, index) => (
+            <button
+              key={point.id}
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => {
+                const pin = savedTripPins[index];
+                if (pin) focusPin(pin);
+              }}
+              style={{
+                left: `calc(50% + ${point.x}px)`,
+                top: `calc(50% + ${point.y}px)`,
+              }}
+              className="absolute z-[12] flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#D6B56D] text-xs font-black text-[#071F2F] shadow-lg ring-4 ring-white"
+            >
+              {index + 1}
+            </button>
+          ))}
+
           {pins.length === 0 ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center">
               <div className="rounded-2xl bg-white/95 p-6 shadow">
@@ -971,6 +1144,131 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       </div>
 
       <aside className="grid gap-4 lg:max-h-[760px] lg:overflow-y-auto">
+        <section className="rounded-2xl bg-[#071F2F] p-5 text-white shadow-2xl shadow-[#071F2F]/15">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
+                Trip plan
+              </p>
+              <h2 className="mt-1 text-xl font-bold">
+                {savedTripPins.length} saved stop
+                {savedTripPins.length === 1 ? "" : "s"}
+              </h2>
+            </div>
+            {savedTripPins.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSavedTripIds([]);
+                  setTripMessage("");
+                }}
+                className="rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white hover:bg-white/15"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-xl bg-white/10 p-3">
+              <p className="text-white/60">Route distance</p>
+              <p className="mt-1 font-bold text-[#FFF6DA]">
+                {savedTripPins.length > 1
+                  ? `${tripDistanceMiles.toFixed(1)} mi`
+                  : "Add stops"}
+              </p>
+            </div>
+            <div className="rounded-xl bg-white/10 p-3">
+              <p className="text-white/60">Drive estimate</p>
+              <p className="mt-1 font-bold text-[#FFF6DA]">
+                {savedTripPins.length > 1
+                  ? `${Math.max(5, Math.round((tripDistanceMiles / 20) * 60))} min`
+                  : "Pending"}
+              </p>
+            </div>
+          </div>
+
+          {savedTripPins.length === 0 ? (
+            <p className="mt-4 rounded-xl bg-white/10 p-4 text-sm leading-6 text-white/75">
+              Save places from the map to build a simple day plan. The numbered
+              stops will appear on the map and stay shareable in the link.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-2">
+              {savedTripPins.map((pin, index) => (
+                <div
+                  key={pin.id}
+                  className="rounded-xl bg-white p-3 text-[#0B3C5D]"
+                >
+                  <div className="flex gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#D6B56D] text-sm font-black text-[#071F2F]">
+                      {index + 1}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => focusPin(pin)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="block truncate text-sm font-bold">
+                        {pin.title}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {pin.location || "Roatan"} - {formatPrice(pin.price)}
+                      </span>
+                    </button>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => moveTripStop(pin.id, -1)}
+                      disabled={index === 0}
+                      className="rounded-lg bg-[#F7F3EA] px-2 py-2 text-xs font-semibold disabled:opacity-40"
+                    >
+                      Up
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveTripStop(pin.id, 1)}
+                      disabled={index === savedTripPins.length - 1}
+                      className="rounded-lg bg-[#F7F3EA] px-2 py-2 text-xs font-semibold disabled:opacity-40"
+                    >
+                      Down
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleTripStop(pin)}
+                      className="rounded-lg bg-[#FFF3D2] px-2 py-2 text-xs font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={shareTripPlan}
+              className="rounded-xl bg-[#D6B56D] px-4 py-3 text-sm font-bold text-[#071F2F]"
+            >
+              Share plan
+            </button>
+            <Link
+              href={savedTripPins[0] ? `/book?listing=${savedTripPins[0].id}` : "/map"}
+              className="rounded-xl border border-white/20 px-4 py-3 text-center text-sm font-bold text-white"
+            >
+              Book first stop
+            </Link>
+          </div>
+          {tripMessage ? (
+            <p className="mt-3 break-words rounded-xl bg-white/10 p-3 text-sm text-white/80">
+              {tripMessage}
+            </p>
+          ) : null}
+        </section>
+
         {selectedPin ? (
           <article
             className={`sticky bottom-3 z-30 overflow-hidden rounded-2xl bg-white shadow-2xl shadow-[#071F2F]/15 ring-2 ring-[#D6B56D]/35 lg:static ${
@@ -1083,16 +1381,27 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 </div>
               </div>
             ) : null}
-            <div className="mt-4 flex gap-2">
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => toggleTripStop(selectedPin)}
+                className={`rounded-xl px-4 py-3 text-center text-sm font-semibold ${
+                  savedTripIds.includes(selectedPin.id)
+                    ? "bg-[#FFF3D2] text-[#0B3C5D]"
+                    : "bg-[#071F2F] text-white"
+                }`}
+              >
+                {savedTripIds.includes(selectedPin.id) ? "Saved" : "Save"}
+              </button>
               <Link
                 href={`/listings/${selectedPin.id}`}
-                className="flex-1 rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-semibold text-white"
+                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-semibold text-white"
               >
                 View listing
               </Link>
               <Link
                 href={`/book?listing=${selectedPin.id}`}
-                className="flex-1 rounded-xl border border-[#00A8A8] px-4 py-3 text-center text-sm font-semibold text-[#007B7B]"
+                className="rounded-xl border border-[#00A8A8] px-4 py-3 text-center text-sm font-semibold text-[#007B7B]"
               >
                 Book
               </Link>
