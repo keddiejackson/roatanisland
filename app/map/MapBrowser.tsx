@@ -25,6 +25,17 @@ type Cluster = {
   longitude: number;
 };
 
+type MapCollection = {
+  id: string;
+  label: string;
+  blurb: string;
+  category: string;
+  area: string;
+  keywords: string[];
+  center: { latitude: number; longitude: number };
+  zoom: number;
+};
+
 const luxuryLayers = [
   "All",
   "Tours",
@@ -70,6 +81,69 @@ const areaButtons = [
   "Camp Bay",
 ];
 
+const mapCollections: MapCollection[] = [
+  {
+    id: "cruise-port",
+    label: "Cruise Port Friendly",
+    blurb: "Shorter-distance picks around Coxen Hole, Sandy Bay, and West Bay for guests watching the ship clock.",
+    category: "All",
+    area: "Coxen Hole",
+    keywords: ["cruise", "port", "coxen", "mahogany", "west bay", "sandy"],
+    center: { latitude: 16.315, longitude: -86.548 },
+    zoom: 13,
+  },
+  {
+    id: "sunset",
+    label: "Best Sunset Spots",
+    blurb: "West-facing tours, beach time, and private charters built around golden-hour plans.",
+    category: "All",
+    area: "West End",
+    keywords: ["sunset", "west end", "west bay", "boat", "charter", "beach"],
+    center: { latitude: 16.296, longitude: -86.596 },
+    zoom: 13,
+  },
+  {
+    id: "west-bay",
+    label: "West Bay Beach Day",
+    blurb: "Easy beach-day planning around West Bay with tours, stays, food, and transport close by.",
+    category: "All",
+    area: "West Bay",
+    keywords: ["west bay", "beach", "snorkel", "resort", "food"],
+    center: { latitude: 16.274, longitude: -86.599 },
+    zoom: 13,
+  },
+  {
+    id: "family",
+    label: "Family Friendly",
+    blurb: "Lower-friction options for groups, kids, and visitors who want a smooth island day.",
+    category: "All",
+    area: "All",
+    keywords: ["family", "kids", "private", "beach", "transport", "snorkel"],
+    center: roatanCenter,
+    zoom: 12,
+  },
+  {
+    id: "private-charter",
+    label: "Private Charter Day",
+    blurb: "Premium boat, driver, and custom-day style listings for a more private Roatan plan.",
+    category: "Private Charters",
+    area: "All",
+    keywords: ["private", "charter", "boat", "driver", "custom", "luxury"],
+    center: roatanCenter,
+    zoom: 12,
+  },
+  {
+    id: "east-end",
+    label: "East End Adventure",
+    blurb: "A guided look east toward French Harbour, Oak Ridge, Punta Gorda, and Camp Bay.",
+    category: "All",
+    area: "French Harbour",
+    keywords: ["east", "french", "oak ridge", "camp bay", "punta gorda", "adventure"],
+    center: { latitude: 16.385, longitude: -86.39 },
+    zoom: 12,
+  },
+];
+
 function formatPrice(price: number | null) {
   if (!price) return "Ask";
 
@@ -95,6 +169,27 @@ function findAreaPosition(location: string | null) {
   );
 
   return match?.[1] || areaPositions.roatan;
+}
+
+function collectionMatches(listing: MapListing, collection: MapCollection) {
+  const listingText = [
+    listing.title,
+    listing.location || "",
+    listing.category || "",
+    listing.description || "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  const matchesCategory =
+    collection.category === "All" || listing.category === collection.category;
+  const matchesArea =
+    collection.area === "All" ||
+    (listing.location || "").toLowerCase().includes(collection.area.toLowerCase());
+  const matchesKeyword = collection.keywords.some((keyword) =>
+    listingText.includes(keyword),
+  );
+
+  return matchesCategory && (matchesArea || matchesKeyword);
 }
 
 function listingToPin(listing: MapListing): Pin {
@@ -199,6 +294,7 @@ function readInitialMapState(listings: MapListing[]) {
       selectedId: listings[0]?.id || "",
       center: roatanCenter,
       zoom: 12,
+      collectionId: "",
     };
   }
 
@@ -206,6 +302,8 @@ function readInitialMapState(listings: MapListing[]) {
   const category = params.get("category");
   const location = params.get("area") || "All";
   const search = params.get("search") || "";
+  const collectionId = params.get("collection") || "";
+  const collection = mapCollections.find((item) => item.id === collectionId);
   const selectedId = params.get("selected") || listings[0]?.id || "";
   const selectedListing = listings.find((listing) => listing.id === selectedId);
   const selectedPin = selectedListing ? listingToPin(selectedListing) : null;
@@ -213,15 +311,18 @@ function readInitialMapState(listings: MapListing[]) {
 
   return {
     category: category && luxuryLayers.includes(category) ? category : "All",
-    location,
+    location: collection?.area || location,
     search,
     selectedId,
     center: selectedPin
       ? { latitude: selectedPin.latitudeValue, longitude: selectedPin.longitudeValue }
+      : collection
+        ? collection.center
       : location === "All"
         ? roatanCenter
         : findAreaPosition(location),
     zoom: zoomLevels.includes(requestedZoom) ? requestedZoom : 12,
+    collectionId: collection?.id || "",
   };
 }
 
@@ -233,6 +334,9 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [selectedId, setSelectedId] = useState(initialMapState.selectedId);
   const [center, setCenter] = useState(initialMapState.center);
   const [zoom, setZoom] = useState(initialMapState.zoom);
+  const [activeCollectionId, setActiveCollectionId] = useState(
+    initialMapState.collectionId,
+  );
   const [fullMap, setFullMap] = useState(false);
   const [hoveredId, setHoveredId] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
@@ -267,6 +371,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
   useEffect(() => {
     const params = new URLSearchParams();
+    if (activeCollectionId) params.set("collection", activeCollectionId);
     if (category !== "All") params.set("category", category);
     if (location !== "All") params.set("area", location);
     if (search.trim()) params.set("search", search.trim());
@@ -276,7 +381,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     const query = params.toString();
     const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     window.history.replaceState(null, "", nextUrl);
-  }, [category, location, search, selectedId, zoom]);
+  }, [activeCollectionId, category, location, search, selectedId, zoom]);
 
   const suggestions = useMemo(() => {
     if (!search.trim()) return [];
@@ -312,6 +417,18 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     ) as Record<string, number>;
   }, [listings]);
 
+  const activeCollection =
+    mapCollections.find((collection) => collection.id === activeCollectionId) ||
+    null;
+  const collectionCounts = useMemo(() => {
+    return Object.fromEntries(
+      mapCollections.map((collection) => [
+        collection.id,
+        listings.filter((listing) => collectionMatches(listing, collection)).length,
+      ]),
+    ) as Record<string, number>;
+  }, [listings]);
+
   const filteredListings = useMemo(() => {
     const rows = listings.filter((listing) => {
         const matchesCategory =
@@ -330,7 +447,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           .toLowerCase()
           .includes(search.toLowerCase());
 
-        return matchesCategory && matchesLocation && matchesSearch;
+        const matchesCollection = activeCollection
+          ? collectionMatches(listing, activeCollection)
+          : true;
+
+        return matchesCategory && matchesLocation && matchesSearch && matchesCollection;
       });
 
     if (!userLocation) {
@@ -351,7 +472,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         })
       );
     });
-  }, [category, listings, location, search, userLocation]);
+  }, [activeCollection, category, listings, location, search, userLocation]);
 
   const pins = useMemo(
     () => filteredListings.map((listing) => listingToPin(listing)),
@@ -405,6 +526,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }
 
   function focusArea(area: string) {
+    setActiveCollectionId("");
     setLocation(area);
     const nextCenter = area === "All" ? roatanCenter : findAreaPosition(area);
     setCenter(nextCenter);
@@ -416,6 +538,25 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     setMobileDrawerOpen(true);
     setCenter({ latitude: pin.latitudeValue, longitude: pin.longitudeValue });
     setZoom((currentZoom) => Math.max(currentZoom, 13));
+  }
+
+  function applyCollection(collection: MapCollection) {
+    setActiveCollectionId(collection.id);
+    setCategory(collection.category);
+    setLocation(collection.area);
+    setSearch("");
+    setCenter(collection.center);
+    setZoom(collection.zoom);
+    setSelectedId("");
+  }
+
+  function clearCollection() {
+    setActiveCollectionId("");
+    setCategory("All");
+    setLocation("All");
+    setSearch("");
+    setCenter(roatanCenter);
+    setZoom(12);
   }
 
   function useNearMe() {
@@ -482,7 +623,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <div className="relative">
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setActiveCollectionId("");
+                setSearch(e.target.value);
+              }}
               placeholder="Search map"
               className="min-h-12 w-full rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
             />
@@ -508,7 +652,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </div>
           <select
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
+            onChange={(e) => {
+              setActiveCollectionId("");
+              setCategory(e.target.value);
+            }}
             className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
           >
             {luxuryLayers.map((item) => (
@@ -542,12 +689,68 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </p>
         ) : null}
 
+        <div className="mt-4 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9C7A2F]">
+                Curated map collections
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
+                Tap a collection for a guided island view.
+              </p>
+            </div>
+            {activeCollection ? (
+              <button
+                type="button"
+                onClick={clearCollection}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm"
+              >
+                Clear collection
+              </button>
+            ) : null}
+          </div>
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {mapCollections.map((collection) => (
+              <button
+                key={collection.id}
+                type="button"
+                onClick={() => applyCollection(collection)}
+                className={`shrink-0 rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
+                  activeCollectionId === collection.id
+                    ? "bg-[#071F2F] text-[#FFF6DA] ring-1 ring-[#D6B56D]/70"
+                    : "bg-white text-[#0B3C5D] shadow-sm hover:-translate-y-0.5"
+                }`}
+              >
+                <span className="block">{collection.label}</span>
+                <span
+                  className={`mt-1 block text-xs ${
+                    activeCollectionId === collection.id
+                      ? "text-white/70"
+                      : "text-gray-500"
+                  }`}
+                >
+                  {collectionCounts[collection.id] || 0} match
+                  {collectionCounts[collection.id] === 1 ? "" : "es"}
+                </span>
+              </button>
+            ))}
+          </div>
+          {activeCollection ? (
+            <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-[#0B3C5D]">
+              {activeCollection.blurb}
+            </p>
+          ) : null}
+        </div>
+
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {luxuryLayers.map((layer) => (
             <button
               key={layer}
               type="button"
-              onClick={() => setCategory(layer)}
+              onClick={() => {
+                setActiveCollectionId("");
+                setCategory(layer);
+              }}
               className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ${
                 category === layer
                   ? "bg-[#071F2F] text-[#FFF6DA] ring-1 ring-[#D6B56D]/60"
@@ -656,6 +859,40 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               title="Your location"
             />
           ) : null}
+
+          {zoom >= 12
+            ? areaButtons
+                .filter((area) => area !== "All")
+                .map((area) => {
+                  const areaPosition = findAreaPosition(area);
+                  const point = latLonToWorld(
+                    areaPosition.latitude,
+                    areaPosition.longitude,
+                    zoom,
+                  );
+                  const isActive = location === area;
+
+                  return (
+                    <button
+                      key={area}
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => focusArea(area)}
+                      style={{
+                        left: `calc(50% + ${point.x - centerWorld.x}px)`,
+                        top: `calc(50% + ${point.y - centerWorld.y}px)`,
+                      }}
+                      className={`absolute z-[8] -translate-x-1/2 translate-y-4 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide shadow-lg ring-2 transition hover:scale-105 ${
+                        isActive
+                          ? "bg-[#D6B56D] text-[#071F2F] ring-white"
+                          : "bg-[#071F2F]/90 text-[#FFF6DA] ring-white/70"
+                      }`}
+                    >
+                      {area}
+                    </button>
+                  );
+                })
+            : null}
 
           {pins.length === 0 ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center">
