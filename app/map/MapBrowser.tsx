@@ -830,6 +830,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <div className="absolute left-4 top-4 z-20 grid gap-2">
             <button
               type="button"
+              onPointerDown={(event) => event.stopPropagation()}
               onClick={() => zoomMap(1)}
               className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
             >
@@ -837,6 +838,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             </button>
             <button
               type="button"
+              onPointerDown={(event) => event.stopPropagation()}
               onClick={() => zoomMap(-1)}
               className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
             >
