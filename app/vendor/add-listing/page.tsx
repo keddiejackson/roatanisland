@@ -39,7 +39,7 @@ export default function AddListingPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [galleryImageUrls, setGalleryImageUrls] = useState("");
   const [blockedDates, setBlockedDates] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
@@ -74,10 +74,11 @@ export default function AddListingPage() {
 
     const { data: sessionData } = await supabase.auth.getSession();
     let finalImageUrl = imageUrl;
+    let uploadedGalleryUrls: string[] = [];
 
-    if (imageFile) {
+    if (imageFiles.length > 0) {
       const uploadForm = new FormData();
-      uploadForm.append("image", imageFile);
+      imageFiles.forEach((file) => uploadForm.append("image", file));
       uploadForm.append("vendorId", vendorAccount?.vendor_id || "pending");
 
       const uploadResponse = await fetch("/api/uploads/listing-image", {
@@ -101,6 +102,7 @@ export default function AddListingPage() {
       }
 
       finalImageUrl = uploadResult.imageUrl;
+      uploadedGalleryUrls = (uploadResult.imageUrls || []).slice(1);
     }
 
     const response = await fetch("/api/vendor-listings", {
@@ -125,10 +127,13 @@ export default function AddListingPage() {
         location,
         category,
         imageUrl: finalImageUrl,
-        galleryImageUrls: galleryImageUrls
-          .split("\n")
-          .map((url) => url.trim())
-          .filter(Boolean),
+        galleryImageUrls: [
+          ...uploadedGalleryUrls,
+          ...galleryImageUrls
+            .split("\n")
+            .map((url) => url.trim())
+            .filter(Boolean),
+        ],
         tourTimes: tourTimes
           .split("\n")
           .map((time) => time.trim())
@@ -409,19 +414,20 @@ export default function AddListingPage() {
 
                   <div>
                     <label className="mb-2 block font-medium">
-                      Listing Image
+                      Listing Photos
                     </label>
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp,image/gif"
+                      multiple
                       onChange={(e) =>
-                        setImageFile(e.target.files?.[0] || null)
+                        setImageFiles(Array.from(e.target.files || []))
                       }
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
                     />
-                    {imageFile ? (
+                    {imageFiles.length > 0 ? (
                       <p className="mt-2 text-sm text-gray-500">
-                        Selected: {imageFile.name}
+                        Selected: {imageFiles.map((file) => file.name).join(", ")}
                       </p>
                     ) : null}
                   </div>
@@ -441,7 +447,7 @@ export default function AddListingPage() {
 
                   <div className="md:col-span-2">
                     <label className="mb-2 block font-medium">
-                      Gallery Image URLs
+                      Extra Gallery Image URLs
                     </label>
                     <textarea
                       value={galleryImageUrls}

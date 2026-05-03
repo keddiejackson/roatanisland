@@ -15,6 +15,7 @@ type ListingRow = {
   price: number | null;
   location: string | null;
   image_url: string | null;
+  gallery_image_urls: string[] | null;
   category: string | null;
   tour_times: string[] | null;
   availability_note: string | null;
@@ -39,6 +40,7 @@ type ListingDraft = {
   price: string;
   location: string;
   image_url: string;
+  gallery_image_urls: string;
   category: string;
   tour_times: string;
   availability_note: string;
@@ -58,6 +60,7 @@ function toDraft(listing: ListingRow): ListingDraft {
     price: listing.price === null ? "" : String(listing.price),
     location: listing.location || "",
     image_url: listing.image_url || "",
+    gallery_image_urls: (listing.gallery_image_urls || []).join("\n"),
     category: listing.category || "Tours",
     tour_times: (listing.tour_times || [
       "10:30 AM",
@@ -135,7 +138,7 @@ export default function AdminListingsPage() {
     async function fetchListings() {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, vendor_id, title, description, price, location, image_url, category, tour_times, availability_note, max_guests, minimum_notice_hours, is_active, is_featured, latitude, longitude")
+        .select("id, vendor_id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, availability_note, max_guests, minimum_notice_hours, is_active, is_featured, latitude, longitude")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -143,6 +146,7 @@ export default function AdminListingsPage() {
           error.message.includes("is_active") ||
           error.message.includes("vendor_id") ||
           error.message.includes("is_featured") ||
+          error.message.includes("gallery_image_urls") ||
           error.message.includes("tour_times") ||
           error.message.includes("availability_note") ||
           error.message.includes("max_guests") ||
@@ -188,6 +192,7 @@ export default function AdminListingsPage() {
           minimum_notice_hours: null,
               is_active: true,
               is_featured: false,
+              gallery_image_urls: [],
               latitude: null,
               longitude: null,
             }));
@@ -309,6 +314,10 @@ export default function AdminListingsPage() {
       .split("\n")
       .map((time) => time.trim())
       .filter(Boolean);
+    const galleryImageUrls = draft.gallery_image_urls
+      .split("\n")
+      .map((url) => url.trim())
+      .filter(Boolean);
     const maxGuests = draft.max_guests ? Number(draft.max_guests) : null;
     const minimumNoticeHours = draft.minimum_notice_hours
       ? Number(draft.minimum_notice_hours)
@@ -325,6 +334,7 @@ export default function AdminListingsPage() {
         price: draft.price ? Number(draft.price) : null,
         location: draft.location,
         image_url: draft.image_url || null,
+        ...(setupMessage ? {} : { gallery_image_urls: galleryImageUrls }),
         category: draft.category,
         ...(setupMessage ? {} : { tour_times: tourTimes }),
         ...(setupMessage
@@ -361,6 +371,7 @@ export default function AdminListingsPage() {
               price: draft.price ? Number(draft.price) : null,
               location: draft.location,
               image_url: draft.image_url || null,
+              gallery_image_urls: galleryImageUrls,
               category: draft.category,
               tour_times: tourTimes,
               availability_note: draft.availability_note || null,
@@ -627,6 +638,29 @@ export default function AdminListingsPage() {
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
                         />
                       </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <label className="mb-2 block text-sm font-medium">
+                        Gallery Image URLs
+                      </label>
+                      <textarea
+                        value={draft.gallery_image_urls}
+                        disabled={Boolean(setupMessage)}
+                        onChange={(e) =>
+                          updateDraft(
+                            listing.id,
+                            "gallery_image_urls",
+                            e.target.value,
+                          )
+                        }
+                        rows={4}
+                        placeholder={"https://...\nhttps://..."}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                      />
+                      <p className="mt-2 text-sm text-gray-500">
+                        One URL per line. These photos show in the public gallery.
+                      </p>
                     </div>
 
                     <div className="mt-4">

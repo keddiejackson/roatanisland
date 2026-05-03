@@ -32,18 +32,24 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!allowedTypes.has(image.type)) {
-    return NextResponse.json(
-      { error: "Please upload a JPG, PNG, WebP, or GIF image." },
-      { status: 400 },
-    );
-  }
+  for (const uploadImage of images) {
+    if (!(uploadImage instanceof File)) {
+      continue;
+    }
 
-  if (image.size > maxFileSize) {
-    return NextResponse.json(
-      { error: "Please upload an image smaller than 5 MB." },
-      { status: 400 },
-    );
+    if (!allowedTypes.has(uploadImage.type)) {
+      return NextResponse.json(
+        { error: "Please upload JPG, PNG, WebP, or GIF images." },
+        { status: 400 },
+      );
+    }
+
+    if (uploadImage.size > maxFileSize) {
+      return NextResponse.json(
+        { error: "Please upload images smaller than 5 MB each." },
+        { status: 400 },
+      );
+    }
   }
 
   const safeVendorId = vendorId.replace(/[^a-zA-Z0-9-]/g, "") || "pending";

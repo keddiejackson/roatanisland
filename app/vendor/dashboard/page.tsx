@@ -100,7 +100,7 @@ export default function VendorDashboardPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [listings, setListings] = useState<ListingRow[]>([]);
   const [listingDrafts, setListingDrafts] = useState<Record<string, ListingDraft>>({});
-  const [listingImageFiles, setListingImageFiles] = useState<Record<string, File | null>>({});
+  const [listingImageFiles, setListingImageFiles] = useState<Record<string, File[]>>({});
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [addons, setAddons] = useState<AddonRow[]>([]);
   const [addonForms, setAddonForms] = useState<Record<string, { name: string; priceCents: string }>>({});
@@ -457,7 +457,7 @@ export default function VendorDashboardPage() {
       .split("\n")
       .map((date) => date.trim())
       .filter(Boolean);
-    const galleryImageUrls = (draft.galleryImageUrls || "")
+    let galleryImageUrls = (draft.galleryImageUrls || "")
       .split("\n")
       .map((url) => url.trim())
       .filter(Boolean);
@@ -475,11 +475,11 @@ export default function VendorDashboardPage() {
     let finalImageUrl = draft.imageUrl;
     setSavingListingId(listingId);
 
-    const imageFile = listingImageFiles[listingId];
+    const imageFiles = listingImageFiles[listingId] || [];
 
-    if (imageFile) {
+    if (imageFiles.length > 0) {
       const uploadForm = new FormData();
-      uploadForm.append("image", imageFile);
+      imageFiles.forEach((file) => uploadForm.append("image", file));
       uploadForm.append("vendorId", vendorAccount?.vendor_id || "pending");
 
       const uploadResponse = await fetch("/api/uploads/listing-image", {
@@ -501,6 +501,10 @@ export default function VendorDashboardPage() {
       }
 
       finalImageUrl = uploadResult.imageUrl;
+      galleryImageUrls = [
+        ...((uploadResult.imageUrls as string[] | undefined) || []).slice(1),
+        ...galleryImageUrls,
+      ];
     }
 
     const response = await fetch(`/api/vendor/listings/${listingId}`, {
@@ -578,7 +582,7 @@ export default function VendorDashboardPage() {
     }));
     setListingImageFiles((currentFiles) => ({
       ...currentFiles,
-      [listingId]: null,
+      [listingId]: [],
     }));
     setAvailabilityNotes((currentNotes) => ({
       ...currentNotes,
@@ -1326,22 +1330,25 @@ export default function VendorDashboardPage() {
 
                         <div>
                           <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
-                            Listing Image
+                            Listing Photos
                           </label>
                           <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/gif"
+                            multiple
                             onChange={(e) =>
                               setListingImageFiles((currentFiles) => ({
                                 ...currentFiles,
-                                [listing.id]: e.target.files?.[0] || null,
+                                [listing.id]: Array.from(e.target.files || []),
                               }))
                             }
                             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
                           />
-                          {listingImageFiles[listing.id] ? (
+                          {(listingImageFiles[listing.id] || []).length > 0 ? (
                             <p className="mt-2 text-sm text-gray-500">
-                              Selected: {listingImageFiles[listing.id]?.name}
+                              Selected: {(listingImageFiles[listing.id] || [])
+                                .map((file) => file.name)
+                                .join(", ")}
                             </p>
                           ) : null}
                         </div>
@@ -1366,7 +1373,7 @@ export default function VendorDashboardPage() {
 
                         <div className="md:col-span-2">
                           <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
-                            Gallery Image URLs
+                            Extra Gallery Image URLs
                           </label>
                           <textarea
                             value={draft.galleryImageUrls}

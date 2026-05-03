@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import ListingGallery from "@/app/listings/[id]/ListingGallery";
 import ReviewForm from "@/app/listings/[id]/ReviewForm";
 import ReportListingForm from "@/app/listings/[id]/ReportListingForm";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -232,25 +233,7 @@ export default async function ListingPage({
             {listing.description || "Details for this experience are coming soon."}
           </p>
 
-          {galleryImages.length > 1 ? (
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {galleryImages.slice(0, 6).map((imageUrl, index) => (
-                <div
-                  key={`${imageUrl}-${index}`}
-                  className="relative h-48 overflow-hidden rounded-2xl bg-[#D8EFEC]"
-                >
-                  <Image
-                    src={imageUrl}
-                    alt={`${listing.title} photo ${index + 1}`}
-                    fill
-                    sizes="(min-width: 1024px) 24vw, (min-width: 640px) 50vw, 100vw"
-                    unoptimized
-                    className="object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          ) : null}
+          <ListingGallery title={listing.title} images={galleryImages} />
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             <div className="rounded-xl bg-[#EEF7F6] p-4">
