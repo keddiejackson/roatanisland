@@ -88,7 +88,7 @@ async function fetchRows(type: ExportType) {
   if (type === "reviews") {
     const { data, error } = await supabaseServer
       .from("listing_reviews")
-      .select("id, listing_id, reviewer_name, reviewer_email, rating, comment, is_approved, created_at")
+      .select("id, listing_id, reviewer_name, reviewer_email, rating, comment, photo_urls, is_approved, created_at")
       .order("created_at", { ascending: false });
 
     if (error) {

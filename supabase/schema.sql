@@ -241,6 +241,7 @@ create table if not exists public.listing_reviews (
   reviewer_email text,
   rating integer not null check (rating between 1 and 5),
   comment text not null,
+  photo_urls text[] not null default '{}',
   is_approved boolean not null default false,
   created_at timestamptz not null default now()
 );
@@ -381,6 +382,9 @@ add column if not exists reviewer_email text;
 
 alter table public.listing_reviews
 add column if not exists is_approved boolean not null default false;
+
+alter table public.listing_reviews
+add column if not exists photo_urls text[] not null default '{}';
 
 alter table public.vendor_invites
 add column if not exists accepted_at timestamptz;

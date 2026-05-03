@@ -9,7 +9,20 @@ type ReviewRequest = {
   reviewerEmail?: string;
   rating?: number | string;
   comment?: string;
+  photoUrls?: unknown;
 };
+
+function cleanPhotoUrls(values: unknown) {
+  if (!Array.isArray(values)) {
+    return [];
+  }
+
+  return values
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+}
 
 export async function POST(request: Request) {
   const body = (await request.json()) as ReviewRequest;
@@ -51,6 +64,7 @@ export async function POST(request: Request) {
         reviewer_email: reviewerEmail,
         rating,
         comment,
+        photo_urls: cleanPhotoUrls(body.photoUrls),
         is_approved: false,
       },
     ])

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import { isAdminUser } from "@/lib/admin";
@@ -13,6 +14,7 @@ type ReviewRow = {
   reviewer_email: string | null;
   rating: number;
   comment: string;
+  photo_urls: string[] | null;
   is_approved: boolean;
   created_at: string;
   listings: {
@@ -59,7 +61,7 @@ export default function AdminReviewsPage() {
     async function fetchReviews() {
       const { data, error } = await supabase
         .from("listing_reviews")
-        .select("id, listing_id, reviewer_name, reviewer_email, rating, comment, is_approved, created_at, listings(title)")
+        .select("id, listing_id, reviewer_name, reviewer_email, rating, comment, photo_urls, is_approved, created_at, listings(title)")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -271,6 +273,28 @@ export default function AdminReviewsPage() {
                   <p className="mt-4 rounded-xl bg-[#F7F3EA] p-4 leading-7 text-gray-700">
                     {review.comment}
                   </p>
+                  {review.photo_urls && review.photo_urls.length > 0 ? (
+                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {review.photo_urls.map((photoUrl, index) => (
+                        <a
+                          key={`${photoUrl}-${index}`}
+                          href={photoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="relative h-32 overflow-hidden rounded-xl bg-[#D8EFEC]"
+                        >
+                          <Image
+                            src={photoUrl}
+                            alt={`${review.reviewer_name} review photo ${index + 1}`}
+                            fill
+                            sizes="160px"
+                            unoptimized
+                            className="object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  ) : null}
                   {review.reviewer_email ? (
                     <p className="mt-3 text-sm text-gray-500">
                       {review.reviewer_email}

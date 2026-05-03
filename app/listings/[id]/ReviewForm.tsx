@@ -7,12 +7,34 @@ export default function ReviewForm({ listingId }: { listingId: string }) {
   const [reviewerEmail, setReviewerEmail] = useState("");
   const [rating, setRating] = useState("5");
   const [comment, setComment] = useState("");
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
   async function submitReview(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    let photoUrls: string[] = [];
+
+    if (photoFiles.length > 0) {
+      const uploadForm = new FormData();
+      photoFiles.forEach((file) => uploadForm.append("image", file));
+      uploadForm.append("listingId", listingId);
+
+      const uploadResponse = await fetch("/api/uploads/review-images", {
+        method: "POST",
+        body: uploadForm,
+      });
+      const uploadResult = await uploadResponse.json();
+
+      if (!uploadResponse.ok) {
+        setLoading(false);
+        alert(uploadResult.error || "Unable to upload review photos.");
+        return;
+      }
+
+      photoUrls = uploadResult.imageUrls || [];
+    }
 
     const response = await fetch("/api/reviews", {
       method: "POST",
@@ -25,6 +47,7 @@ export default function ReviewForm({ listingId }: { listingId: string }) {
         reviewerEmail,
         rating,
         comment,
+        photoUrls,
       }),
     });
     const result = await response.json();
@@ -40,6 +63,7 @@ export default function ReviewForm({ listingId }: { listingId: string }) {
     setReviewerEmail("");
     setRating("5");
     setComment("");
+    setPhotoFiles([]);
   }
 
   if (submitted) {
@@ -107,6 +131,22 @@ export default function ReviewForm({ listingId }: { listingId: string }) {
           className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
           required
         />
+      </div>
+
+      <div className="md:col-span-2">
+        <label className="mb-2 block font-medium">Trip Photos</label>
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          multiple
+          onChange={(e) => setPhotoFiles(Array.from(e.target.files || []))}
+          className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+        />
+        {photoFiles.length > 0 ? (
+          <p className="mt-2 text-sm text-gray-500">
+            Selected: {photoFiles.map((file) => file.name).join(", ")}
+          </p>
+        ) : null}
       </div>
 
       <button

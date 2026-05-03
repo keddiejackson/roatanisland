@@ -36,6 +36,7 @@ type Review = {
   reviewer_name: string;
   rating: number;
   comment: string;
+  photo_urls: string[] | null;
   created_at: string;
 };
 
@@ -155,7 +156,7 @@ export default async function ListingPage({
 
   const { data: reviewData } = await supabaseServer
     .from("listing_reviews")
-    .select("id, reviewer_name, rating, comment, created_at")
+    .select("id, reviewer_name, rating, comment, photo_urls, created_at")
     .eq("listing_id", listing.id)
     .eq("is_approved", true)
     .order("created_at", { ascending: false })
@@ -367,6 +368,25 @@ export default async function ListingPage({
                     <p className="mt-3 leading-7 text-gray-700">
                       {review.comment}
                     </p>
+                    {review.photo_urls && review.photo_urls.length > 0 ? (
+                      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {review.photo_urls.slice(0, 6).map((photoUrl, index) => (
+                          <div
+                            key={`${photoUrl}-${index}`}
+                            className="relative h-32 overflow-hidden rounded-xl bg-[#D8EFEC]"
+                          >
+                            <Image
+                              src={photoUrl}
+                              alt={`${review.reviewer_name} review photo ${index + 1}`}
+                              fill
+                              sizes="180px"
+                              unoptimized
+                              className="object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                   </article>
                 ))}
               </div>
