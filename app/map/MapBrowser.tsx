@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import type { MapListing } from "@/app/map/page";
 import {
   appleDirectionsUrl,
@@ -388,20 +388,21 @@ function readSavedTripIds(listings: MapListing[]) {
   }
 }
 
-function readInitialMapState(listings: MapListing[]) {
-  if (typeof window === "undefined") {
-    return {
-      category: "All",
-      location: "All",
-      search: "",
-      selectedId: listings[0]?.id || "",
-      center: roatanCenter,
-      zoom: 12,
-      collectionId: "",
-      tripIds: [],
-    };
-  }
+function defaultMapState(listings: MapListing[]) {
+  return {
+    category: "All",
+    location: "All",
+    search: "",
+    selectedId: listings[0]?.id || "",
+    center: roatanCenter,
+    zoom: 12,
+    collectionId: "",
+    tripIds: [] as string[],
+    pickupId: "",
+  };
+}
 
+function readBrowserMapState(listings: MapListing[]) {
   const params = new URLSearchParams(window.location.search);
   const category = params.get("category");
   const location = params.get("area") || "All";
@@ -436,7 +437,7 @@ function readInitialMapState(listings: MapListing[]) {
 }
 
 export default function MapBrowser({ listings }: { listings: MapListing[] }) {
-  const initialMapState = useMemo(() => readInitialMapState(listings), [listings]);
+  const initialMapState = useMemo(() => defaultMapState(listings), [listings]);
   const [category, setCategory] = useState(initialMapState.category);
   const [location, setLocation] = useState(initialMapState.location);
   const [search, setSearch] = useState(initialMapState.search);
@@ -452,6 +453,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [tripMessage, setTripMessage] = useState("");
   const [pickupId, setPickupId] = useState(initialMapState.pickupId);
   const [fullMap, setFullMap] = useState(false);
+  const [browserStateLoaded, setBrowserStateLoaded] = useState(false);
   const [hoveredId, setHoveredId] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<{
@@ -484,6 +486,24 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   );
 
   useEffect(() => {
+    startTransition(() => {
+      const browserMapState = readBrowserMapState(listings);
+      setCategory(browserMapState.category);
+      setLocation(browserMapState.location);
+      setSearch(browserMapState.search);
+      setSelectedId(browserMapState.selectedId);
+      setCenter(browserMapState.center);
+      setZoom(browserMapState.zoom);
+      setActiveCollectionId(browserMapState.collectionId);
+      setSavedTripIds(browserMapState.tripIds);
+      setPickupId(browserMapState.pickupId);
+      setBrowserStateLoaded(true);
+    });
+  }, [listings]);
+
+  useEffect(() => {
+    if (!browserStateLoaded) return;
+
     const params = new URLSearchParams();
     if (activeCollectionId) params.set("collection", activeCollectionId);
     if (category !== "All") params.set("category", category);
@@ -497,11 +517,23 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     const query = params.toString();
     const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
     window.history.replaceState(null, "", nextUrl);
-  }, [activeCollectionId, category, location, pickupId, savedTripIds, search, selectedId, zoom]);
+  }, [
+    activeCollectionId,
+    browserStateLoaded,
+    category,
+    location,
+    pickupId,
+    savedTripIds,
+    search,
+    selectedId,
+    zoom,
+  ]);
 
   useEffect(() => {
+    if (!browserStateLoaded) return;
+
     localStorage.setItem("roatan-trip-plan", JSON.stringify(savedTripIds));
-  }, [savedTripIds]);
+  }, [browserStateLoaded, savedTripIds]);
 
   const suggestions = useMemo(() => {
     if (!search.trim()) return [];
@@ -542,6 +574,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     null;
   const selectedPickup =
     pickupPoints.find((point) => point.id === pickupId) || null;
+  const directionsOrigin = userLocation || selectedPickup;
   const collectionCounts = useMemo(() => {
     return Object.fromEntries(
       mapCollections.map((collection) => [
@@ -850,17 +883,19 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     <section
       className={
         fullMap
-          ? "fixed inset-0 z-50 grid gap-4 overflow-auto bg-[#071F2F] p-3 text-[#17324D] sm:p-5 lg:grid-cols-[1fr_420px]"
-          : "grid gap-6 lg:grid-cols-[1fr_380px]"
+          ? "fixed inset-0 z-50 grid min-w-0 gap-4 overflow-auto bg-[#071F2F] p-3 text-[#17324D] sm:p-5 lg:grid-cols-[minmax(0,1fr)_420px]"
+          : "grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]"
       }
     >
-      <div className="rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-4 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
-        <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] p-4 text-white sm:flex-row sm:items-center">
-          <div>
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-4 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
+        <div className="mb-4 flex min-w-0 flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] p-4 text-white sm:flex-row sm:items-center">
+          <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
               Roatan atlas
             </p>
-            <h2 className="mt-1 text-2xl font-bold">Explore by coast, cove, and crew</h2>
+            <h2 className="mt-1 text-2xl font-bold leading-tight">
+              Explore by coast, cove, and crew
+            </h2>
           </div>
           <button
             type="button"
@@ -1203,40 +1238,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             </div>
           ) : null}
 
-          {zoom >= 12
-            ? areaButtons
-                .filter((area) => area !== "All")
-                .map((area) => {
-                  const areaPosition = findAreaPosition(area);
-                  const point = latLonToWorld(
-                    areaPosition.latitude,
-                    areaPosition.longitude,
-                    zoom,
-                  );
-                  const isActive = location === area;
-
-                  return (
-                    <button
-                      key={area}
-                      type="button"
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={() => focusArea(area)}
-                      style={{
-                        left: `calc(50% + ${point.x - centerWorld.x}px)`,
-                        top: `calc(50% + ${point.y - centerWorld.y}px)`,
-                      }}
-                      className={`absolute z-[8] -translate-x-1/2 translate-y-4 rounded-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide shadow-lg ring-2 transition hover:scale-105 ${
-                        isActive
-                          ? "bg-[#D6B56D] text-[#071F2F] ring-white"
-                          : "bg-[#071F2F]/90 text-[#FFF6DA] ring-white/70"
-                      }`}
-                    >
-                      {area}
-                    </button>
-                  );
-                })
-            : null}
-
           {tripRoutePoints.length > 1 ? (
             <div className="pointer-events-none absolute inset-0 z-[9]">
               {tripRoutePoints.slice(1).map((point, index) => {
@@ -1355,8 +1356,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         </div>
       </div>
 
-      <aside className="grid gap-4 lg:max-h-[760px] lg:overflow-y-auto">
-        <section className="rounded-2xl bg-[#071F2F] p-5 text-white shadow-2xl shadow-[#071F2F]/15">
+      <aside className="grid min-w-0 gap-4 lg:max-h-[760px] lg:overflow-y-auto">
+        <section className="min-w-0 rounded-2xl bg-[#071F2F] p-5 text-white shadow-2xl shadow-[#071F2F]/15">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
@@ -1485,7 +1486,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <article
             className={`sticky bottom-3 z-30 overflow-hidden rounded-2xl bg-white shadow-2xl shadow-[#071F2F]/15 ring-2 ring-[#D6B56D]/35 lg:static ${
               mobileDrawerOpen ? "max-h-[82vh]" : "max-h-28"
-            } transition-[max-height] duration-300`}
+            } transition-[max-height] duration-300 lg:max-h-none`}
           >
             <button
               type="button"
@@ -1503,6 +1504,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                   alt={selectedPin.title}
                   fill
                   sizes="380px"
+                  loading="eager"
                   unoptimized
                   className="object-cover"
                 />
@@ -1633,28 +1635,28 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <a
-                href={(userLocation ? googleDirectionsUrl : googleMapsUrl)({
+                href={(directionsOrigin ? googleDirectionsUrl : googleMapsUrl)({
                   latitude: selectedPin.latitudeValue,
                   longitude: selectedPin.longitudeValue,
                   location: selectedPin.location,
                   title: selectedPin.title,
-                  originLatitude: userLocation?.latitude,
-                  originLongitude: userLocation?.longitude,
+                  originLatitude: directionsOrigin?.latitude,
+                  originLongitude: directionsOrigin?.longitude,
                 })}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-center text-sm font-semibold text-[#0B3C5D]"
               >
-                {userLocation ? "Directions" : "Google Maps"}
+                {directionsOrigin ? "Directions" : "Google Maps"}
               </a>
               <a
-                href={(userLocation ? appleDirectionsUrl : appleMapsUrl)({
+                href={(directionsOrigin ? appleDirectionsUrl : appleMapsUrl)({
                   latitude: selectedPin.latitudeValue,
                   longitude: selectedPin.longitudeValue,
                   location: selectedPin.location,
                   title: selectedPin.title,
-                  originLatitude: userLocation?.latitude,
-                  originLongitude: userLocation?.longitude,
+                  originLatitude: directionsOrigin?.latitude,
+                  originLongitude: directionsOrigin?.longitude,
                 })}
                 target="_blank"
                 rel="noreferrer"

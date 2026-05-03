@@ -27,8 +27,8 @@ export default async function MapPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-5 py-10 text-[#17324D] sm:px-6">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen overflow-x-hidden bg-[#F7F3EA] px-5 py-10 text-[#17324D] sm:px-6">
+      <div className="mx-auto max-w-7xl min-w-0">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
             RoatanIsland.life
