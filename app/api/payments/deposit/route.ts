@@ -18,10 +18,23 @@ function getBaseUrl(request: Request) {
 
 export async function POST(request: Request) {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-  const depositAmountCents = Number(
+  let depositAmountCents = Number(
     process.env.STRIPE_DEPOSIT_AMOUNT_CENTS || "5000",
   );
   const body = (await request.json()) as DepositRequest;
+
+  const { data: settingsData } = await supabaseServer
+    .from("site_settings")
+    .select("value")
+    .eq("key", "site")
+    .maybeSingle();
+  const settings = settingsData?.value as
+    | { depositAmountCents?: string | number }
+    | null;
+
+  if (settings?.depositAmountCents) {
+    depositAmountCents = Number(settings.depositAmountCents);
+  }
 
   if (!stripeSecretKey) {
     return NextResponse.json(

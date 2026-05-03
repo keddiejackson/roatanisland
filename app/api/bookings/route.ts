@@ -37,6 +37,7 @@ export async function POST(request: Request) {
   let estimatedCommissionCents: number | null = null;
   let discountAmountCents: number | null = null;
   let selectedAddons: { id: string; name: string; price_cents: number }[] = [];
+  let commissionRate = 0.1;
 
   if (
     !body.fullName ||
@@ -95,16 +96,20 @@ export async function POST(request: Request) {
     if (body.promoCode?.trim() && estimatedBookingValueCents) {
       const { data: promo } = await supabaseServer
         .from("promo_codes")
-        .select("code, discount_percent, discount_amount_cents")
+        .select("code, discount_percent, discount_amount_cents, expires_at")
         .eq("code", body.promoCode.trim().toUpperCase())
         .eq("is_active", true)
         .maybeSingle();
 
-      if (promo?.discount_percent) {
+      const promoExpired = promo?.expires_at
+        ? new Date(promo.expires_at).getTime() < Date.now()
+        : false;
+
+      if (promo?.discount_percent && !promoExpired) {
         discountAmountCents = Math.round(
           estimatedBookingValueCents * (promo.discount_percent / 100),
         );
-      } else if (promo?.discount_amount_cents) {
+      } else if (promo?.discount_amount_cents && !promoExpired) {
         discountAmountCents = promo.discount_amount_cents;
       }
 
@@ -115,7 +120,20 @@ export async function POST(request: Request) {
     }
 
     if (estimatedBookingValueCents) {
-      estimatedCommissionCents = Math.round(estimatedBookingValueCents * 0.1);
+      const { data: settingsData } = await supabaseServer
+        .from("site_settings")
+        .select("value")
+        .eq("key", "site")
+        .maybeSingle();
+      const settings = settingsData?.value as
+        | { commissionRate?: string | number }
+        | null;
+      commissionRate = settings?.commissionRate
+        ? Number(settings.commissionRate)
+        : commissionRate;
+      estimatedCommissionCents = Math.round(
+        estimatedBookingValueCents * commissionRate,
+      );
     }
 
     if (listingRules?.max_guests && guests > listingRules.max_guests) {
@@ -194,6 +212,7 @@ export async function POST(request: Request) {
         guest_message: guestMessage,
         listing_id: body.listingId || null,
         booking_value_cents: estimatedBookingValueCents,
+        commission_rate: commissionRate,
         commission_amount_cents: estimatedCommissionCents,
         promo_code: body.promoCode?.trim().toUpperCase() || null,
         discount_amount_cents: discountAmountCents,

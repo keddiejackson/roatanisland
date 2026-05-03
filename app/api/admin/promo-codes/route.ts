@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     description?: string;
     discountPercent?: string;
     discountAmountCents?: string;
+    expiresAt?: string;
   };
   const { data, error } = await supabaseServer
     .from("promo_codes")
@@ -37,6 +38,7 @@ export async function POST(request: Request) {
         discount_amount_cents: body.discountAmountCents
           ? Number(body.discountAmountCents)
           : null,
+        expires_at: body.expiresAt || null,
         is_active: true,
       },
     ])

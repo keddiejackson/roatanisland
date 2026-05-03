@@ -7,7 +7,10 @@ type ExportType =
   | "vendors"
   | "reviews"
   | "activity"
-  | "vendor_invites";
+  | "vendor_invites"
+  | "reports"
+  | "promo_codes"
+  | "vendor_documents";
 
 async function verifyAdmin(request: Request) {
   const token = request.headers
@@ -121,6 +124,45 @@ async function fetchRows(type: ExportType) {
     return (data || []) as Record<string, unknown>[];
   }
 
+  if (type === "reports") {
+    const { data, error } = await supabaseServer
+      .from("listing_reports")
+      .select("id, listing_id, reporter_name, reporter_email, reason, details, status, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
+  if (type === "promo_codes") {
+    const { data, error } = await supabaseServer
+      .from("promo_codes")
+      .select("id, code, description, discount_percent, discount_amount_cents, is_active, expires_at, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
+  if (type === "vendor_documents") {
+    const { data, error } = await supabaseServer
+      .from("vendor_documents")
+      .select("id, vendor_id, title, file_url, status, admin_note, created_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
   const { data, error } = await supabaseServer
     .from("vendors")
     .select(
@@ -152,6 +194,9 @@ export async function GET(request: Request) {
       "reviews",
       "activity",
       "vendor_invites",
+      "reports",
+      "promo_codes",
+      "vendor_documents",
     ].includes(type)
   ) {
     return NextResponse.json({ error: "Unknown export type." }, { status: 400 });

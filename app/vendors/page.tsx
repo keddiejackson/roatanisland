@@ -13,12 +13,13 @@ type Vendor = {
   business_name: string;
   notes: string | null;
   profile_image_url: string | null;
+  is_verified: boolean | null;
 };
 
 export default async function VendorsPage() {
   const { data } = await supabaseServer
     .from("vendors")
-    .select("id, business_name, notes, profile_image_url")
+    .select("id, business_name, notes, profile_image_url, is_verified")
     .eq("is_active", true)
     .order("business_name", { ascending: true });
 
@@ -86,6 +87,11 @@ export default async function VendorsPage() {
                     <h2 className="text-xl font-bold text-[#0B3C5D]">
                       {vendor.business_name}
                     </h2>
+                    {vendor.is_verified ? (
+                      <span className="mt-2 inline-block rounded-full bg-[#D8EFEC] px-3 py-1 text-xs font-bold text-[#0B3C5D]">
+                        Verified vendor
+                      </span>
+                    ) : null}
                     <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
                       {vendor.notes || "View active listings from this operator."}
                     </p>

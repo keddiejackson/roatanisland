@@ -17,6 +17,7 @@ type VendorRow = {
   website: string | null;
   notes: string | null;
   is_active: boolean | null;
+  is_verified: boolean | null;
 };
 
 type VendorForm = {
@@ -95,7 +96,7 @@ export default function AdminVendorsPage() {
     async function fetchVendors() {
       const { data, error } = await supabase
         .from("vendors")
-        .select("id, business_name, contact_name, email, phone, website, notes, is_active")
+        .select("id, business_name, contact_name, email, phone, website, notes, is_active, is_verified")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -169,7 +170,7 @@ export default function AdminVendorsPage() {
           is_active: true,
         },
       ])
-      .select("id, business_name, contact_name, email, phone, website, notes, is_active")
+      .select("id, business_name, contact_name, email, phone, website, notes, is_active, is_verified")
       .single();
 
     setSaving(false);
@@ -179,7 +180,10 @@ export default function AdminVendorsPage() {
       return;
     }
 
-    setVendors((currentVendors) => [data as VendorRow, ...currentVendors]);
+    setVendors((currentVendors) => [
+      { ...(data as VendorRow), is_verified: false },
+      ...currentVendors,
+    ]);
     await logAdminActivity({
       action: "vendor_created",
       targetType: "vendor",
@@ -223,6 +227,30 @@ export default function AdminVendorsPage() {
         is_active: nextActive,
       },
     });
+    setSavingVendorId(null);
+  }
+
+  async function toggleVerified(vendor: VendorRow) {
+    setSavingVendorId(vendor.id);
+    const nextVerified = !(vendor.is_verified ?? false);
+    const { error } = await supabase
+      .from("vendors")
+      .update({ is_verified: nextVerified })
+      .eq("id", vendor.id);
+
+    if (error) {
+      alert(`Unable to update vendor: ${error.message}`);
+      setSavingVendorId(null);
+      return;
+    }
+
+    setVendors((currentVendors) =>
+      currentVendors.map((currentVendor) =>
+        currentVendor.id === vendor.id
+          ? { ...currentVendor, is_verified: nextVerified }
+          : currentVendor,
+      ),
+    );
     setSavingVendorId(null);
   }
 
@@ -451,6 +479,11 @@ export default function AdminVendorsPage() {
                           >
                             {vendor.is_active === false ? "Inactive" : "Active"}
                           </span>
+                          {vendor.is_verified ? (
+                            <span className="rounded-full bg-[#D8EFEC] px-3 py-1 text-xs font-semibold text-[#0B3C5D]">
+                              Verified
+                            </span>
+                          ) : null}
                         </div>
                         <p className="mt-2 text-sm text-gray-600">
                           {vendor.contact_name || "No contact name"}
@@ -475,6 +508,13 @@ export default function AdminVendorsPage() {
                           {invitingVendorId === vendor.id
                             ? "Sending..."
                             : "Invite"}
+                        </button>
+                        <button
+                          onClick={() => toggleVerified(vendor)}
+                          disabled={savingVendorId === vendor.id}
+                          className="rounded-xl border border-green-600 px-4 py-2 text-sm font-semibold text-green-700 disabled:opacity-50"
+                        >
+                          {vendor.is_verified ? "Unverify" : "Verify"}
                         </button>
                         <button
                           onClick={() => deleteVendor(vendor)}

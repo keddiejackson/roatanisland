@@ -53,6 +53,9 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   const [guests, setGuests] = useState("");
   const [guestMessage, setGuestMessage] = useState("");
   const [promoCode, setPromoCode] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+  const [accountMessage, setAccountMessage] = useState("");
+  const [accountLoading, setAccountLoading] = useState(false);
 
   useEffect(() => {
     async function fetchListing() {
@@ -201,6 +204,30 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     window.location.href = result.url;
   }
 
+  async function createBookingAccount(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setAccountLoading(true);
+    setAccountMessage("");
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password: accountPassword,
+      options: {
+        emailRedirectTo: `${window.location.origin}/account`,
+      },
+    });
+
+    setAccountLoading(false);
+
+    if (error) {
+      setAccountMessage(error.message);
+      return;
+    }
+
+    setAccountPassword("");
+    setAccountMessage("Check your email to confirm your customer account.");
+  }
+
   return (
     <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow ring-1 ring-black/5">
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -277,6 +304,36 @@ export default function BookingForm({ listingId }: BookingFormProps) {
               </Link>
             ) : null}
           </div>
+          <form
+            onSubmit={createBookingAccount}
+            className="mt-6 rounded-xl bg-white/70 p-5 text-green-900"
+          >
+            <h3 className="font-semibold">Create a customer account</h3>
+            <p className="mt-2 text-sm">
+              Use the same email to see your booking requests in My Bookings.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]">
+              <input
+                type="password"
+                minLength={6}
+                value={accountPassword}
+                onChange={(e) => setAccountPassword(e.target.value)}
+                placeholder="Password"
+                className="rounded-xl border border-green-200 px-4 py-3 outline-none"
+                required
+              />
+              <button
+                type="submit"
+                disabled={accountLoading}
+                className="rounded-xl bg-green-700 px-5 py-3 font-semibold text-white disabled:opacity-50"
+              >
+                {accountLoading ? "Creating..." : "Create account"}
+              </button>
+            </div>
+            {accountMessage ? (
+              <p className="mt-3 text-sm font-semibold">{accountMessage}</p>
+            ) : null}
+          </form>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">

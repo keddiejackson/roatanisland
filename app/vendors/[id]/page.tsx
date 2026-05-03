@@ -17,6 +17,7 @@ type Vendor = {
   show_phone: boolean | null;
   show_website: boolean | null;
   is_active: boolean | null;
+  is_verified: boolean | null;
 };
 
 type Listing = {
@@ -46,7 +47,7 @@ async function getVendor(id: string) {
   const { data } = await supabaseServer
     .from("vendors")
     .select(
-      "id, business_name, contact_name, email, phone, website, notes, profile_image_url, show_contact_name, show_email, show_phone, show_website, is_active",
+      "id, business_name, contact_name, email, phone, website, notes, profile_image_url, show_contact_name, show_email, show_phone, show_website, is_active, is_verified",
     )
     .eq("id", id)
     .maybeSingle();
@@ -165,6 +166,11 @@ export default async function VendorProfilePage({
               <h1 className="mt-3 text-4xl font-bold sm:text-6xl">
                 {vendor.business_name}
               </h1>
+              {vendor.is_verified ? (
+                <span className="mt-4 inline-block rounded-full bg-white px-4 py-2 text-sm font-bold text-[#0B3C5D]">
+                  Verified vendor
+                </span>
+              ) : null}
               <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">
                 {vendor.notes ||
                   "Browse active listings from this Roatan operator."}

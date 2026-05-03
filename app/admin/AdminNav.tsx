@@ -11,6 +11,8 @@ const navItems = [
   { href: "/admin/listings", label: "Listings" },
   { href: "/admin/listing-review", label: "Review" },
   { href: "/admin/reviews", label: "Reviews" },
+  { href: "/admin/reports", label: "Reports" },
+  { href: "/admin/vendor-documents", label: "Vendor Docs" },
   { href: "/admin/promos", label: "Promos" },
   { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/activity", label: "Activity" },

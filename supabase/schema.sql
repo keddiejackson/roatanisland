@@ -37,6 +37,9 @@ create table if not exists public.vendors (
   website text,
   notes text,
   profile_image_url text,
+  verification_status text not null default 'unverified' check (verification_status in ('unverified', 'pending', 'verified', 'rejected')),
+  verification_note text,
+  verification_document_urls text[] not null default '{}'::text[],
   show_contact_name boolean not null default true,
   show_email boolean not null default true,
   show_phone boolean not null default true,
@@ -86,6 +89,16 @@ add column if not exists notes text;
 
 alter table public.vendors
 add column if not exists profile_image_url text;
+
+alter table public.vendors
+add column if not exists verification_status text not null default 'unverified'
+check (verification_status in ('unverified', 'pending', 'verified', 'rejected'));
+
+alter table public.vendors
+add column if not exists verification_note text;
+
+alter table public.vendors
+add column if not exists verification_document_urls text[] not null default '{}'::text[];
 
 alter table public.vendors
 add column if not exists show_contact_name boolean not null default true;
@@ -279,6 +292,25 @@ create table if not exists public.listing_reports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.vendor_documents (
+  id uuid primary key default gen_random_uuid(),
+  vendor_id uuid not null references public.vendors(id) on delete cascade,
+  title text not null,
+  file_url text not null,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  admin_note text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.vendors
+add column if not exists is_verified boolean not null default false;
+
+alter table public.listings
+add column if not exists latitude numeric;
+
+alter table public.listings
+add column if not exists longitude numeric;
+
 alter table public.bookings
 add column if not exists status text not null default 'new'
 check (status in ('new', 'confirmed', 'completed', 'cancelled'));
@@ -363,6 +395,10 @@ alter table public.listing_reports
 add column if not exists status text not null default 'new'
 check (status in ('new', 'reviewing', 'resolved'));
 
+alter table public.vendor_documents
+add column if not exists status text not null default 'pending'
+check (status in ('pending', 'approved', 'rejected'));
+
 alter table public.admin_users enable row level security;
 alter table public.vendors enable row level security;
 alter table public.vendor_users enable row level security;
@@ -377,6 +413,7 @@ alter table public.site_settings enable row level security;
 alter table public.promo_codes enable row level security;
 alter table public.listing_addons enable row level security;
 alter table public.listing_reports enable row level security;
+alter table public.vendor_documents enable row level security;
 
 grant usage on schema public to anon, authenticated;
 grant select, insert on public.vendors to anon, authenticated;
@@ -398,6 +435,7 @@ grant select, insert, update, delete on public.listing_addons to authenticated;
 grant select on public.listing_addons to anon, authenticated;
 grant insert on public.listing_reports to anon, authenticated;
 grant select, update on public.listing_reports to authenticated;
+grant select, insert, update on public.vendor_documents to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
 grant select, update on public.bookings to authenticated;
@@ -585,6 +623,46 @@ drop policy if exists "Admins can update listing reports" on public.listing_repo
 create policy "Admins can update listing reports"
 on public.listing_reports
 for update
+to authenticated
+using (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1 from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Vendors can manage own documents" on public.vendor_documents;
+create policy "Vendors can manage own documents"
+on public.vendor_documents
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.vendor_users
+    where vendor_users.vendor_id = vendor_documents.vendor_id
+      and vendor_users.user_id = auth.uid()
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.vendor_users
+    where vendor_users.vendor_id = vendor_documents.vendor_id
+      and vendor_users.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Admins can manage vendor documents" on public.vendor_documents;
+create policy "Admins can manage vendor documents"
+on public.vendor_documents
+for all
 to authenticated
 using (
   exists (

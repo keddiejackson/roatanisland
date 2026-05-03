@@ -72,6 +72,15 @@ type AddonRow = {
   price_cents: number;
 };
 
+type VendorDocument = {
+  id: string;
+  title: string;
+  file_url: string;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+};
+
 export default function VendorDashboardPage() {
   const router = useRouter();
   const [vendorAccount, setVendorAccount] = useState<VendorAccount | null>(null);
@@ -95,6 +104,10 @@ export default function VendorDashboardPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [addons, setAddons] = useState<AddonRow[]>([]);
   const [addonForms, setAddonForms] = useState<Record<string, { name: string; priceCents: string }>>({});
+  const [documents, setDocuments] = useState<VendorDocument[]>([]);
+  const [documentTitle, setDocumentTitle] = useState("");
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [uploadingDocument, setUploadingDocument] = useState(false);
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
   const [blockedDates, setBlockedDates] = useState<Record<string, string>>({});
@@ -245,6 +258,13 @@ export default function VendorDashboardPage() {
               .in("listing_id", listingIds);
       const addonsData = addonsResult.data;
       setAddons((addonsData as AddonRow[]) || []);
+
+      const { data: documentData } = await supabase
+        .from("vendor_documents")
+        .select("id, title, file_url, status, admin_note, created_at")
+        .eq("vendor_id", account.vendor_id)
+        .order("created_at", { ascending: false });
+      setDocuments((documentData as VendorDocument[]) || []);
 
       const { data: sessionData } = await supabase.auth.getSession();
       const bookingsResponse = await fetch("/api/vendor/bookings", {
@@ -647,6 +667,42 @@ export default function VendorDashboardPage() {
     setAddonForms((current) => ({ ...current, [listingId]: { name: "", priceCents: "" } }));
   }
 
+  async function uploadVendorDocument(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    if (!documentFile) {
+      alert("Choose a document to upload.");
+      return;
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const formData = new FormData();
+    formData.append("title", documentTitle);
+    formData.append("document", documentFile);
+    setUploadingDocument(true);
+
+    const response = await fetch("/api/vendor/documents", {
+      method: "POST",
+      headers: {
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: formData,
+    });
+    const result = await response.json();
+    setUploadingDocument(false);
+
+    if (!response.ok) {
+      alert(result.error || "Unable to upload document.");
+      return;
+    }
+
+    setDocuments((current) => [result.document as VendorDocument, ...current]);
+    setDocumentTitle("");
+    setDocumentFile(null);
+  }
+
   const groupedBookings = useMemo(() => {
     const groups = new Map<string, BookingRow[]>();
 
@@ -905,6 +961,78 @@ export default function VendorDashboardPage() {
               {savingProfile ? "Saving profile..." : "Save Profile"}
             </button>
           </form>
+        </section>
+
+        <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+          <h2 className="text-2xl font-bold text-[#0B3C5D]">
+            Business Verification
+          </h2>
+          <p className="mt-2 text-gray-600">
+            Upload business documents so the admin can review and verify your vendor account.
+          </p>
+
+          <form onSubmit={uploadVendorDocument} className="mt-6 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
+            <input
+              value={documentTitle}
+              onChange={(e) => setDocumentTitle(e.target.value)}
+              placeholder="Document name"
+              className="rounded-xl border border-gray-300 px-4 py-3 outline-none"
+              required
+            />
+            <input
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              onChange={(e) => setDocumentFile(e.target.files?.[0] || null)}
+              className="rounded-xl border border-gray-300 px-4 py-3 outline-none"
+              required
+            />
+            <button
+              type="submit"
+              disabled={uploadingDocument}
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white disabled:opacity-50"
+            >
+              {uploadingDocument ? "Uploading..." : "Upload"}
+            </button>
+          </form>
+
+          <div className="mt-6 grid gap-3">
+            {documents.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-gray-300 p-5 text-sm text-gray-600">
+                No documents uploaded yet.
+              </p>
+            ) : (
+              documents.map((document) => (
+                <div
+                  key={document.id}
+                  className="rounded-xl border border-gray-200 p-4"
+                >
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                    <div>
+                      <p className="font-semibold text-[#0B3C5D]">
+                        {document.title}
+                      </p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Status: {document.status}
+                      </p>
+                    </div>
+                    <a
+                      href={document.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="rounded-xl border border-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#007B7B]"
+                    >
+                      Open
+                    </a>
+                  </div>
+                  {document.admin_note ? (
+                    <p className="mt-3 rounded-lg bg-[#F7F3EA] p-3 text-sm text-gray-700">
+                      {document.admin_note}
+                    </p>
+                  ) : null}
+                </div>
+              ))
+            )}
+          </div>
         </section>
 
         <section className="mt-8 rounded-2xl bg-white p-8 shadow">

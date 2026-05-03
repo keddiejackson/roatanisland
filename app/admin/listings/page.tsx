@@ -22,6 +22,8 @@ type ListingRow = {
   minimum_notice_hours: number | null;
   is_active: boolean | null;
   is_featured: boolean | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type VendorRow = {
@@ -44,6 +46,8 @@ type ListingDraft = {
   minimum_notice_hours: string;
   is_active: boolean;
   is_featured: boolean;
+  latitude: string;
+  longitude: string;
 };
 
 function toDraft(listing: ListingRow): ListingDraft {
@@ -67,6 +71,8 @@ function toDraft(listing: ListingRow): ListingDraft {
         : "",
     is_active: listing.is_active ?? true,
     is_featured: listing.is_featured ?? false,
+    latitude: listing.latitude === null ? "" : String(listing.latitude),
+    longitude: listing.longitude === null ? "" : String(listing.longitude),
   };
 }
 
@@ -129,7 +135,7 @@ export default function AdminListingsPage() {
     async function fetchListings() {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, vendor_id, title, description, price, location, image_url, category, tour_times, availability_note, max_guests, minimum_notice_hours, is_active, is_featured")
+        .select("id, vendor_id, title, description, price, location, image_url, category, tour_times, availability_note, max_guests, minimum_notice_hours, is_active, is_featured, latitude, longitude")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -141,6 +147,8 @@ export default function AdminListingsPage() {
           error.message.includes("availability_note") ||
           error.message.includes("max_guests") ||
           error.message.includes("minimum_notice_hours") ||
+          error.message.includes("latitude") ||
+          error.message.includes("longitude") ||
           error.code === "42703";
 
         if (!missingSetupColumn) {
@@ -178,9 +186,11 @@ export default function AdminListingsPage() {
           availability_note: null,
           max_guests: null,
           minimum_notice_hours: null,
-          is_active: true,
-          is_featured: false,
-        }));
+              is_active: true,
+              is_featured: false,
+              latitude: null,
+              longitude: null,
+            }));
 
         setSetupMessage(
           "Run the updated Supabase SQL setup to enable vendor assignment, active toggles, featured listings, custom tour times, availability notes, and capacity rules.",
@@ -303,6 +313,8 @@ export default function AdminListingsPage() {
     const minimumNoticeHours = draft.minimum_notice_hours
       ? Number(draft.minimum_notice_hours)
       : null;
+    const latitude = draft.latitude ? Number(draft.latitude) : null;
+    const longitude = draft.longitude ? Number(draft.longitude) : null;
 
     const { error } = await supabase
       .from("listings")
@@ -323,6 +335,8 @@ export default function AdminListingsPage() {
           : {
               max_guests: maxGuests,
               minimum_notice_hours: minimumNoticeHours,
+              latitude,
+              longitude,
             }),
         ...(setupMessage
           ? {}
@@ -352,6 +366,8 @@ export default function AdminListingsPage() {
               availability_note: draft.availability_note || null,
               max_guests: maxGuests,
               minimum_notice_hours: minimumNoticeHours,
+              latitude,
+              longitude,
               is_active: draft.is_active,
               is_featured: draft.is_featured,
             }
@@ -630,6 +646,41 @@ export default function AdminListingsPage() {
                         placeholder="Runs Monday-Friday, weather permitting"
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
                       />
+                    </div>
+
+                    <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">
+                          Latitude
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={draft.latitude}
+                          disabled={Boolean(setupMessage)}
+                          onChange={(e) =>
+                            updateDraft(listing.id, "latitude", e.target.value)
+                          }
+                          placeholder="16.33"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-medium">
+                          Longitude
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={draft.longitude}
+                          disabled={Boolean(setupMessage)}
+                          onChange={(e) =>
+                            updateDraft(listing.id, "longitude", e.target.value)
+                          }
+                          placeholder="-86.53"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                        />
+                      </div>
                     </div>
 
                     <div className="mt-4 grid gap-4 lg:grid-cols-2">

@@ -36,6 +36,12 @@ function formatPrice(price: number | null) {
 
 export default function Home() {
   const [listings, setListings] = useState<Listing[]>([]);
+  const [siteSettings, setSiteSettings] = useState({
+    siteName: "RoatanIsland.life",
+    homepageHeadline: "Plan your best Roatan day in one place.",
+    homepageSubhead:
+      "Browse local experiences, compare prices, and request bookings from a simple island directory built for travelers.",
+  });
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [maxPrice, setMaxPrice] = useState("");
@@ -58,6 +64,19 @@ export default function Home() {
       );
 
       setListings(rows);
+
+      const { data: settingsData } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "site")
+        .maybeSingle();
+
+      if (settingsData?.value && typeof settingsData.value === "object") {
+        setSiteSettings((current) => ({
+          ...current,
+          ...(settingsData.value as Partial<typeof current>),
+        }));
+      }
     }
 
     fetchListings();
@@ -184,7 +203,7 @@ export default function Home() {
         <div className="relative mx-auto flex min-h-[620px] max-w-7xl flex-col justify-between px-5 py-6 sm:min-h-[640px] sm:px-6 sm:py-8">
           <header className="flex flex-col items-start justify-between gap-4 text-white sm:flex-row sm:items-center">
             <Link href="/" className="text-xl font-bold">
-              RoatanIsland.life
+              {siteSettings.siteName}
             </Link>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
               <a
@@ -243,11 +262,10 @@ export default function Home() {
               Tours, stays, and transport
             </p>
             <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-6xl">
-              Plan your best Roatan day in one place.
+              {siteSettings.homepageHeadline}
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/90">
-              Browse local experiences, compare prices, and request bookings
-              from a simple island directory built for travelers.
+              {siteSettings.homepageSubhead}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <a

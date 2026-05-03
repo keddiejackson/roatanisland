@@ -1,4 +1,5 @@
 import { logAppError } from "@/lib/error-log";
+import { supabaseServer } from "@/lib/supabase-server";
 
 type AdminNotification = {
   subject: string;
@@ -48,13 +49,28 @@ export function brandedEmail(title: string, rows: [string, string | number | nul
   );
 }
 
-function getAdminRecipients() {
+async function getAdminRecipients() {
   const raw =
     process.env.ADMIN_NOTIFICATION_EMAIL ||
     process.env.NEXT_PUBLIC_ADMIN_EMAILS ||
     "";
+  const envRecipients = raw
+    .split(",")
+    .map((email) => email.trim())
+    .filter(Boolean);
 
-  return raw
+  if (envRecipients.length > 0) {
+    return envRecipients;
+  }
+
+  const { data } = await supabaseServer
+    .from("site_settings")
+    .select("value")
+    .eq("key", "site")
+    .maybeSingle();
+  const settings = data?.value as { adminEmails?: string } | null;
+
+  return (settings?.adminEmails || "")
     .split(",")
     .map((email) => email.trim())
     .filter(Boolean);
@@ -70,7 +86,7 @@ export function escapeHtml(value: string | number | null | undefined) {
 }
 
 export async function sendAdminNotification(message: AdminNotification) {
-  const recipients = getAdminRecipients();
+  const recipients = await getAdminRecipients();
 
   if (recipients.length === 0) {
     console.info("Admin email skipped: missing recipient.");
