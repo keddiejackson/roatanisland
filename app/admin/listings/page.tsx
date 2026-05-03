@@ -117,6 +117,7 @@ export default function AdminListingsPage() {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [featuredFilter, setFeaturedFilter] = useState("All");
+  const [pinFilter, setPinFilter] = useState("All");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -279,10 +280,30 @@ export default function AdminListingsPage() {
           featuredFilter === "All" ||
           (featuredFilter === "Featured" && isFeatured) ||
           (featuredFilter === "Not featured" && !isFeatured);
+        const hasExactPin = Boolean(draft.latitude && draft.longitude);
+        const matchesPin =
+          pinFilter === "All" ||
+          (pinFilter === "Exact pin" && hasExactPin) ||
+          (pinFilter === "Missing exact pin" && !hasExactPin);
 
-        return matchesSearch && matchesCategory && matchesStatus && matchesFeatured;
+        return (
+          matchesSearch &&
+          matchesCategory &&
+          matchesStatus &&
+          matchesFeatured &&
+          matchesPin
+        );
       }),
-    [categoryFilter, drafts, featuredFilter, listings, search, statusFilter, vendors],
+    [
+      categoryFilter,
+      drafts,
+      featuredFilter,
+      listings,
+      pinFilter,
+      search,
+      statusFilter,
+      vendors,
+    ],
   );
 
   if (checkingAuth || !authorized) {
@@ -492,7 +513,7 @@ export default function AdminListingsPage() {
             <p className="mt-8">No listings found.</p>
           ) : (
             <>
-            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_180px_180px_180px_auto] lg:items-center">
+            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_170px_170px_170px_180px_auto] lg:items-center">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -526,6 +547,15 @@ export default function AdminListingsPage() {
                 <option value="All">All featured</option>
                 <option value="Featured">Featured</option>
                 <option value="Not featured">Not featured</option>
+              </select>
+              <select
+                value={pinFilter}
+                onChange={(e) => setPinFilter(e.target.value)}
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              >
+                <option value="All">All map pins</option>
+                <option value="Exact pin">Exact pins</option>
+                <option value="Missing exact pin">Missing exact pin</option>
               </select>
               <p className="text-sm font-semibold text-[#0B3C5D]">
                 {filteredListings.length} shown

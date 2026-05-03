@@ -50,6 +50,32 @@ export function googleMapsUrl(input: {
   )}`;
 }
 
+export function googleDirectionsUrl(input: {
+  latitude?: number | null;
+  longitude?: number | null;
+  location?: string | null;
+  title?: string | null;
+  originLatitude?: number | null;
+  originLongitude?: number | null;
+}) {
+  const destination =
+    input.latitude !== null &&
+    input.latitude !== undefined &&
+    input.longitude !== null &&
+    input.longitude !== undefined
+      ? `${input.latitude},${input.longitude}`
+      : `${input.title || ""} ${input.location || "Roatan"}`.trim();
+  const origin =
+    input.originLatitude !== null &&
+    input.originLatitude !== undefined &&
+    input.originLongitude !== null &&
+    input.originLongitude !== undefined
+      ? `&origin=${input.originLatitude},${input.originLongitude}`
+      : "";
+
+  return `https://www.google.com/maps/dir/?api=1${origin}&destination=${encodeURIComponent(destination)}`;
+}
+
 export function appleMapsUrl(input: {
   latitude?: number | null;
   longitude?: number | null;
@@ -63,6 +89,32 @@ export function appleMapsUrl(input: {
   return `https://maps.apple.com/?q=${encodeURIComponent(
     `${input.title || ""} ${input.location || "Roatan"}`.trim(),
   )}`;
+}
+
+export function appleDirectionsUrl(input: {
+  latitude?: number | null;
+  longitude?: number | null;
+  location?: string | null;
+  title?: string | null;
+  originLatitude?: number | null;
+  originLongitude?: number | null;
+}) {
+  const destination =
+    input.latitude !== null &&
+    input.latitude !== undefined &&
+    input.longitude !== null &&
+    input.longitude !== undefined
+      ? `${input.latitude},${input.longitude}`
+      : `${input.title || ""} ${input.location || "Roatan"}`.trim();
+  const origin =
+    input.originLatitude !== null &&
+    input.originLatitude !== undefined &&
+    input.originLongitude !== null &&
+    input.originLongitude !== undefined
+      ? `&sll=${input.originLatitude},${input.originLongitude}`
+      : "";
+
+  return `https://maps.apple.com/?daddr=${encodeURIComponent(destination)}${origin}`;
 }
 
 export function distanceMiles(

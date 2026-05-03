@@ -4,7 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import type { MapListing } from "@/app/map/page";
-import { appleMapsUrl, googleMapsUrl } from "@/lib/map";
+import {
+  appleDirectionsUrl,
+  appleMapsUrl,
+  distanceMiles,
+  googleDirectionsUrl,
+  googleMapsUrl,
+} from "@/lib/map";
 
 type Pin = MapListing & {
   latitudeValue: number;
@@ -183,6 +189,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [selectedId, setSelectedId] = useState(listings[0]?.id || "");
   const [center, setCenter] = useState(roatanCenter);
   const [zoom, setZoom] = useState(12);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const [locationMessage, setLocationMessage] = useState("");
   const dragRef = useRef<{
     x: number;
     y: number;
@@ -203,9 +214,25 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     [listings],
   );
 
-  const filteredListings = useMemo(
-    () =>
-      listings.filter((listing) => {
+  const suggestions = useMemo(() => {
+    if (!search.trim()) return [];
+    const searchValue = search.toLowerCase();
+    return Array.from(
+      new Set(
+        [
+          ...areaButtons,
+          ...locations,
+          ...categories,
+          ...listings.map((listing) => listing.title),
+        ].filter((item) => item.toLowerCase().includes(searchValue)),
+      ),
+    )
+      .filter((item) => item !== "All")
+      .slice(0, 6);
+  }, [listings, locations, search]);
+
+  const filteredListings = useMemo(() => {
+    const rows = listings.filter((listing) => {
         const matchesCategory =
           category === "All" || listing.category === category;
         const matchesLocation =
@@ -221,9 +248,27 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           .includes(search.toLowerCase());
 
         return matchesCategory && matchesLocation && matchesSearch;
-      }),
-    [category, listings, location, search],
-  );
+      });
+
+    if (!userLocation) {
+      return rows;
+    }
+
+    return [...rows].sort((a, b) => {
+      const firstPin = listingToPin(a);
+      const secondPin = listingToPin(b);
+      return (
+        distanceMiles(userLocation, {
+          latitude: firstPin.latitudeValue,
+          longitude: firstPin.longitudeValue,
+        }) -
+        distanceMiles(userLocation, {
+          latitude: secondPin.latitudeValue,
+          longitude: secondPin.longitudeValue,
+        })
+      );
+    });
+  }, [category, listings, location, search, userLocation]);
 
   const pins = useMemo(
     () => filteredListings.map((listing) => listingToPin(listing)),
@@ -262,16 +307,72 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     setZoom((currentZoom) => Math.max(currentZoom, 13));
   }
 
+  function useNearMe() {
+    if (!navigator.geolocation) {
+      setLocationMessage("Your browser does not support location sharing.");
+      return;
+    }
+
+    setLocationMessage("Finding your location...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const coords = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        setUserLocation(coords);
+        setCenter(coords);
+        setZoom(13);
+        setLocationMessage("Showing closest listings first.");
+      },
+      () => {
+        setLocationMessage("Location permission was not allowed.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
+
+  function pinDistanceLabel(pin: Pin) {
+    if (!userLocation) return pin.hasExactPin ? "Exact pin" : "Area pin";
+    const miles = distanceMiles(userLocation, {
+      latitude: pin.latitudeValue,
+      longitude: pin.longitudeValue,
+    });
+    const minutes = Math.max(1, Math.round((miles / 20) * 60));
+    return `${miles.toFixed(1)} mi - about ${minutes} min`;
+  }
+
   return (
     <section className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <div className="rounded-2xl bg-white p-4 shadow sm:p-5">
-        <div className="grid gap-3 md:grid-cols-[1fr_150px_190px]">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search map"
-            className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
-          />
+        <div className="grid gap-3 md:grid-cols-[1fr_150px_190px_auto]">
+          <div className="relative">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search map"
+              className="min-h-12 w-full rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+            />
+            {suggestions.length > 0 ? (
+              <div className="absolute left-0 right-0 top-14 z-40 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => {
+                      setSearch(suggestion);
+                      if (areaButtons.includes(suggestion)) {
+                        focusArea(suggestion);
+                      }
+                    }}
+                    className="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#0B3C5D] hover:bg-[#F7F3EA]"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
@@ -294,7 +395,19 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={useNearMe}
+            className="min-h-12 rounded-xl bg-[#0B3C5D] px-4 text-sm font-semibold text-white"
+          >
+            Near me
+          </button>
         </div>
+        {locationMessage ? (
+          <p className="mt-3 rounded-xl bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+            {locationMessage}
+          </p>
+        ) : null}
 
         <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
           {areaButtons.map((area) => (
@@ -372,6 +485,22 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               -
             </button>
           </div>
+          {userLocation ? (
+            <div
+              style={{
+                left: `calc(50% + ${
+                  latLonToWorld(userLocation.latitude, userLocation.longitude, zoom)
+                    .x - centerWorld.x
+                }px)`,
+                top: `calc(50% + ${
+                  latLonToWorld(userLocation.latitude, userLocation.longitude, zoom)
+                    .y - centerWorld.y
+                }px)`,
+              }}
+              className="absolute z-20 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600 ring-4 ring-white shadow"
+              title="Your location"
+            />
+          ) : null}
 
           {pins.length === 0 ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center">
@@ -474,9 +603,13 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 </p>
               </div>
               <div className="rounded-xl bg-[#F7F3EA] p-3">
-                <p className="text-gray-500">Price</p>
+                <p className="text-gray-500">
+                  {userLocation ? "Distance" : "Price"}
+                </p>
                 <p className="font-bold text-[#0B3C5D]">
-                  {formatPrice(selectedPin.price)}
+                  {userLocation
+                    ? pinDistanceLabel(selectedPin)
+                    : formatPrice(selectedPin.price)}
                 </p>
               </div>
             </div>
@@ -515,24 +648,28 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2">
               <a
-                href={googleMapsUrl({
+                href={(userLocation ? googleDirectionsUrl : googleMapsUrl)({
                   latitude: selectedPin.latitudeValue,
                   longitude: selectedPin.longitudeValue,
                   location: selectedPin.location,
                   title: selectedPin.title,
+                  originLatitude: userLocation?.latitude,
+                  originLongitude: userLocation?.longitude,
                 })}
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-center text-sm font-semibold text-[#0B3C5D]"
               >
-                Google Maps
+                {userLocation ? "Directions" : "Google Maps"}
               </a>
               <a
-                href={appleMapsUrl({
+                href={(userLocation ? appleDirectionsUrl : appleMapsUrl)({
                   latitude: selectedPin.latitudeValue,
                   longitude: selectedPin.longitudeValue,
                   location: selectedPin.location,
                   title: selectedPin.title,
+                  originLatitude: userLocation?.latitude,
+                  originLongitude: userLocation?.longitude,
                 })}
                 target="_blank"
                 rel="noreferrer"
@@ -575,7 +712,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                     selectedPin?.id === pin.id ? "text-white/75" : "text-gray-600"
                   }`}
                 >
-                  {pin.location || "Roatan"} - {formatPrice(pin.price)}
+                  {pin.location || "Roatan"} -{" "}
+                  {userLocation ? pinDistanceLabel(pin) : formatPrice(pin.price)}
                 </p>
                 <p
                   className={`mt-1 text-xs font-semibold ${

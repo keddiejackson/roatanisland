@@ -26,6 +26,10 @@ type Listing = {
   title: string;
   is_active: boolean | null;
   approval_status: string | null;
+  vendor_id: string | null;
+  image_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 type Vendor = {
@@ -78,7 +82,9 @@ export default function AdminDashboardPage() {
             .select("id, full_name, tour_date, tour_time, guests, status, listing_id, commission_amount_cents, commission_status, created_at")
             .order("tour_date", { ascending: true })
             .limit(200),
-          supabase.from("listings").select("id, title, is_active, approval_status"),
+          supabase
+            .from("listings")
+            .select("id, title, is_active, approval_status, vendor_id, image_url, latitude, longitude"),
           supabase.from("vendors").select("id, is_active"),
           supabase.from("listing_reviews").select("id, is_approved"),
         ]);
@@ -117,6 +123,14 @@ export default function AdminDashboardPage() {
         .length,
       activeVendors: vendors.filter((vendor) => vendor.is_active !== false).length,
       pendingReviews: reviews.filter((review) => !review.is_approved).length,
+      exactPins: listings.filter(
+        (listing) => listing.latitude !== null && listing.longitude !== null,
+      ).length,
+      areaPins: listings.filter(
+        (listing) => listing.latitude === null || listing.longitude === null,
+      ).length,
+      missingPhotos: listings.filter((listing) => !listing.image_url).length,
+      missingVendors: listings.filter((listing) => !listing.vendor_id).length,
       unpaidCommissionCents: bookings
         .filter((booking) => (booking.commission_status || "unpaid") === "unpaid")
         .reduce(
@@ -167,6 +181,8 @@ export default function AdminDashboardPage() {
                   ["Active listings", summary.activeListings],
                   ["Active vendors", summary.activeVendors],
                   ["Pending reviews", summary.pendingReviews],
+                  ["Exact map pins", summary.exactPins],
+                  ["Area-only pins", summary.areaPins],
                 ].map(([label, value]) => (
                   <div key={label} className="rounded-2xl bg-[#F7F3EA] p-5">
                     <p className="text-sm text-gray-600">{label}</p>
@@ -234,6 +250,12 @@ export default function AdminDashboardPage() {
                       Review pending listings
                     </Link>
                     <Link
+                      href="/admin/listings"
+                      className="rounded-xl bg-[#F7F3EA] px-4 py-3 font-semibold text-[#0B3C5D]"
+                    >
+                      Clean up map pins
+                    </Link>
+                    <Link
                       href="/admin/reviews"
                       className="rounded-xl bg-[#F7F3EA] px-4 py-3 font-semibold text-[#0B3C5D]"
                     >
@@ -254,6 +276,27 @@ export default function AdminDashboardPage() {
                   </div>
                 </section>
               </div>
+
+              <section className="mt-8 rounded-2xl border border-gray-200 p-5">
+                <h2 className="text-xl font-bold text-[#0B3C5D]">
+                  Map and listing health
+                </h2>
+                <div className="mt-4 grid gap-4 md:grid-cols-4">
+                  {[
+                    ["Exact pins", summary.exactPins],
+                    ["Area-only pins", summary.areaPins],
+                    ["Missing photos", summary.missingPhotos],
+                    ["Missing vendors", summary.missingVendors],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-2xl bg-[#F7F3EA] p-5">
+                      <p className="text-sm text-gray-600">{label}</p>
+                      <p className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+                        {value}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
               <section className="mt-8 rounded-2xl border border-gray-200 p-5">
                 <h2 className="text-xl font-bold text-[#0B3C5D]">
