@@ -246,6 +246,12 @@ export default async function ListingPage({
                 All listings
               </Link>
               <Link
+                href={`/map?selected=${listing.id}`}
+                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+              >
+                Map
+              </Link>
+              <Link
                 href={`/book?listing=${listing.id}`}
                 className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] transition hover:bg-[#EEF7F6]"
               >
@@ -270,6 +276,9 @@ export default async function ListingPage({
               </span>
               <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
                 {formatPrice(listing.price)} starting price
+              </span>
+              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+                Request reviewed before confirmation
               </span>
             </div>
           </div>
@@ -404,7 +413,7 @@ export default async function ListingPage({
 
           <div className="mt-8 rounded-2xl bg-[#F7F3EA] p-6">
             <h2 className="text-xl font-bold text-[#0B3C5D]">
-              Before you book
+              Booking flow
             </h2>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
               <div>
@@ -522,6 +531,12 @@ export default async function ListingPage({
               Book This Experience
             </button>
           </Link>
+          <Link
+            href={`/map?selected=${listing.id}`}
+            className="mt-3 block rounded-xl border border-[#00A8A8]/30 bg-[#EEF7F6] px-4 py-3 text-center text-sm font-bold text-[#0B3C5D]"
+          >
+            View on Roatan map
+          </Link>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <a
               href={googleMapsUrl({
@@ -549,6 +564,16 @@ export default async function ListingPage({
             >
               Apple Maps
             </a>
+          </div>
+
+          <div className="mt-6 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4">
+            <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#9C7A2F]">
+              Trip planning note
+            </p>
+            <p className="mt-2 text-sm leading-6 text-gray-700">
+              Use the map for airport, cruise port, and beach-area planning
+              before sending your request.
+            </p>
           </div>
 
           <div className="mt-6 rounded-xl bg-[#F7F3EA] p-4">

@@ -875,6 +875,37 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
+        <section className="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            {
+              title: "Public profile",
+              text: "Keep your brand photo, website, and public details current.",
+              href: vendorAccount?.vendor_id
+                ? `/vendors/${vendorAccount.vendor_id}`
+                : "/vendors",
+            },
+            {
+              title: "New listing",
+              text: "Add another tour, stay, transfer, food stop, or charter.",
+              href: "/vendor/add-listing",
+            },
+            {
+              title: "Map quality",
+              text: "Use photos, exact pins, tour times, and pickup notes to stand out.",
+              href: "/map",
+            },
+          ].map((item) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className="rounded-2xl border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+            >
+              <p className="text-sm font-bold text-[#00A8A8]">{item.title}</p>
+              <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
+            </Link>
+          ))}
+        </section>
+
         <section className="mt-8 rounded-2xl bg-white p-8 shadow">
           <h2 className="text-2xl font-bold text-[#0B3C5D]">
             Public Vendor Profile

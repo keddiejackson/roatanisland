@@ -229,7 +229,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow ring-1 ring-black/5">
+    <div className="mx-auto max-w-4xl rounded-2xl bg-white p-8 shadow ring-1 ring-black/5">
       <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
         Booking request
       </p>
@@ -241,6 +241,24 @@ export default function BookingForm({ listingId }: BookingFormProps) {
         Choose your date, time, and number of guests. We will confirm
         availability after your request is received.
       </p>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        {[
+          ["1", "Request sent"],
+          ["2", "Operator reviews"],
+          ["3", "Plans confirmed"],
+        ].map(([number, text]) => (
+          <div
+            key={number}
+            className="rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4"
+          >
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Step {number}
+            </p>
+            <p className="mt-1 font-bold text-[#0B3C5D]">{text}</p>
+          </div>
+        ))}
+      </div>
 
       {listing ? (
         <div className="mt-6 rounded-xl border border-[#00A8A8]/20 bg-[#00A8A8]/10 p-4">
@@ -336,7 +354,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
           </form>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-8 space-y-6">
+        <form onSubmit={handleSubmit} className="mt-8 grid gap-6 md:grid-cols-2">
           <div>
             <label className="mb-2 block font-medium">Full Name</label>
             <input
@@ -430,7 +448,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             ) : null}
           </div>
 
-          <div>
+          <div className="md:col-span-2">
             <label className="mb-2 block font-medium">
               Message for the operator
             </label>
@@ -449,7 +467,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
           </div>
 
           {addons.length > 0 ? (
-            <div>
+            <div className="md:col-span-2">
               <p className="mb-2 block font-medium">Add-ons</p>
               <div className="grid gap-2">
                 {addons.map((addon) => (
@@ -481,7 +499,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             </div>
           ) : null}
 
-          <div>
+          <div className="md:col-span-2">
             <label className="mb-2 block font-medium">Promo Code</label>
             <input
               value={promoCode}
@@ -494,7 +512,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
           <button
             type="submit"
             disabled={loading || Boolean(guestWarning || dateWarning)}
-            className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
+            className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
           >
             {loading ? "Submitting..." : "Submit Booking Request"}
           </button>

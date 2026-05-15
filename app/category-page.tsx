@@ -50,12 +50,20 @@ export default async function CategoryPage({
             <Link href="/" className="text-xl font-bold">
               RoatanIsland.life
             </Link>
-            <Link
-              href="/"
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
-            >
-              Home
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/"
+                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
+              >
+                Home
+              </Link>
+              <Link
+                href="/map"
+                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/20"
+              >
+                Map
+              </Link>
+            </div>
           </header>
           <div className="py-16">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
@@ -65,6 +73,20 @@ export default async function CategoryPage({
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">
               {description}
             </p>
+            <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
+              {[
+                "Locally listed",
+                "Map-friendly planning",
+                "Request before confirm",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-2xl bg-white/10 p-4 text-sm font-semibold ring-1 ring-white/15"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

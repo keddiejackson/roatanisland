@@ -41,6 +41,12 @@ export default async function MapPage() {
               Home
             </Link>
             <Link
+              href="/tours"
+              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
+            >
+              Tours
+            </Link>
+            <Link
               href="/vendor/signup"
               className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white shadow"
             >
@@ -61,6 +67,18 @@ export default async function MapPage() {
             show as precise pins; area-only listings are grouped near their
             listed town or beach.
           </p>
+          <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
+            {["Airport pickup", "Cruise ports", "Beach areas", "Trip planner"].map(
+              (item) => (
+                <span
+                  key={item}
+                  className="rounded-full border border-[#D6B56D]/30 bg-white px-4 py-2 text-[#0B3C5D] shadow-sm"
+                >
+                  {item}
+                </span>
+              ),
+            )}
+          </div>
         </section>
 
         <MapBrowser listings={(data as MapListing[]) || []} />

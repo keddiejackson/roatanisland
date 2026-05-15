@@ -20,7 +20,51 @@ type Listing = {
   tour_times: string[] | null;
 };
 
-const categories = ["All", "Tours", "Hotels", "Transport"];
+const categories = [
+  "All",
+  "Tours",
+  "Hotels",
+  "Transport",
+  "Food",
+  "Beaches",
+  "Private Charters",
+];
+
+const categoryLinks = [
+  {
+    title: "Tours",
+    href: "/tours",
+    text: "Snorkeling, island routes, wildlife, and reef days.",
+  },
+  {
+    title: "Hotels",
+    href: "/hotels",
+    text: "Beach stays, boutique rooms, and easy base camps.",
+  },
+  {
+    title: "Transport",
+    href: "/transport",
+    text: "Airport rides, cruise transfers, and private drivers.",
+  },
+  {
+    title: "Map",
+    href: "/map",
+    text: "Compare beaches, ports, airport pickup, and nearby stops.",
+  },
+];
+
+const trustHighlights = [
+  ["Local-first", "Operators manage their own listings and availability."],
+  ["Map-ready", "Plan around ports, beaches, the airport, and pickup points."],
+  ["Request-based", "Bookings are reviewed before anything is final."],
+];
+
+const planningSteps = [
+  ["Browse", "Choose tours, stays, transport, food, beaches, or charters."],
+  ["Plan", "Use the map to group stops by coast, town, or pickup point."],
+  ["Request", "Send your preferred date, time, group size, and notes."],
+  ["Confirm", "The operator reviews the request and follows up."],
+];
 
 function formatPrice(price: number | null) {
   if (!price) {
@@ -257,29 +301,53 @@ export default function Home() {
             </div>
           </header>
 
-          <div className="max-w-3xl pb-20 pt-20 text-white sm:pt-28">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
-              Tours, stays, and transport
-            </p>
-            <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-6xl">
-              {siteSettings.homepageHeadline}
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-white/90">
-              {siteSettings.homepageSubhead}
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#listings"
-                className="rounded-full bg-[#00A8A8] px-6 py-3 font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-[#078F8F]"
-              >
-                Find an experience
-              </a>
-              <Link
-                href="/vendor/signup"
-                className="rounded-full bg-white px-6 py-3 font-semibold text-[#0B3C5D] shadow-lg shadow-black/10 transition hover:bg-[#EEF7F6]"
-              >
-                Add your business
-              </Link>
+          <div className="grid gap-8 pb-20 pt-20 text-white sm:pt-28 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end">
+            <div className="max-w-3xl">
+              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
+                Tours, stays, and transport
+              </p>
+              <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-6xl">
+                {siteSettings.homepageHeadline}
+              </h1>
+              <p className="mt-5 max-w-2xl text-lg leading-8 text-white/90">
+                {siteSettings.homepageSubhead}
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href="#listings"
+                  className="rounded-full bg-[#00A8A8] px-6 py-3 font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-[#078F8F]"
+                >
+                  Find an experience
+                </a>
+                <Link
+                  href="/vendor/signup"
+                  className="rounded-full bg-white px-6 py-3 font-semibold text-[#0B3C5D] shadow-lg shadow-black/10 transition hover:bg-[#EEF7F6]"
+                >
+                  Add your business
+                </Link>
+                <Link
+                  href="/map"
+                  className="rounded-full border border-white/35 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur transition hover:bg-white/20"
+                >
+                  Explore the map
+                </Link>
+              </div>
+            </div>
+            <div className="rounded-2xl border border-white/20 bg-white/15 p-5 shadow-2xl shadow-black/20 backdrop-blur">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9EE8E3]">
+                Island planning desk
+              </p>
+              <div className="mt-4 grid gap-3">
+                {trustHighlights.map(([title, text]) => (
+                  <div
+                    key={title}
+                    className="rounded-xl bg-white/10 p-4 ring-1 ring-white/15"
+                  >
+                    <p className="font-bold">{title}</p>
+                    <p className="mt-1 text-sm leading-6 text-white/80">{text}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -361,6 +429,27 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-16">
+        <div className="mb-14 grid gap-4 md:grid-cols-4">
+          {categoryLinks.map((item) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className="group rounded-2xl border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+            >
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Explore
+              </p>
+              <h2 className="mt-2 text-xl font-bold text-[#0B3C5D]">
+                {item.title}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
+              <span className="mt-5 inline-flex text-sm font-bold text-[#007B7B]">
+                View options
+              </span>
+            </Link>
+          ))}
+        </div>
+
         {featuredListings.length > 0 ? (
           <div className="mb-14">
             <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
@@ -534,14 +623,13 @@ export default function Home() {
       </section>
 
       <section className="bg-white px-6 py-12">
-        <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-3">
-          {[
-            ["Browse", "Search active island listings by type and location."],
-            ["Request", "Send your preferred date, time, and group size."],
-            ["Confirm", "The operator reviews availability before it is final."],
-          ].map(([title, text]) => (
+        <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-4">
+          {planningSteps.map(([title, text], index) => (
             <div key={title} className="rounded-2xl bg-[#F7F3EA] p-6">
-              <p className="text-lg font-bold text-[#0B3C5D]">{title}</p>
+              <p className="text-sm font-bold text-[#00A8A8]">
+                {String(index + 1).padStart(2, "0")}
+              </p>
+              <p className="mt-2 text-lg font-bold text-[#0B3C5D]">{title}</p>
               <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
             </div>
           ))}

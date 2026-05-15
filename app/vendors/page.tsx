@@ -33,12 +33,20 @@ export default async function VendorsPage() {
             <Link href="/" className="text-xl font-bold">
               RoatanIsland.life
             </Link>
-            <Link
-              href="/"
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
-            >
-              Home
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/"
+                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
+              >
+                Home
+              </Link>
+              <Link
+                href="/vendor/signup"
+                className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white"
+              >
+                List your business
+              </Link>
+            </div>
           </header>
           <div className="py-16">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
@@ -51,6 +59,18 @@ export default async function VendorsPage() {
               Find local tour, stay, and transport operators with active
               listings on RoatanIsland.life.
             </p>
+            <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
+              {["Verified profiles", "Public contact controls", "Active listings"].map(
+                (item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl bg-white/10 p-4 text-sm font-semibold ring-1 ring-white/15"
+                  >
+                    {item}
+                  </div>
+                ),
+              )}
+            </div>
           </div>
         </div>
       </section>

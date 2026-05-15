@@ -138,12 +138,20 @@ export default async function VendorProfilePage({
             <Link href="/" className="text-xl font-bold">
               RoatanIsland.life
             </Link>
-            <Link
-              href="/"
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
-            >
-              Home
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/"
+                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
+              >
+                Home
+              </Link>
+              <Link
+                href="/vendors"
+                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/20"
+              >
+                Vendors
+              </Link>
+            </div>
           </header>
 
           <div className="flex flex-col gap-8 py-16 lg:flex-row lg:items-center">
@@ -176,24 +184,24 @@ export default async function VendorProfilePage({
                   "Browse active listings from this Roatan operator."}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
-              {vendor.show_website !== false && vendor.website ? (
-                <a
-                  href={vendor.website}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-block rounded-xl bg-white px-5 py-3 font-semibold text-[#0B3C5D]"
-                >
-                  Visit Website
-                </a>
-              ) : null}
-              {vendor.show_email !== false && vendor.email ? (
-                <a
-                  href={`mailto:${vendor.email}`}
-                  className="inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
-                >
-                  Email Vendor
-                </a>
-              ) : null}
+                {vendor.show_website !== false && vendor.website ? (
+                  <a
+                    href={vendor.website}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-block rounded-xl bg-white px-5 py-3 font-semibold text-[#0B3C5D]"
+                  >
+                    Visit Website
+                  </a>
+                ) : null}
+                {vendor.show_email !== false && vendor.email ? (
+                  <a
+                    href={`mailto:${vendor.email}`}
+                    className="inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                  >
+                    Email Vendor
+                  </a>
+                ) : null}
               </div>
             </div>
           </div>

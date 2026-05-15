@@ -187,7 +187,7 @@ export default function AddListingPage() {
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex items-center justify-between gap-4">
+        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
             RoatanIsland.life
           </Link>
@@ -204,6 +204,30 @@ export default function AddListingPage() {
             Vendor Login
           </Link>
         </header>
+
+        <section className="mb-8 rounded-2xl bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10">
+          <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#9EE8E3]">
+            Partner onboarding
+          </p>
+          <h1 className="mt-2 text-3xl font-bold sm:text-5xl">
+            Add a polished listing guests can trust.
+          </h1>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {[
+              ["Photos", "Show the actual experience or meeting point."],
+              ["Times", "Set clear tour times and blocked dates."],
+              ["Map pin", "Place the start point near pickup or check-in."],
+            ].map(([title, text]) => (
+              <div
+                key={title}
+                className="rounded-xl bg-white/10 p-4 ring-1 ring-white/15"
+              >
+                <p className="font-bold">{title}</p>
+                <p className="mt-1 text-sm leading-6 text-white/75">{text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
 
         <div className="rounded-2xl bg-white p-8 shadow">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
