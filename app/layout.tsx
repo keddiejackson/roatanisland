@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   ),
   title: "RoatanIsland.life",
   description: "Discover and book tours, stays, and transport in Roatan.",
+  icons: {
+    icon: [{ url: "/images/roatan-island-life-mark.svg", type: "image/svg+xml" }],
+    shortcut: "/images/roatan-island-life-mark.svg",
+  },
   verification: {
     google: "rvSAtX1sV6nfPG1RCaF8euFpTRUtZ3NqRwmqE_J5C4o",
   },

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteLogo from "@/app/SiteLogo";
 import MapBrowser from "@/app/map/MapBrowser";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -30,9 +31,7 @@ export default async function MapPage() {
     <main className="min-h-screen overflow-x-hidden bg-[#F7F3EA] px-5 py-10 text-[#17324D] sm:px-6">
       <div className="mx-auto max-w-7xl min-w-0">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
-            RoatanIsland.life
-          </Link>
+          <SiteLogo />
           <div className="flex flex-wrap gap-2">
             <Link
               href="/"

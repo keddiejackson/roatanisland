@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 
 function VendorClaimContent() {
@@ -82,9 +83,7 @@ function VendorClaimContent() {
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
       <div className="mx-auto max-w-2xl">
         <header className="mb-8 flex items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
-            RoatanIsland.life
-          </Link>
+          <SiteLogo />
           <Link
             href="/"
             className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"

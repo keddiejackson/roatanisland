@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import SiteLogo from "@/app/SiteLogo";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
@@ -47,9 +48,7 @@ export default async function CategoryPage({
       <section className="bg-[#0B3C5D] px-6 py-10 text-white">
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-4">
-            <Link href="/" className="text-xl font-bold">
-              RoatanIsland.life
-            </Link>
+            <SiteLogo variant="light" />
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/"

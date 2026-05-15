@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" role="img" aria-labelledby="title desc">
+  <title id="title">Roatan Island Life mark</title>
+  <desc id="desc">Circular island logo mark with palm, coastline, and sunset.</desc>
+  <defs>
+    <linearGradient id="sunset" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#FFB15D"/>
+      <stop offset="1" stop-color="#FF5D7D"/>
+    </linearGradient>
+  </defs>
+  <circle cx="80" cy="80" r="72" fill="#FFFFFF" stroke="#082A44" stroke-width="8"/>
+  <circle cx="126" cy="62" r="17" fill="url(#sunset)"/>
+  <path d="M24 84c25-5 46 3 61 24 20 29 48 22 59 5" fill="none" stroke="#082A44" stroke-width="3.8" stroke-linecap="round"/>
+  <path d="M26 99c28-3 49 5 61 24 15 24 38 21 54 9" fill="none" stroke="#4D98AA" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M44 127c23-10 45-11 67-3" fill="none" stroke="#4D98AA" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M37 79c21 0 38 8 53 24" fill="none" stroke="#082A44" stroke-width="9" stroke-linecap="round"/>
+  <path d="M64 132c-2-36 7-64 31-85" fill="none" stroke="#082A44" stroke-width="9" stroke-linecap="round"/>
+  <path d="M91 47c-11-13-16-26-16-42 17 10 26 24 29 42" fill="#082A44"/>
+  <path d="M97 50c13-11 30-16 52-15-16 15-33 22-51 22" fill="#082A44"/>
+  <path d="M87 56c-12 2-26 0-42-8 15-7 30-8 45-1" fill="#082A44"/>
+  <path d="M87 64c-7 16-16 28-29 37 1-18 8-32 22-42" fill="#082A44"/>
+  <path d="M99 64c16 7 29 17 38 33-19-2-33-10-43-24" fill="#082A44"/>
+  <circle cx="92" cy="57" r="7" fill="#FFFFFF" stroke="#082A44" stroke-width="5"/>
+  <circle cx="76" cy="56" r="5" fill="#FFFFFF" stroke="#082A44" stroke-width="4"/>
+  <circle cx="104" cy="49" r="5" fill="#FFFFFF" stroke="#082A44" stroke-width="4"/>
+  <circle cx="105" cy="66" r="5" fill="#FFFFFF" stroke="#082A44" stroke-width="4"/>
+</svg>

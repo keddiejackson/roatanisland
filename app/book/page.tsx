@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SiteLogo from "@/app/SiteLogo";
 import BookingForm from "./BookingForm";
 
 export default async function BookPage({
@@ -12,9 +13,7 @@ export default async function BookPage({
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#1F2937]">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
-            RoatanIsland.life
-          </Link>
+          <SiteLogo />
           <div className="flex flex-wrap gap-2">
             <Link
               href="/"

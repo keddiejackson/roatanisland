@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 
 type Booking = {
@@ -62,9 +63,7 @@ export default function AccountPage() {
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
       <div className="mx-auto max-w-4xl">
         <header className="mb-8 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
-            RoatanIsland.life
-          </Link>
+          <SiteLogo />
           <Link href="/" className="rounded-xl bg-white px-4 py-2 font-semibold shadow">
             Home
           </Link>

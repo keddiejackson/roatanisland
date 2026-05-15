@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import SiteLogo from "@/app/SiteLogo";
 import ListingGallery from "@/app/listings/[id]/ListingGallery";
 import ReviewForm from "@/app/listings/[id]/ReviewForm";
 import ReportListingForm from "@/app/listings/[id]/ReportListingForm";
@@ -235,9 +236,7 @@ export default async function ListingPage({
 
         <div className="relative mx-auto flex min-h-[560px] max-w-7xl flex-col justify-between px-6 py-8">
           <header className="flex items-center justify-between gap-4 text-white">
-            <Link href="/" className="text-xl font-bold">
-              RoatanIsland.life
-            </Link>
+            <SiteLogo variant="light" />
             <div className="flex items-center gap-2">
               <Link
                 href="/"

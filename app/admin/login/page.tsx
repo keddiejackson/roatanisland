@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import SiteLogo from "@/app/SiteLogo";
 import { isAdminUser } from "@/lib/admin";
 import { supabase } from "@/lib/supabase";
 
@@ -45,9 +46,7 @@ export default function AdminLoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-[#F7F3EA] px-6 py-10">
       <div className="w-full max-w-md">
         <header className="mb-8 flex items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
-            RoatanIsland.life
-          </Link>
+          <SiteLogo />
           <Link
             href="/"
             className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"

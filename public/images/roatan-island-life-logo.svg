@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 168" role="img" aria-labelledby="title desc">
+  <title id="title">Roatan Island Life</title>
+  <desc id="desc">Roatan Island Life logo with palm, coastline, sunset, and wordmark.</desc>
+  <defs>
+    <linearGradient id="sunset" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#FFB15D"/>
+      <stop offset="1" stop-color="#FF5D7D"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <g transform="translate(12 12)">
+      <circle cx="72" cy="72" r="68" fill="#FFFFFF" stroke="#082A44" stroke-width="7"/>
+      <circle cx="118" cy="55" r="16" fill="url(#sunset)"/>
+      <path d="M15 76c25-5 45 3 60 24 20 29 47 22 58 5" stroke="#082A44" stroke-width="3.4" stroke-linecap="round"/>
+      <path d="M17 91c28-3 48 5 60 24 15 24 37 21 53 9" stroke="#4D98AA" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M35 119c22-10 43-11 65-3" stroke="#4D98AA" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M28 71c20 0 36 8 51 23" stroke="#082A44" stroke-width="8" stroke-linecap="round"/>
+      <path d="M53 123c-2-34 6-61 29-81" stroke="#082A44" stroke-width="8" stroke-linecap="round"/>
+      <path d="M78 42c-10-12-15-25-15-39 16 9 25 22 27 39" fill="#082A44"/>
+      <path d="M84 45c12-10 28-15 49-14-15 14-31 21-48 21" fill="#082A44"/>
+      <path d="M75 51c-11 2-24 0-39-7 14-7 28-8 42-1" fill="#082A44"/>
+      <path d="M74 59c-6 15-15 26-27 35 1-17 7-30 21-40" fill="#082A44"/>
+      <path d="M86 58c15 6 27 16 36 31-18-2-31-9-40-23" fill="#082A44"/>
+      <circle cx="79" cy="51" r="7" fill="#FFFFFF" stroke="#082A44" stroke-width="5"/>
+      <circle cx="64" cy="50" r="5" fill="#FFFFFF" stroke="#082A44" stroke-width="4"/>
+      <circle cx="90" cy="44" r="5" fill="#FFFFFF" stroke="#082A44" stroke-width="4"/>
+      <circle cx="91" cy="59" r="5" fill="#FFFFFF" stroke="#082A44" stroke-width="4"/>
+    </g>
+    <g transform="translate(172 39)">
+      <text x="0" y="54" fill="#C29414" font-family="Brush Script MT, Segoe Script, cursive" font-size="78" font-style="italic">Roatan</text>
+      <text x="8" y="104" fill="#082A44" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="700" letter-spacing="13">ISLAND LIFE</text>
+    </g>
+  </g>
+</svg>

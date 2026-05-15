@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 
 type Listing = {
@@ -254,9 +255,7 @@ export default function Home() {
 
         <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col px-5 py-5 sm:px-6">
           <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/15 bg-white/10 p-2 shadow-2xl shadow-black/20 backdrop-blur-md">
-            <Link href="/" className="px-3 py-2 text-lg font-black tracking-tight">
-              {siteSettings.siteName}
-            </Link>
+            <SiteLogo variant="light" priority />
             <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-semibold text-white/85">
               <a href="#marketplace" className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Marketplace

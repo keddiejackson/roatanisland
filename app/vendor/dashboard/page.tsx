@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import PinPicker from "@/app/map/PinPicker";
+import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 
 type VendorAccount = {
@@ -808,9 +809,7 @@ export default function VendorDashboardPage() {
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
       <div className="mx-auto max-w-5xl">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
-          <Link href="/" className="text-xl font-bold text-[#0B3C5D]">
-            RoatanIsland.life
-          </Link>
+          <SiteLogo />
           <div className="flex flex-wrap justify-end gap-2">
             <Link
               href="/"
