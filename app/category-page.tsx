@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
+import SiteFooter from "@/app/SiteFooter";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
@@ -106,9 +108,10 @@ export default async function CategoryPage({
         </div>
 
         {listings.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#00A8A8]/40 bg-white p-10 text-center text-gray-600">
-            No active listings yet.
-          </div>
+          <EmptyState
+            title={`No active ${category.toLowerCase()} listings yet.`}
+            text="This section is ready for local operators. Explore the map for nearby options or add your business to help grow the marketplace."
+          />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {listings.map((listing) => (
@@ -157,6 +160,7 @@ export default async function CategoryPage({
           </div>
         )}
       </section>
+      <SiteFooter />
     </main>
   );
 }

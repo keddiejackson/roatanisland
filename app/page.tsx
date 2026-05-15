@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import BrandAbout from "@/app/BrandAbout";
+import EmptyState from "@/app/EmptyState";
+import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 
@@ -534,14 +537,15 @@ export default function Home() {
 
           <div className="mt-10">
             {visibleListings.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-[#00A8A8]/40 bg-[#F7F3EA] p-10 text-center">
-                <h3 className="text-2xl font-black text-[#0B3C5D]">
-                  No matches yet.
-                </h3>
-                <p className="mx-auto mt-2 max-w-xl leading-7 text-gray-600">
-                  Clear the filters or send a planning request and we will point
-                  you toward the closest fit.
-                </p>
+              <div className="rounded-lg bg-[#F7F3EA] p-4">
+                <EmptyState
+                  title="No matches yet."
+                  text="Clear the filters or send a planning request and we will point you toward the closest fit."
+                  primaryHref="/map"
+                  primaryLabel="Explore the map"
+                  secondaryHref="/vendor/signup"
+                  secondaryLabel="Add a business"
+                />
                 <button
                   type="button"
                   onClick={() => {
@@ -552,7 +556,7 @@ export default function Home() {
                     setMinimumRating("All");
                     setSortBy("Featured");
                   }}
-                  className="mt-5 rounded-lg bg-[#00A8A8] px-5 py-3 font-bold text-white"
+                  className="mx-auto mt-5 block rounded-lg bg-[#071F2F] px-5 py-3 font-bold text-white"
                 >
                   Reset filters
                 </button>
@@ -589,6 +593,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <BrandAbout />
 
       <section className="px-5 py-16 sm:px-6">
         <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
@@ -700,6 +706,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <SiteFooter />
     </main>
   );
 }

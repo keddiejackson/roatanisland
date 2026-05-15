@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
+import SiteFooter from "@/app/SiteFooter";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const metadata: Metadata = {
@@ -76,9 +78,14 @@ export default async function VendorsPage() {
 
       <section className="mx-auto max-w-7xl px-6 py-14">
         {vendors.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#00A8A8]/40 bg-white p-10 text-center text-gray-600">
-            No active vendors yet.
-          </div>
+          <EmptyState
+            title="No active vendors yet."
+            text="Vendor profiles will appear here as local operators join and publish active listings."
+            primaryHref="/vendor/signup"
+            primaryLabel="List your business"
+            secondaryHref="/map"
+            secondaryLabel="Explore the map"
+          />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {vendors.map((vendor) => (
@@ -121,6 +128,7 @@ export default async function VendorsPage() {
           </div>
         )}
       </section>
+      <SiteFooter />
     </main>
   );
 }

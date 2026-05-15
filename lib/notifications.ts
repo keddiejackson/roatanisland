@@ -13,11 +13,16 @@ type EmailNotification = AdminNotification & {
 };
 
 function emailShell(title: string, body: string) {
+  const siteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://www.roatanisland.life";
+  const logoUrl = `${siteUrl}/images/roatan-island-life-logo.svg`;
+
   return `
     <div style="margin:0;background:#f7f3ea;padding:32px;font-family:Arial,sans-serif;color:#17324d">
       <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden">
         <div style="background:#0b3c5d;color:#ffffff;padding:24px">
-          <div style="font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9ee8e3">RoatanIsland.life</div>
+          <img src="${logoUrl}" alt="Roatan Island Life" width="190" style="display:block;width:190px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:8px" />
+          <div style="margin-top:12px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9ee8e3">RoatanIsland.life</div>
           <h1 style="margin:10px 0 0;font-size:28px;line-height:1.2">${escapeHtml(title)}</h1>
         </div>
         <div style="padding:28px;font-size:16px;line-height:1.65;color:#334155">

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
+import SiteFooter from "@/app/SiteFooter";
 import { supabase } from "@/lib/supabase";
 
 type Booking = {
@@ -77,7 +79,16 @@ export default function AccountPage() {
               <button className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white">Login</button>
             </form>
           ) : bookings.length === 0 ? (
-            <p className="mt-8 text-gray-600">No bookings found for {email}.</p>
+            <div className="mt-8">
+              <EmptyState
+                title="No bookings found yet."
+                text={`We did not find any booking requests for ${email}. Browse listings or use the map to start planning.`}
+                primaryHref="/map"
+                primaryLabel="Explore the map"
+                secondaryHref="/"
+                secondaryLabel="Browse listings"
+              />
+            </div>
           ) : (
             <div className="mt-8 grid gap-4">
               {bookings.map((booking) => (
@@ -99,6 +110,7 @@ export default function AccountPage() {
           )}
         </section>
       </div>
+      <SiteFooter />
     </main>
   );
 }

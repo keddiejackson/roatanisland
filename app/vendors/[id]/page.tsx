@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
+import SiteFooter from "@/app/SiteFooter";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Vendor = {
@@ -265,9 +267,14 @@ export default async function VendorProfilePage({
         </div>
 
         {listings.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#00A8A8]/40 bg-white p-10 text-center text-gray-600">
-            No active listings yet.
-          </div>
+          <EmptyState
+            title="No active listings yet."
+            text={`${vendor.business_name} does not have public listings live right now. Check the map for nearby options or return later.`}
+            primaryHref="/map"
+            primaryLabel="Explore nearby options"
+            secondaryHref="/vendors"
+            secondaryLabel="Browse vendors"
+          />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {listings.map((listing) => (
@@ -320,6 +327,7 @@ export default async function VendorProfilePage({
           </div>
         )}
       </section>
+      <SiteFooter />
     </main>
   );
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import PinPicker from "@/app/map/PinPicker";
+import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 
@@ -587,6 +588,7 @@ export default function AddListingPage() {
           )}
         </div>
       </div>
+      <SiteFooter />
     </main>
   );
 }

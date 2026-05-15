@@ -21,6 +21,11 @@ export const metadata: Metadata = {
     siteName: "RoatanIsland.life",
     type: "website",
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "RoatanIsland.life",
+    description: "Discover and book tours, stays, and transport in Roatan.",
+  },
 };
 
 export default function RootLayout({

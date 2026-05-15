@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 import SiteLogo from "@/app/SiteLogo";
+import SiteFooter from "@/app/SiteFooter";
 import ListingGallery from "@/app/listings/[id]/ListingGallery";
 import ReviewForm from "@/app/listings/[id]/ReviewForm";
 import ReportListingForm from "@/app/listings/[id]/ReportListingForm";
@@ -453,9 +454,15 @@ export default async function ListingPage({
             </div>
 
             {reviews.length === 0 ? (
-              <p className="mt-5 rounded-xl bg-[#F7F3EA] p-4 text-sm text-gray-600">
-                No approved reviews yet.
-              </p>
+              <div className="mt-5 rounded-xl bg-[#F7F3EA] p-5">
+                <p className="font-bold text-[#0B3C5D]">
+                  Reviews are coming soon.
+                </p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  Approved guest reviews will appear here after travelers share
+                  their experience.
+                </p>
+              </div>
             ) : (
               <div className="mt-5 grid gap-4">
                 {reviews.map((review) => (
@@ -617,6 +624,7 @@ export default async function ListingPage({
           <ReportListingForm listingId={listing.id} />
         </aside>
       </section>
+      <SiteFooter />
     </main>
   );
 }

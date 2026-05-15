@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteLogo from "@/app/SiteLogo";
+import SiteFooter from "@/app/SiteFooter";
 import BookingForm from "./BookingForm";
 
 export default async function BookPage({
@@ -51,6 +52,7 @@ export default async function BookPage({
 
         <BookingForm listingId={listing} />
       </div>
+      <SiteFooter />
     </main>
   );
 }

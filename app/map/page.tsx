@@ -1,5 +1,6 @@
 import Link from "next/link";
 import SiteLogo from "@/app/SiteLogo";
+import SiteFooter from "@/app/SiteFooter";
 import MapBrowser from "@/app/map/MapBrowser";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -82,6 +83,7 @@ export default async function MapPage() {
 
         <MapBrowser listings={(data as MapListing[]) || []} />
       </div>
+      <SiteFooter />
     </main>
   );
 }

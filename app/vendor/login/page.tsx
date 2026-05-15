@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 import { normalizeWebsiteUrl } from "@/lib/url";
@@ -141,6 +142,7 @@ export default function VendorLoginPage() {
           </p>
         </div>
       </div>
+      <SiteFooter />
     </main>
   );
 }

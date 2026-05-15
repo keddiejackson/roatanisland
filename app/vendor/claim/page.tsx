@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
+import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import { supabase } from "@/lib/supabase";
 
@@ -142,6 +143,7 @@ function VendorClaimContent() {
           )}
         </section>
       </div>
+      <SiteFooter />
     </main>
   );
 }
