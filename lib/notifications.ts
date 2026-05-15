@@ -15,13 +15,19 @@ type EmailNotification = AdminNotification & {
 function emailShell(title: string, body: string) {
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || "https://www.roatanisland.life";
-  const logoUrl = `${siteUrl}/images/roatan-island-life-logo.svg`;
+  const logoUrl = `${siteUrl}/images/roatan-island-life-mark.svg`;
 
   return `
     <div style="margin:0;background:#f7f3ea;padding:32px;font-family:Arial,sans-serif;color:#17324d">
       <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden">
         <div style="background:#0b3c5d;color:#ffffff;padding:24px">
-          <img src="${logoUrl}" alt="Roatan Island Life" width="190" style="display:block;width:190px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:8px" />
+          <div style="display:inline-flex;align-items:center;gap:12px;background:#ffffff;border-radius:16px;padding:10px 14px">
+            <img src="${logoUrl}" alt="Roatan Island Life" width="48" height="48" style="display:block;width:48px;height:48px" />
+            <div>
+              <div style="font-size:20px;font-weight:900;line-height:1;color:#082a44">Roatan</div>
+              <div style="margin-top:6px;font-size:11px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:#c29414">Island Life</div>
+            </div>
+          </div>
           <div style="margin-top:12px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9ee8e3">RoatanIsland.life</div>
           <h1 style="margin:10px 0 0;font-size:28px;line-height:1.2">${escapeHtml(title)}</h1>
         </div>

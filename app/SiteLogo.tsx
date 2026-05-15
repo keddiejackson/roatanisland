@@ -18,28 +18,36 @@ export default function SiteLogo({
 }: SiteLogoProps) {
   const variantClass =
     variant === "light"
-      ? "rounded-lg bg-white/95 px-3 py-2 shadow-lg shadow-black/10"
-      : "rounded-lg";
-  const imageClass = compact ? "h-11 w-11" : "h-12 w-auto";
+      ? "rounded-xl bg-white/95 px-3 py-2 shadow-lg shadow-black/10"
+      : "rounded-xl";
+  const textClass =
+    variant === "light" ? "text-[#082A44]" : "text-[#082A44]";
+  const markClass = compact ? "h-11 w-11" : "h-12 w-12";
 
   return (
     <Link
       href={href}
       aria-label="Roatan Island Life home"
-      className={`inline-flex shrink-0 items-center ${variantClass} ${className}`}
+      className={`inline-flex shrink-0 items-center gap-3 ${variantClass} ${className}`}
     >
       <Image
-        src={
-          compact
-            ? "/images/roatan-island-life-mark.svg"
-            : "/images/roatan-island-life-logo.svg"
-        }
+        src="/images/roatan-island-life-mark.svg"
         alt="Roatan Island Life"
-        width={compact ? 48 : 210}
-        height={compact ? 48 : 64}
+        width={48}
+        height={48}
         priority={priority}
-        className={imageClass}
+        className={markClass}
       />
+      {!compact && (
+        <span className="leading-none">
+          <span className={`block text-lg font-black tracking-tight ${textClass}`}>
+            Roatan
+          </span>
+          <span className="mt-1 block text-[10px] font-black uppercase tracking-[0.28em] text-[#C29414]">
+            Island Life
+          </span>
+        </span>
+      )}
     </Link>
   );
 }
