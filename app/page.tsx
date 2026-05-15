@@ -30,40 +30,47 @@ const categories = [
   "Private Charters",
 ];
 
-const categoryLinks = [
+const metrics = [
+  ["Real operators", "Local vendors manage profiles, times, and availability."],
+  ["Live map", "Airport, cruise ports, beach areas, and nearby stops in one view."],
+  ["Request-first", "Guests send trip details before operators confirm."],
+];
+
+const tripTypes = [
   {
-    title: "Tours",
-    href: "/tours",
-    text: "Snorkeling, island routes, wildlife, and reef days.",
-  },
-  {
-    title: "Hotels",
-    href: "/hotels",
-    text: "Beach stays, boutique rooms, and easy base camps.",
-  },
-  {
-    title: "Transport",
-    href: "/transport",
-    text: "Airport rides, cruise transfers, and private drivers.",
-  },
-  {
-    title: "Map",
+    title: "Cruise day",
+    text: "Port-friendly tours, transfer timing, and short island routes.",
     href: "/map",
-    text: "Compare beaches, ports, airport pickup, and nearby stops.",
+  },
+  {
+    title: "Beach day",
+    text: "West Bay, West End, Sandy Bay, food stops, and sunset plans.",
+    href: "/map",
+  },
+  {
+    title: "Family day",
+    text: "Easy pickups, clear capacity, gentle routes, and flexible timing.",
+    href: "/tours",
+  },
+  {
+    title: "Private day",
+    text: "Charters, custom drivers, private add-ons, and VIP pacing.",
+    href: "/map",
   },
 ];
 
-const trustHighlights = [
-  ["Local-first", "Operators manage their own listings and availability."],
-  ["Map-ready", "Plan around ports, beaches, the airport, and pickup points."],
-  ["Request-based", "Bookings are reviewed before anything is final."],
+const productHighlights = [
+  ["Map-first discovery", "Pins, areas, pickup points, and trip stops stay connected."],
+  ["Vendor workspace", "Operators can update listings, photos, times, and profiles."],
+  ["Booking requests", "Guests submit dates, guests, notes, add-ons, and promo codes."],
+  ["Admin review", "Listings, vendors, reviews, reports, and content stay controlled."],
 ];
 
-const planningSteps = [
-  ["Browse", "Choose tours, stays, transport, food, beaches, or charters."],
-  ["Plan", "Use the map to group stops by coast, town, or pickup point."],
-  ["Request", "Send your preferred date, time, group size, and notes."],
-  ["Confirm", "The operator reviews the request and follows up."],
+const workflow = [
+  ["01", "Discover", "Search active island listings by category, area, rating, and price."],
+  ["02", "Plan", "Compare places on the map around the airport, cruise ports, and beaches."],
+  ["03", "Request", "Send date, time, guests, notes, add-ons, and contact details."],
+  ["04", "Confirm", "The operator reviews availability before plans are final."],
 ];
 
 function formatPrice(price: number | null) {
@@ -78,13 +85,19 @@ function formatPrice(price: number | null) {
   }).format(price);
 }
 
+function listingBadge(listing: Listing) {
+  if (listing.is_featured) return "Featured";
+  if ((listing.rating || 0) >= 4.8) return "Top rated";
+  return listing.category || "Listing";
+}
+
 export default function Home() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [siteSettings, setSiteSettings] = useState({
     siteName: "RoatanIsland.life",
-    homepageHeadline: "Plan your best Roatan day in one place.",
+    homepageHeadline: "The operating system for a better Roatan day.",
     homepageSubhead:
-      "Browse local experiences, compare prices, and request bookings from a simple island directory built for travelers.",
+      "A polished island marketplace where travelers discover local experiences, plan around the map, and request bookings from trusted Roatan operators.",
   });
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
@@ -133,11 +146,10 @@ export default function Home() {
       return listings
         .filter((listing) => {
           const listingRating = listing.rating ?? 5;
-          const matchesSearch =
-            `${listing.title} ${listing.location} ${listing.description} ${(listing.tour_times || []).join(" ")}`
-              .toLowerCase()
-              .includes(search.toLowerCase());
+          const searchBlob =
+            `${listing.title} ${listing.location} ${listing.description} ${(listing.tour_times || []).join(" ")}`.toLowerCase();
 
+          const matchesSearch = searchBlob.includes(search.toLowerCase());
           const matchesCategory =
             category === "All" || listing.category === category;
           const matchesLocation =
@@ -156,22 +168,12 @@ export default function Home() {
           );
         })
         .sort((a, b) => {
-          if (sortBy === "Price low") {
-            return (a.price || 0) - (b.price || 0);
-          }
-
-          if (sortBy === "Price high") {
-            return (b.price || 0) - (a.price || 0);
-          }
-
-          if (sortBy === "Rating") {
-            return (b.rating || 5) - (a.rating || 5);
-          }
-
+          if (sortBy === "Price low") return (a.price || 0) - (b.price || 0);
+          if (sortBy === "Price high") return (b.price || 0) - (a.price || 0);
+          if (sortBy === "Rating") return (b.rating || 5) - (a.rating || 5);
           if (Boolean(a.is_featured) === Boolean(b.is_featured)) {
             return (b.rating || 5) - (a.rating || 5);
           }
-
           return a.is_featured ? -1 : 1;
         });
     },
@@ -179,7 +181,10 @@ export default function Home() {
   );
 
   const featuredListings = useMemo(
-    () => listings.filter((listing) => listing.is_featured).slice(0, 3),
+    () =>
+      listings
+        .filter((listing) => listing.is_featured)
+        .slice(0, 3),
     [listings],
   );
 
@@ -196,6 +201,8 @@ export default function Home() {
     ],
     [listings],
   );
+
+  const visibleListings = filteredListings.slice(0, 9);
 
   async function handleLeadSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -232,8 +239,8 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="relative min-h-[620px] overflow-hidden sm:min-h-[640px]">
+    <main className="min-h-screen overflow-x-hidden bg-[#F7F3EA] text-[#102A43]">
+      <section className="relative min-h-[760px] overflow-hidden bg-[#071F2F] text-white">
         <Image
           src="/images/roatan.jpeg"
           alt="Roatan coastline"
@@ -242,426 +249,383 @@ export default function Home() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/25 to-[#F7F3EA]" />
+        <div className="absolute inset-0 bg-[#071F2F]/70" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.1)_0%,rgba(7,31,47,0.85)_72%,#F7F3EA_100%)]" />
 
-        <div className="relative mx-auto flex min-h-[620px] max-w-7xl flex-col justify-between px-5 py-6 sm:min-h-[640px] sm:px-6 sm:py-8">
-          <header className="flex flex-col items-start justify-between gap-4 text-white sm:flex-row sm:items-center">
-            <Link href="/" className="text-xl font-bold">
+        <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col px-5 py-5 sm:px-6">
+          <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/15 bg-white/10 p-2 shadow-2xl shadow-black/20 backdrop-blur-md">
+            <Link href="/" className="px-3 py-2 text-lg font-black tracking-tight">
               {siteSettings.siteName}
             </Link>
-            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-              <a
-                href="#listings"
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
-              >
-                Browse
+            <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-semibold text-white/85">
+              <a href="#marketplace" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Marketplace
               </a>
-              <Link
-                href="/tours"
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
-              >
-                Tours
+              <Link href="/map" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Map
+              </Link>
+              <Link href="/vendors" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Vendors
+              </Link>
+              <Link href="/vendor/login" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Login
               </Link>
               <Link
                 href="/vendor/signup"
-                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm transition hover:bg-[#EEF7F6]"
+                className="rounded-lg bg-white px-4 py-2 text-[#071F2F] shadow-lg shadow-black/10"
               >
                 List your business
               </Link>
-              <Link
-                href="/vendors"
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
-              >
-                Vendors
-              </Link>
-              <Link
-                href="/map"
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
-              >
-                Map
-              </Link>
-              <Link
-                href="/account"
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
-              >
-                My Bookings
-              </Link>
-              <Link
-                href="/vendor/login"
-                className="hidden rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25 sm:inline-block"
-              >
-                Vendor Login
-              </Link>
-              <Link
-                href="/admin/login"
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
-              >
-                Admin
-              </Link>
-            </div>
+            </nav>
           </header>
 
-          <div className="grid gap-8 pb-20 pt-20 text-white sm:pt-28 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-end">
-            <div className="max-w-3xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
-                Tours, stays, and transport
-              </p>
-              <h1 className="mt-4 text-4xl font-bold leading-tight sm:text-6xl">
-                {siteSettings.homepageHeadline}
-              </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-white/90">
-                {siteSettings.homepageSubhead}
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <a
-                  href="#listings"
-                  className="rounded-full bg-[#00A8A8] px-6 py-3 font-semibold text-white shadow-lg shadow-black/20 transition hover:bg-[#078F8F]"
-                >
-                  Find an experience
-                </a>
-                <Link
-                  href="/vendor/signup"
-                  className="rounded-full bg-white px-6 py-3 font-semibold text-[#0B3C5D] shadow-lg shadow-black/10 transition hover:bg-[#EEF7F6]"
-                >
-                  Add your business
-                </Link>
-                <Link
-                  href="/map"
-                  className="rounded-full border border-white/35 bg-white/10 px-6 py-3 font-semibold text-white backdrop-blur transition hover:bg-white/20"
-                >
-                  Explore the map
-                </Link>
-              </div>
+          <div className="motion-rise flex flex-1 flex-col justify-center py-20">
+            <p className="text-sm font-bold uppercase tracking-[0.24em] text-[#9EE8E3]">
+              Island marketplace platform
+            </p>
+            <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] tracking-tight sm:text-7xl">
+              {siteSettings.homepageHeadline}
+            </h1>
+            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/84 sm:text-xl">
+              {siteSettings.homepageSubhead}
+            </p>
+            <div className="mt-9 flex flex-wrap gap-3">
+              <a
+                href="#marketplace"
+                className="rounded-lg bg-[#00A8A8] px-6 py-3 font-bold text-white shadow-2xl shadow-[#00A8A8]/25 transition hover:-translate-y-0.5 hover:bg-[#078F8F]"
+              >
+                Explore listings
+              </a>
+              <Link
+                href="/map"
+                className="rounded-lg border border-white/25 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20"
+              >
+                Open island map
+              </Link>
             </div>
-            <div className="rounded-2xl border border-white/20 bg-white/15 p-5 shadow-2xl shadow-black/20 backdrop-blur">
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9EE8E3]">
-                Island planning desk
-              </p>
-              <div className="mt-4 grid gap-3">
-                {trustHighlights.map(([title, text]) => (
-                  <div
-                    key={title}
-                    className="rounded-xl bg-white/10 p-4 ring-1 ring-white/15"
-                  >
+          </div>
+
+          <div className="grid gap-3 pb-10 md:grid-cols-3">
+            {metrics.map(([title, text], index) => (
+              <div
+                key={title}
+                className="motion-rise rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur"
+                style={{ animationDelay: `${index * 90}ms` }}
+              >
+                <p className="text-lg font-black">{title}</p>
+                <p className="mt-2 text-sm leading-6 text-white/75">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="relative z-10 mx-auto -mt-16 max-w-7xl px-5 sm:px-6">
+        <div className="motion-rise grid gap-4 rounded-lg border border-[#D6B56D]/25 bg-white p-4 shadow-2xl shadow-[#071F2F]/10 lg:grid-cols-[1fr_380px]">
+          <div className="rounded-lg bg-[#071F2F] p-5 text-white">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#D6B56D]">
+                  Live planning dashboard
+                </p>
+                <h2 className="mt-2 text-2xl font-black">Roatan Command Center</h2>
+              </div>
+              <Link
+                href="/map"
+                className="rounded-lg border border-white/20 px-4 py-2 text-sm font-bold"
+              >
+                View map
+              </Link>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {[
+                ["Listings", listings.length || 0],
+                ["Areas", Math.max(locations.length - 1, 0)],
+                ["Visible now", filteredListings.length],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg bg-white/10 p-4">
+                  <p className="text-sm text-white/60">{label}</p>
+                  <p className="mt-1 text-3xl font-black text-[#FFF3D2]">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-5 grid gap-3">
+              {productHighlights.map(([title, text], index) => (
+                <div
+                  key={title}
+                  className="flex gap-3 rounded-lg bg-white/10 p-4 ring-1 ring-white/10"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#D6B56D] text-sm font-black text-[#071F2F]">
+                    {index + 1}
+                  </span>
+                  <div>
                     <p className="font-bold">{title}</p>
-                    <p className="mt-1 text-sm leading-6 text-white/80">{text}</p>
+                    <p className="mt-1 text-sm leading-6 text-white/70">{text}</p>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
 
-      <section
-        id="listings"
-        className="relative z-10 mx-auto -mt-20 max-w-7xl px-5 sm:px-6"
-      >
-        <div className="rounded-2xl bg-white p-4 shadow-xl shadow-black/10 ring-1 ring-black/5">
-          <div className="grid gap-4 xl:grid-cols-[1fr_auto] xl:items-center">
-            <input
-              type="text"
-              placeholder="Search by tour, stay, transport, or location"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-            />
-
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className={`rounded-xl px-4 py-3 text-sm font-semibold transition ${
-                    category === cat
-                      ? "bg-[#00A8A8] text-white"
-                      : "bg-[#EEF7F6] text-[#0B3C5D] hover:bg-[#D8EFEC]"
-                  }`}
+          <div className="rounded-lg bg-[#F7F3EA] p-5">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+              Quick launch
+            </p>
+            <div className="mt-4 grid gap-3">
+              {[
+                ["Traveler", "Find tours, stays, transport, food, and charters.", "/#marketplace"],
+                ["Vendor", "Create an account and submit your listings.", "/vendor/signup"],
+                ["Operator", "Manage bookings, photos, times, and profile privacy.", "/vendor/login"],
+                ["Admin", "Review vendors, listings, bookings, and reports.", "/admin/login"],
+              ].map(([title, text, href]) => (
+                <Link
+                  key={title}
+                  href={href}
+                  className="rounded-lg bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
                 >
-                  {cat}
-                </button>
+                  <p className="font-black text-[#0B3C5D]">{title}</p>
+                  <p className="mt-1 text-sm leading-6 text-gray-600">{text}</p>
+                </Link>
               ))}
             </div>
-          </div>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <select
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-            >
-              {locations.map((location) => (
-                <option key={location} value={location}>
-                  {location === "All" ? "All locations" : location}
-                </option>
-              ))}
-            </select>
-            <input
-              type="number"
-              min="0"
-              value={maxPrice}
-              onChange={(e) => setMaxPrice(e.target.value)}
-              placeholder="Max price"
-              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-            />
-            <select
-              value={minimumRating}
-              onChange={(e) => setMinimumRating(e.target.value)}
-              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-            >
-              <option value="All">Any rating</option>
-              <option value="5">5 stars</option>
-              <option value="4">4+ stars</option>
-              <option value="3">3+ stars</option>
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="min-h-12 rounded-xl border border-gray-200 px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-            >
-              <option value="Featured">Featured first</option>
-              <option value="Rating">Highest rated</option>
-              <option value="Price low">Price low to high</option>
-              <option value="Price high">Price high to low</option>
-            </select>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-14 sm:px-6 sm:py-16">
-        <div className="mb-14 grid gap-4 md:grid-cols-4">
-          {categoryLinks.map((item) => (
+      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6">
+        <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
+              Plan by trip type
+            </p>
+            <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
+              Start with the day you want.
+            </h2>
+          </div>
+          <Link href="/map" className="text-sm font-black text-[#007B7B]">
+            Explore all areas
+          </Link>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+          {tripTypes.map((item, index) => (
             <Link
               key={item.title}
               href={item.href}
-              className="group rounded-2xl border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+              className="motion-rise group rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+              style={{ animationDelay: `${index * 70}ms` }}
             >
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
-                Explore
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                Route
               </p>
-              <h2 className="mt-2 text-xl font-bold text-[#0B3C5D]">
+              <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
                 {item.title}
-              </h2>
+              </h3>
               <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
-              <span className="mt-5 inline-flex text-sm font-bold text-[#007B7B]">
-                View options
+              <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
+                Build plan
               </span>
             </Link>
           ))}
         </div>
+      </section>
 
-        {featuredListings.length > 0 ? (
-          <div className="mb-14">
-            <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
-                  Featured picks
-                </p>
-                <h2 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
-                  Start with these island favorites
-                </h2>
+      <section id="marketplace" className="bg-white px-5 py-16 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
+                Live marketplace
+              </p>
+              <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
+                Search Roatan like a product.
+              </h2>
+              <p className="mt-3 max-w-2xl leading-7 text-gray-600">
+                Browse active listings with filters for category, area, rating, and
+                budget.
+              </p>
+            </div>
+            <p className="rounded-lg bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+              {filteredListings.length} result
+              {filteredListings.length === 1 ? "" : "s"}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-gray-200 bg-[#F7F3EA] p-4">
+            <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
+              <input
+                type="text"
+                placeholder="Search by tour, stay, transport, or location"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              />
+
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategory(cat)}
+                    className={`rounded-lg px-4 py-3 text-sm font-bold transition ${
+                      category === cat
+                        ? "bg-[#071F2F] text-white shadow-lg"
+                        : "bg-white text-[#0B3C5D] hover:bg-[#EEF7F6]"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
               </div>
-              <a
-                href="#all-listings"
-                className="text-sm font-semibold text-[#007B7B]"
-              >
-                View all listings
-              </a>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-              {featuredListings.map((listing) => (
-                <Link
-                  key={listing.id}
-                  href={`/listings/${listing.id}`}
-                  className="group overflow-hidden rounded-2xl bg-white shadow transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
-                >
-                  <div className="relative h-64 bg-[#D8EFEC]">
-                    {listing.image_url ? (
-                      <Image
-                        src={listing.image_url}
-                        alt={listing.title}
-                        fill
-                        sizes="(min-width: 1024px) 33vw, 100vw"
-                        unoptimized
-                        className="object-cover transition duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
-                        No image yet
-                      </div>
-                    )}
-                    <span className="absolute left-4 top-4 rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
-                      Featured
-                    </span>
-                    <span className="absolute bottom-4 right-4 rounded-full bg-[#0B3C5D] px-3 py-1 text-sm font-bold text-white shadow">
-                      {formatPrice(listing.price)}
-                    </span>
-                  </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-4">
+              <select
+                value={locationFilter}
+                onChange={(e) => setLocationFilter(e.target.value)}
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              >
+                {locations.map((location) => (
+                  <option key={location} value={location}>
+                    {location === "All" ? "All locations" : location}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                min="0"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value)}
+                placeholder="Max price"
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              />
+              <select
+                value={minimumRating}
+                onChange={(e) => setMinimumRating(e.target.value)}
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              >
+                <option value="All">Any rating</option>
+                <option value="5">5 stars</option>
+                <option value="4">4+ stars</option>
+                <option value="3">3+ stars</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              >
+                <option value="Featured">Featured first</option>
+                <option value="Rating">Highest rated</option>
+                <option value="Price low">Price low to high</option>
+                <option value="Price high">Price high to low</option>
+              </select>
+            </div>
+          </div>
 
-                  <div className="p-5">
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
-                      {listing.category || "Experience"}
-                    </p>
-                    <h3 className="mt-2 text-xl font-bold text-[#0B3C5D]">
-                      {listing.title}
-                    </h3>
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
-                      {listing.description || "Details coming soon."}
-                    </p>
-                    <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
-                      <span className="text-gray-500">
-                        {listing.location || "Roatan"}
-                      </span>
-                      <span className="font-semibold text-[#0B3C5D]">
-                        {listing.rating ?? 5}/5 rating
-                      </span>
-                    </div>
-                  </div>
-                </Link>
+          {featuredListings.length > 0 ? (
+            <div className="mt-10 grid gap-5 lg:grid-cols-3">
+              {featuredListings.map((listing) => (
+                <ListingCard key={listing.id} listing={listing} featured />
               ))}
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        <div id="all-listings" />
-        <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
-              Available experiences
+          <div className="mt-10">
+            {visibleListings.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-[#00A8A8]/40 bg-[#F7F3EA] p-10 text-center">
+                <h3 className="text-2xl font-black text-[#0B3C5D]">
+                  No matches yet.
+                </h3>
+                <p className="mx-auto mt-2 max-w-xl leading-7 text-gray-600">
+                  Clear the filters or send a planning request and we will point
+                  you toward the closest fit.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setCategory("All");
+                    setLocationFilter("All");
+                    setMaxPrice("");
+                    setMinimumRating("All");
+                    setSortBy("Featured");
+                  }}
+                  className="mt-5 rounded-lg bg-[#00A8A8] px-5 py-3 font-bold text-white"
+                >
+                  Reset filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {visibleListings.map((listing) => (
+                  <ListingCard key={listing.id} listing={listing} />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#071F2F] px-5 py-16 text-white sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="max-w-3xl">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#D6B56D]">
+              Platform workflow
             </p>
-            <h2 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
-              Choose what fits your trip
+            <h2 className="mt-3 text-3xl font-black sm:text-5xl">
+              Built for travelers, vendors, and admins.
             </h2>
           </div>
-          <p className="text-sm text-gray-600">
-            {filteredListings.length} result
-            {filteredListings.length === 1 ? "" : "s"}
-          </p>
-        </div>
-
-        {filteredListings.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#00A8A8]/40 bg-white p-10 text-center text-gray-600">
-            <p>No listings match that search yet.</p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearch("");
-                setCategory("All");
-                setLocationFilter("All");
-                setMaxPrice("");
-                setMinimumRating("All");
-                setSortBy("Featured");
-              }}
-              className="mt-4 rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
-            >
-              Clear search
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredListings.map((listing) => (
-              <Link
-                key={listing.id}
-                href={`/listings/${listing.id}`}
-                className="group overflow-hidden rounded-2xl bg-white shadow transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
-              >
-                <div className="relative h-56 bg-[#D8EFEC]">
-                  {listing.image_url ? (
-                    <Image
-                      src={listing.image_url}
-                      alt={listing.title}
-                      fill
-                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                      unoptimized
-                      className="object-cover transition duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
-                      No image yet
-                    </div>
-                  )}
-                  {listing.category ? (
-                    <span className="absolute left-4 top-4 rounded-full bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-[#0B3C5D]">
-                      {listing.category}
-                    </span>
-                  ) : null}
-                  {listing.is_featured ? (
-                    <span className="absolute right-4 top-4 rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
-                      Featured
-                    </span>
-                  ) : null}
-                  <span className="absolute bottom-4 right-4 rounded-full bg-[#0B3C5D] px-3 py-1 text-sm font-bold text-white shadow">
-                    {formatPrice(listing.price)}
-                  </span>
-                </div>
-
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <h3 className="text-lg font-bold text-[#0B3C5D]">
-                      {listing.title}
-                    </h3>
-                  </div>
-
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
-                    {listing.description || "Details coming soon."}
-                  </p>
-
-                  <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
-                    <span className="text-gray-500">
-                      {listing.location || "Roatan"}
-                    </span>
-                    <span className="font-semibold text-[#0B3C5D]">
-                      {listing.rating ?? 5}/5 rating
-                    </span>
-                  </div>
-                </div>
-              </Link>
+          <div className="mt-8 grid gap-4 md:grid-cols-4">
+            {workflow.map(([number, title, text]) => (
+              <div key={number} className="rounded-lg bg-white/10 p-5 ring-1 ring-white/10">
+                <p className="text-sm font-black text-[#D6B56D]">{number}</p>
+                <h3 className="mt-3 text-xl font-black">{title}</h3>
+                <p className="mt-2 text-sm leading-6 text-white/70">{text}</p>
+              </div>
             ))}
           </div>
-        )}
-      </section>
-
-      <section className="bg-white px-6 py-12">
-        <div className="mx-auto grid max-w-7xl gap-6 md:grid-cols-4">
-          {planningSteps.map(([title, text], index) => (
-            <div key={title} className="rounded-2xl bg-[#F7F3EA] p-6">
-              <p className="text-sm font-bold text-[#00A8A8]">
-                {String(index + 1).padStart(2, "0")}
-              </p>
-              <p className="mt-2 text-lg font-bold text-[#0B3C5D]">{title}</p>
-              <p className="mt-2 text-sm leading-6 text-gray-600">{text}</p>
-            </div>
-          ))}
         </div>
       </section>
 
-      <section className="bg-[#0B3C5D] px-5 py-14 text-white sm:px-6 sm:py-16">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
+      <section className="px-5 py-16 sm:px-6">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
-              Need help planning?
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
+              Concierge layer
             </p>
-            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">
-              Tell us what kind of Roatan trip you want.
+            <h2 className="mt-3 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
+              Need help choosing?
             </h2>
-            <p className="mt-4 max-w-xl leading-8 text-white/80">
-              If you are not sure what to book yet, send a quick note. We will
-              point you toward the right tours, stays, or transport options.
+            <p className="mt-4 max-w-xl leading-8 text-gray-600">
+              Send your dates, group size, and style of trip. RoatanIsland.life
+              can route you toward the right listing or operator.
             </p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {["Cruise timing", "Airport pickup", "Private tours", "Family days"].map(
+                (item) => (
+                  <div key={item} className="rounded-lg bg-white p-4 font-bold text-[#0B3C5D] shadow-sm">
+                    {item}
+                  </div>
+                ),
+              )}
+            </div>
           </div>
 
-          <div className="rounded-2xl bg-white p-6 text-[#17324D] shadow-xl">
+          <div className="rounded-lg bg-white p-6 shadow-2xl shadow-[#071F2F]/10">
             {leadSubmitted ? (
-              <div className="rounded-xl bg-green-100 p-5 text-green-800">
-                <h3 className="text-xl font-bold">Message Sent</h3>
+              <div className="rounded-lg bg-green-100 p-5 text-green-800">
+                <h3 className="text-xl font-black">Message sent</h3>
                 <p className="mt-2">
                   Thanks. We received your note and will follow up soon.
                 </p>
                 <button
                   type="button"
                   onClick={() => setLeadSubmitted(false)}
-                  className="mt-4 rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                  className="mt-4 rounded-lg bg-[#00A8A8] px-5 py-3 font-bold text-white"
                 >
                   Send another message
                 </button>
@@ -669,57 +633,58 @@ export default function Home() {
             ) : (
               <form onSubmit={handleLeadSubmit} className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block font-medium">Name</label>
+                  <label className="mb-2 block font-bold">Name</label>
                   <input
                     value={leadName}
                     onChange={(e) => setLeadName(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-medium">Email</label>
+                  <label className="mb-2 block font-bold">Email</label>
                   <input
                     type="email"
                     value={leadEmail}
                     onChange={(e) => setLeadEmail(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-medium">Phone</label>
+                  <label className="mb-2 block font-bold">Phone</label>
                   <input
                     value={leadPhone}
                     onChange={(e) => setLeadPhone(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-medium">Interest</label>
+                  <label className="mb-2 block font-bold">Interest</label>
                   <select
                     value={leadInterest}
                     onChange={(e) => setLeadInterest(e.target.value)}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
                   >
                     <option value="Tours">Tours</option>
                     <option value="Hotels">Hotels</option>
                     <option value="Transport">Transport</option>
+                    <option value="Private Charters">Private Charters</option>
                     <option value="Not sure yet">Not sure yet</option>
                   </select>
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="mb-2 block font-medium">Message</label>
+                  <label className="mb-2 block font-bold">Message</label>
                   <textarea
                     value={leadMessage}
                     onChange={(e) => setLeadMessage(e.target.value)}
                     rows={4}
-                    placeholder="Tell us your dates, group size, and what you want to do."
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
+                    placeholder="Dates, group size, pickup area, and what kind of day you want."
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-[#00A8A8]"
                     required
                   />
                 </div>
@@ -727,9 +692,9 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={leadLoading}
-                  className="rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
+                  className="rounded-lg bg-[#00A8A8] px-6 py-3 font-bold text-white disabled:opacity-50 md:col-span-2"
                 >
-                  {leadLoading ? "Sending..." : "Send Planning Request"}
+                  {leadLoading ? "Sending..." : "Send planning request"}
                 </button>
               </form>
             )}
@@ -737,5 +702,63 @@ export default function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+function ListingCard({
+  listing,
+  featured = false,
+}: {
+  listing: Listing;
+  featured?: boolean;
+}) {
+  return (
+    <Link
+      href={`/listings/${listing.id}`}
+      className="group overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
+    >
+      <div className={featured ? "relative h-64 bg-[#D8EFEC]" : "relative h-56 bg-[#D8EFEC]"}>
+        {listing.image_url ? (
+          <Image
+            src={listing.image_url}
+            alt={listing.title}
+            fill
+            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            unoptimized
+            className="object-cover transition duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
+            No image yet
+          </div>
+        )}
+        <span className="absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-[#0B3C5D] shadow">
+          {listingBadge(listing)}
+        </span>
+        <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
+          {formatPrice(listing.price)}
+        </span>
+      </div>
+
+      <div className="p-5">
+        <p className="text-xs font-black uppercase tracking-wide text-[#00A8A8]">
+          {listing.location || "Roatan"}
+        </p>
+        <h3 className="mt-2 text-lg font-black text-[#0B3C5D]">
+          {listing.title}
+        </h3>
+        <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+          {listing.description || "Details coming soon."}
+        </p>
+        <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
+          <span className="font-bold text-gray-500">
+            {listing.category || "Listing"}
+          </span>
+          <span className="font-black text-[#0B3C5D]">
+            {listing.rating ?? 5}/5
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 }
