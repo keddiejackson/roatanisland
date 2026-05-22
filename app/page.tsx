@@ -228,10 +228,10 @@ export default function Home() {
           </header>
 
           <div className="motion-rise flex flex-1 flex-col justify-center py-20">
-            <p className="text-sm font-bold uppercase tracking-[0.24em] text-[#9EE8E3]">
+            <p className="text-sm font-bold uppercase text-[#9EE8E3]">
               Roatan experiences
             </p>
-            <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] tracking-tight sm:text-7xl">
+            <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl">
               {siteSettings.homepageHeadline}
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/84 sm:text-xl">
@@ -259,7 +259,7 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
+              <p className="text-sm font-bold uppercase text-[#00A8A8]">
                 Explore listings
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
@@ -406,7 +406,7 @@ export default function Home() {
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6">
         <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
+            <p className="text-sm font-bold uppercase text-[#00A8A8]">
               Explore your way
             </p>
             <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
@@ -426,7 +426,7 @@ export default function Home() {
               className="motion-rise group rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
               style={{ animationDelay: `${index * 70}ms` }}
             >
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+              <p className="text-xs font-black uppercase text-[#D6B56D]">
                 Route
               </p>
               <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
@@ -444,7 +444,7 @@ export default function Home() {
       <section className="px-5 pb-16 sm:px-6">
         <div className="mx-auto grid max-w-7xl overflow-hidden rounded-lg bg-[#071F2F] text-white shadow-2xl shadow-[#071F2F]/15 lg:grid-cols-[1fr_0.9fr]">
           <div className="p-6 sm:p-10">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#D6B56D]">
+            <p className="text-sm font-bold uppercase text-[#D6B56D]">
               Plan by place
             </p>
             <h2 className="mt-3 text-3xl font-black sm:text-5xl">
@@ -485,31 +485,32 @@ export default function Home() {
 
       <BrandAbout />
 
-      <section className="px-5 py-16 sm:px-6">
-        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+      <section className="px-5 pb-16 sm:px-6">
+        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.82fr_1fr] lg:items-start">
           <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
-              Concierge layer
+            <p className="text-sm font-bold uppercase text-[#00A8A8]">
+              Planning help
             </p>
-            <h2 className="mt-3 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
+            <h2 className="mt-3 text-3xl font-black text-[#0B3C5D] sm:text-4xl">
               Need help choosing?
             </h2>
-            <p className="mt-4 max-w-xl leading-8 text-gray-600">
-              Send your dates, group size, and style of trip. RoatanIsland.life
-              can route you toward the right listing or operator.
+            <p className="mt-4 max-w-lg leading-7 text-gray-600">
+              Send your dates, group size, pickup area, and the kind of day you
+              want. We can point you toward a closer fit.
             </p>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              {["Cruise timing", "Airport pickup", "Private tours", "Family days"].map(
-                (item) => (
-                  <div key={item} className="rounded-lg bg-white p-4 font-bold text-[#0B3C5D] shadow-sm">
-                    {item}
-                  </div>
-                ),
-              )}
+            <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold text-[#0B3C5D]">
+              {["Cruise timing", "Airport pickup", "Private days"].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-lg border border-[#D6B56D]/25 bg-white px-3 py-2"
+                >
+                  {item}
+                </span>
+              ))}
             </div>
           </div>
 
-          <div className="rounded-lg bg-white p-6 shadow-2xl shadow-[#071F2F]/10">
+          <div className="rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm sm:p-6">
             {leadSubmitted ? (
               <div className="rounded-lg bg-green-100 p-5 text-green-800">
                 <h3 className="text-xl font-black">Message sent</h3>
@@ -627,7 +628,7 @@ function ListingCard({
             No image yet
           </div>
         )}
-        <span className="absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs font-black uppercase tracking-wide text-[#0B3C5D] shadow">
+        <span className="absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs font-black uppercase text-[#0B3C5D] shadow">
           {listingBadge(listing)}
         </span>
         <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
@@ -636,7 +637,7 @@ function ListingCard({
       </div>
 
       <div className="p-5">
-        <p className="text-xs font-black uppercase tracking-wide text-[#00A8A8]">
+        <p className="text-xs font-black uppercase text-[#00A8A8]">
           {listing.location || "Roatan"}
         </p>
         <h3 className="mt-2 text-lg font-black text-[#0B3C5D]">
