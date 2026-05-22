@@ -217,6 +217,9 @@ export default function Home() {
               <Link href="/vendors" className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Vendors
               </Link>
+              <Link href="/signin" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Sign in
+              </Link>
               <Link
                 href="/vendor/signup"
                 className="rounded-lg bg-white px-4 py-2 text-[#071F2F] shadow-lg shadow-black/10"
