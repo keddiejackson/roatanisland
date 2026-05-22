@@ -4,6 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import { isAdminUser } from "@/lib/admin";
+import {
+  logoShapeClasses,
+  logoShapes,
+  logoSizeClasses,
+  logoSizes,
+  normalizeSiteBranding,
+  type LogoShape,
+  type LogoSize,
+} from "@/lib/site-branding";
 import { supabase } from "@/lib/supabase";
 
 const defaultSettings = {
@@ -14,6 +23,9 @@ const defaultSettings = {
   adminEmails: "",
   depositAmountCents: "5000",
   commissionRate: "0.10",
+  logoUrl: "",
+  logoSize: "medium" as LogoSize,
+  logoShape: "original" as LogoShape,
 };
 
 export default function AdminSettingsPage() {
@@ -22,6 +34,8 @@ export default function AdminSettingsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [settings, setSettings] = useState(defaultSettings);
   const [saving, setSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoUploadError, setLogoUploadError] = useState("");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -46,7 +60,13 @@ export default function AdminSettingsPage() {
         .maybeSingle();
 
       if (data?.value && typeof data.value === "object") {
-        setSettings({ ...defaultSettings, ...(data.value as typeof defaultSettings) });
+        const savedSettings = data.value as Partial<typeof defaultSettings>;
+
+        setSettings({
+          ...defaultSettings,
+          ...savedSettings,
+          ...normalizeSiteBranding(savedSettings),
+        });
       }
     }
 
@@ -82,6 +102,32 @@ export default function AdminSettingsPage() {
     alert("Settings saved.");
   }
 
+  async function uploadLogo(file: File) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    setLogoUploading(true);
+    setLogoUploadError("");
+
+    const response = await fetch("/api/admin/branding-logo", {
+      method: "POST",
+      headers: sessionData.session?.access_token
+        ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+        : {},
+      body: formData,
+    });
+    const result = await response.json();
+    setLogoUploading(false);
+
+    if (!response.ok) {
+      setLogoUploadError(result.error || "Unable to upload logo.");
+      return;
+    }
+
+    updateSetting("logoUrl", result.logoUrl);
+  }
+
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
       <div className="mx-auto max-w-5xl">
@@ -92,6 +138,86 @@ export default function AdminSettingsPage() {
             Manage public copy and business rules without changing code.
           </p>
           <form onSubmit={saveSettings} className="mt-8 grid gap-5">
+            <section className="grid gap-5 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-5">
+              <div>
+                <h2 className="text-xl font-bold text-[#0B3C5D]">Branding</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Upload the logo used across the website. A simple square icon
+                  works best in browser tabs.
+                </p>
+              </div>
+              <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
+                <div className="grid gap-4">
+                  <label className="grid gap-2 font-medium">
+                    Logo Image
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      disabled={logoUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadLogo(file);
+                      }}
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-3 disabled:opacity-60"
+                    />
+                  </label>
+                  <label className="grid gap-2 font-medium">
+                    Logo Size
+                    <select
+                      value={settings.logoSize}
+                      onChange={(e) => updateSetting("logoSize", e.target.value)}
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-3"
+                    >
+                      {logoSizes.map((size) => (
+                        <option key={size} value={size}>
+                          {size[0].toUpperCase() + size.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-2 font-medium">
+                    Logo Shape
+                    <select
+                      value={settings.logoShape}
+                      onChange={(e) => updateSetting("logoShape", e.target.value)}
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-3"
+                    >
+                      {logoShapes.map((shape) => (
+                        <option key={shape} value={shape}>
+                          {shape[0].toUpperCase() + shape.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {logoUploading && (
+                    <p className="text-sm text-[#0B3C5D]">Uploading logo...</p>
+                  )}
+                  {logoUploadError && (
+                    <p className="text-sm text-red-600">{logoUploadError}</p>
+                  )}
+                </div>
+                <div className="rounded-2xl border border-dashed border-[#00A8A8]/35 bg-white p-5">
+                  <p className="text-sm font-semibold text-gray-500">
+                    Logo preview
+                  </p>
+                  <div className="mt-4 flex min-h-36 items-center justify-center rounded-2xl bg-[#071F2F] p-5">
+                    {settings.logoUrl ? (
+                      // Admin uploads can come from any public Supabase asset URL.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={settings.logoUrl}
+                        alt="Uploaded Roatan logo preview"
+                        className={`${logoSizeClasses[settings.logoSize]} ${logoShapeClasses[settings.logoShape]}`}
+                      />
+                    ) : (
+                      <p className="text-center text-sm text-white/75">
+                        Upload a logo to preview it here.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </section>
             {[
               ["siteName", "Site Name"],
               ["homepageHeadline", "Homepage Headline"],
