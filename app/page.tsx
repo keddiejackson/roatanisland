@@ -7,6 +7,7 @@ import BrandAbout from "@/app/BrandAbout";
 import EmptyState from "@/app/EmptyState";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
+import TripPlannerDock from "@/app/TripPlannerDock";
 import {
   filterHomeListings,
   homeListingFilterDefaults,
@@ -18,6 +19,11 @@ import {
   normalizeHomepageControls,
   type HomepageControls,
 } from "@/lib/homepage-settings";
+import {
+  buildDateAwareMapUrl,
+  getListingTrustBadges,
+  listingMatchesAvailability,
+} from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 
 type Listing = HomeListing & {
@@ -126,6 +132,10 @@ export default function Home() {
   const [locationFilter, setLocationFilter] = useState("All");
   const [minimumRating, setMinimumRating] = useState("All");
   const [sortBy, setSortBy] = useState("Featured");
+  const [travelDate, setTravelDate] = useState("");
+  const [travelTime, setTravelTime] = useState("");
+  const [guestCount, setGuestCount] = useState("");
+  const [availableOnly, setAvailableOnly] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
@@ -167,8 +177,27 @@ export default function Home() {
         maxPrice,
         minimumRating,
         sortBy,
-      }),
-    [category, listings, locationFilter, maxPrice, minimumRating, search, sortBy],
+      }).filter((listing) =>
+        listingMatchesAvailability(listing, {
+          date: travelDate,
+          time: travelTime,
+          guests: guestCount,
+          availableOnly,
+        }),
+      ),
+    [
+      availableOnly,
+      category,
+      guestCount,
+      listings,
+      locationFilter,
+      maxPrice,
+      minimumRating,
+      search,
+      sortBy,
+      travelDate,
+      travelTime,
+    ],
   );
 
   const spotlightListings = useMemo(
@@ -191,6 +220,14 @@ export default function Home() {
   );
 
   const visibleListings = filteredListings.slice(0, 9);
+  const mapUrl = buildDateAwareMapUrl({
+    category,
+    location: locationFilter,
+    date: travelDate,
+    time: travelTime,
+    guests: guestCount,
+    availableOnly,
+  });
   const categoryCards = useMemo(
     () =>
       categoryHighlights.map((item) => ({
@@ -294,7 +331,7 @@ export default function Home() {
                 {homepageControls.primaryCtaLabel}
               </a>
               <Link
-                href="/map"
+                href={mapUrl}
                 className="rounded-lg border border-white/25 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20"
               >
                 {homepageControls.secondaryCtaLabel}
@@ -323,6 +360,12 @@ export default function Home() {
                 {filteredListings.length} result
                 {filteredListings.length === 1 ? "" : "s"}
               </p>
+              <Link
+                href={mapUrl}
+                className="rounded-lg bg-[#0B3C5D] px-4 py-3 text-sm font-bold text-white"
+              >
+                Open matched map
+              </Link>
               <button
                 type="button"
                 onClick={() => setShowAdvancedFilters((current) => !current)}
@@ -358,6 +401,37 @@ export default function Home() {
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="mt-3 grid gap-3 border-t border-[#D6B56D]/20 pt-3 md:grid-cols-[1fr_1fr_120px_auto]">
+              <input
+                type="date"
+                value={travelDate}
+                onChange={(e) => setTravelDate(e.target.value)}
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              />
+              <input
+                value={travelTime}
+                onChange={(e) => setTravelTime(e.target.value)}
+                placeholder="Preferred time"
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              />
+              <input
+                type="number"
+                min="1"
+                value={guestCount}
+                onChange={(e) => setGuestCount(e.target.value)}
+                placeholder="Guests"
+                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+              />
+              <label className="flex min-h-12 items-center gap-3 rounded-lg border border-[#00A8A8]/20 bg-white px-4 text-sm font-bold text-[#0B3C5D]">
+                <input
+                  type="checkbox"
+                  checked={availableOnly}
+                  onChange={(e) => setAvailableOnly(e.target.checked)}
+                />
+                Available only
+              </label>
             </div>
 
             {showAdvancedFilters ? (
@@ -405,6 +479,10 @@ export default function Home() {
             ) : null}
           </div>
 
+          <div className="mt-5">
+            <TripPlannerDock />
+          </div>
+
           {homepageControls.showFeaturedListings && spotlightListings.length > 0 ? (
             <div className="mt-10 grid gap-5 lg:grid-cols-3">
               {spotlightListings.map((listing) => (
@@ -438,6 +516,10 @@ export default function Home() {
                     setMaxPrice(homeListingFilterDefaults.maxPrice);
                     setMinimumRating(homeListingFilterDefaults.minimumRating);
                     setSortBy(homeListingFilterDefaults.sortBy);
+                    setTravelDate("");
+                    setTravelTime("");
+                    setGuestCount("");
+                    setAvailableOnly(false);
                     setShowAdvancedFilters(false);
                   }}
                   className="mx-auto mt-5 block rounded-lg bg-[#071F2F] px-5 py-3 font-bold text-white"
@@ -516,8 +598,8 @@ export default function Home() {
               Start with the day you want.
             </h2>
           </div>
-          <Link href="/map" className="text-sm font-black text-[#007B7B]">
-            See every area
+        <Link href="/map" className="text-sm font-black text-[#007B7B]">
+          See every area
           </Link>
         </div>
 
@@ -727,6 +809,8 @@ function ListingCard({
   homepageControls: HomepageControls;
   featured?: boolean;
 }) {
+  const trustBadges = getListingTrustBadges(listing);
+
   return (
     <Link
       href={`/listings/${listing.id}`}
@@ -773,6 +857,18 @@ function ListingCard({
             {listing.rating ?? 5}/5
           </span>
         </div>
+        {trustBadges.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {trustBadges.slice(0, 3).map((badge) => (
+              <span
+                key={badge}
+                className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-bold text-[#0B3C5D]"
+              >
+                {badge}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     </Link>
   );

@@ -11,6 +11,9 @@ import { supabase } from "@/lib/supabase";
 
 type BookingFormProps = {
   listingId?: string;
+  initialDate?: string;
+  initialTime?: string;
+  initialGuests?: string;
 };
 
 type ListingSummary = {
@@ -68,7 +71,12 @@ function availabilityToneClass(tone: AvailabilityStatus["tone"]) {
   return "border-[#00A8A8]/25 bg-[#EEF7F6] text-[#0B3C5D]";
 }
 
-export default function BookingForm({ listingId }: BookingFormProps) {
+export default function BookingForm({
+  listingId,
+  initialDate = "",
+  initialTime = "",
+  initialGuests = "",
+}: BookingFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [depositLoading, setDepositLoading] = useState(false);
@@ -80,9 +88,9 @@ export default function BookingForm({ listingId }: BookingFormProps) {
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [tourDate, setTourDate] = useState("");
-  const [tourTime, setTourTime] = useState("");
-  const [guests, setGuests] = useState("");
+  const [tourDate, setTourDate] = useState(initialDate);
+  const [tourTime, setTourTime] = useState(initialTime);
+  const [guests, setGuests] = useState(initialGuests);
   const [pickupPreference, setPickupPreference] = useState("");
   const [guestMessage, setGuestMessage] = useState("");
   const [promoCode, setPromoCode] = useState("");

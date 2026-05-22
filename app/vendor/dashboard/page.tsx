@@ -15,6 +15,7 @@ import {
   formatBookingStatus,
   formatDepositStatus,
 } from "@/lib/booking-flow";
+import { getMonthCalendarDays } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 import {
   countListingPhotos,
@@ -76,6 +77,7 @@ type ListingDraft = {
 
 type BookingRow = {
   id: string;
+  listing_id: string | null;
   listing_name: string;
   full_name: string;
   email: string;
@@ -105,6 +107,10 @@ type VendorDocument = {
   admin_note: string | null;
   created_at: string;
 };
+
+function currentMonthValue() {
+  return new Date().toISOString().slice(0, 7);
+}
 
 export default function VendorDashboardPage() {
   const router = useRouter();
@@ -137,6 +143,7 @@ export default function VendorDashboardPage() {
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
   const [blockedDates, setBlockedDates] = useState<Record<string, string>>({});
   const [blockedDateQuickPicks, setBlockedDateQuickPicks] = useState<Record<string, string>>({});
+  const [calendarMonths, setCalendarMonths] = useState<Record<string, string>>({});
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
@@ -242,6 +249,9 @@ export default function VendorDashboardPage() {
             (listing.blocked_dates || []).join("\n"),
           ]),
         ),
+      );
+      setCalendarMonths(
+        Object.fromEntries(rows.map((listing) => [listing.id, currentMonthValue()])),
       );
       setListingTimes(
         Object.fromEntries(
@@ -480,6 +490,13 @@ export default function VendorDashboardPage() {
     }
 
     toggleBlockedDate(listingId, date);
+  }
+
+  function updateCalendarMonth(listingId: string, month: string) {
+    setCalendarMonths((currentMonths) => ({
+      ...currentMonths,
+      [listingId]: month,
+    }));
   }
 
   function updateAvailabilityNote(listingId: string, value: string) {
@@ -1848,6 +1865,67 @@ export default function VendorDashboardPage() {
                             ))}
                           </div>
                         ) : null}
+                        <div className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-bold text-[#0B3C5D]">
+                                Monthly calendar
+                              </p>
+                              <p className="mt-1 text-xs text-gray-600">
+                                Tap a day to block or unblock it. Booked days show requests.
+                              </p>
+                            </div>
+                            <input
+                              type="month"
+                              value={calendarMonths[listing.id] || currentMonthValue()}
+                              onChange={(e) =>
+                                updateCalendarMonth(listing.id, e.target.value)
+                              }
+                              className="rounded-lg border border-[#00A8A8]/25 bg-white px-3 py-2 text-sm outline-none"
+                            />
+                          </div>
+                          <div className="mt-4 grid grid-cols-7 gap-2">
+                            {getMonthCalendarDays({
+                              month: calendarMonths[listing.id] || currentMonthValue(),
+                              blockedDates: normalizeDateLines(
+                                blockedDates[listing.id] || "",
+                              ),
+                              bookings: bookings.filter(
+                                (booking) => booking.listing_id === listing.id,
+                              ),
+                            }).map((day) => (
+                              <button
+                                key={day.date}
+                                type="button"
+                                onClick={() => toggleBlockedDate(listing.id, day.date)}
+                                className={`min-h-16 rounded-lg border p-2 text-left text-xs transition ${
+                                  day.isBlocked
+                                    ? "border-red-200 bg-red-50 text-red-700"
+                                    : day.bookingCount > 0
+                                      ? "border-[#D6B56D]/40 bg-[#FFF8E8] text-[#7A5B12]"
+                                      : "border-white bg-white text-[#0B3C5D] hover:border-[#00A8A8]/40"
+                                }`}
+                              >
+                                <span className="block font-black">{day.day}</span>
+                                <span className="mt-1 block font-semibold">
+                                  {day.isBlocked
+                                    ? "Blocked"
+                                    : day.bookingCount > 0
+                                      ? `${day.bookingCount} request${
+                                          day.bookingCount === 1 ? "" : "s"
+                                        }`
+                                      : "Open"}
+                                </span>
+                                {day.guestCount > 0 ? (
+                                  <span className="mt-1 block text-[11px]">
+                                    {day.guestCount} guest
+                                    {day.guestCount === 1 ? "" : "s"}
+                                  </span>
+                                ) : null}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>

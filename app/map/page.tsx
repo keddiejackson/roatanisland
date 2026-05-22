@@ -17,6 +17,9 @@ export type MapListing = {
   reviews_count: number | null;
   latitude: number | null;
   longitude: number | null;
+  tour_times: string[] | null;
+  blocked_dates: string[] | null;
+  max_guests: number | null;
 };
 
 export default async function MapPage() {
@@ -25,7 +28,7 @@ export default async function MapPage() {
   const { data } = await supabaseServer
     .from("listings")
     .select(
-      "id, title, description, location, category, price, image_url, rating, reviews_count, latitude, longitude",
+      "id, title, description, location, category, price, image_url, rating, reviews_count, latitude, longitude, tour_times, blocked_dates, max_guests",
     )
     .eq("is_active", true)
     .order("is_featured", { ascending: false })

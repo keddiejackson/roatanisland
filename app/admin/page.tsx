@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
+import { getMarketplaceCommandCenter } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 
 type Booking = {
@@ -30,6 +31,9 @@ type Listing = {
   image_url: string | null;
   latitude: number | null;
   longitude: number | null;
+  is_featured: boolean | null;
+  rating: number | null;
+  reviews_count: number | null;
 };
 
 type Vendor = {
@@ -84,7 +88,7 @@ export default function AdminDashboardPage() {
             .limit(200),
           supabase
             .from("listings")
-            .select("id, title, is_active, approval_status, vendor_id, image_url, latitude, longitude"),
+            .select("id, title, is_active, approval_status, vendor_id, image_url, latitude, longitude, is_featured, rating, reviews_count"),
           supabase.from("vendors").select("id, is_active"),
           supabase.from("listing_reviews").select("id, is_approved"),
         ]);
@@ -109,6 +113,13 @@ export default function AdminDashboardPage() {
         booking.status !== "cancelled" &&
         booking.status !== "completed",
     );
+
+    const commandCenter = getMarketplaceCommandCenter({
+      listings,
+      bookings,
+      vendors,
+      reviews,
+    });
 
     return {
       newBookings: bookings.filter((booking) => (booking.status || "new") === "new")
@@ -138,6 +149,7 @@ export default function AdminDashboardPage() {
           0,
         ),
       nextBookings: upcomingBookings.slice(0, 8),
+      commandCenter,
     };
   }, [bookings, listings, reviews, vendors]);
 
@@ -194,14 +206,57 @@ export default function AdminDashboardPage() {
               </div>
 
               <div className="mt-4 rounded-2xl bg-[#EEF7F6] p-5">
-                <p className="text-sm text-gray-600">Unpaid commission</p>
-                <p className="mt-2 text-3xl font-bold text-[#0B3C5D]">
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                  }).format(summary.unpaidCommissionCents / 100)}
-                </p>
+                <div className="grid gap-4 lg:grid-cols-[1fr_220px] lg:items-center">
+                  <div>
+                    <p className="text-sm text-gray-600">Unpaid commission</p>
+                    <p className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+                      {new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                      }).format(summary.unpaidCommissionCents / 100)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white p-4">
+                    <p className="text-sm text-gray-600">Marketplace score</p>
+                    <p className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                      {summary.commandCenter.marketplaceScore}%
+                    </p>
+                  </div>
+                </div>
               </div>
+
+              <section className="mt-8 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-5">
+                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#9C7A2F]">
+                      Marketplace command center
+                    </p>
+                    <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                      Work the highest-impact queue first.
+                    </h2>
+                  </div>
+                  <Link
+                    href="/admin/analytics"
+                    className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-sm font-semibold text-white"
+                  >
+                    View analytics
+                  </Link>
+                </div>
+                <div className="mt-5 grid gap-3 md:grid-cols-4">
+                  {summary.commandCenter.priorityCards.map((card) => (
+                    <Link
+                      key={card.label}
+                      href={card.href}
+                      className="rounded-2xl bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                    >
+                      <p className="text-sm text-gray-600">{card.label}</p>
+                      <p className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                        {card.value}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
 
               <div className="mt-8 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
                 <section className="rounded-2xl border border-gray-200 p-5">

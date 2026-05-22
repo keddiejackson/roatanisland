@@ -5,6 +5,10 @@ import Link from "next/link";
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import type { MapListing } from "@/app/map/page";
 import {
+  getListingTrustBadges,
+  listingMatchesAvailability,
+} from "@/lib/marketplace-upgrade";
+import {
   appleDirectionsUrl,
   appleMapsUrl,
   distanceMiles,
@@ -399,6 +403,10 @@ function defaultMapState(listings: MapListing[]) {
     collectionId: "",
     tripIds: [] as string[],
     pickupId: "",
+    date: "",
+    time: "",
+    guests: "",
+    availableOnly: false,
   };
 }
 
@@ -410,6 +418,10 @@ function readBrowserMapState(listings: MapListing[]) {
   const collectionId = params.get("collection") || "";
   const collection = mapCollections.find((item) => item.id === collectionId);
   const pickupId = params.get("pickup") || "";
+  const date = params.get("date") || "";
+  const time = params.get("time") || "";
+  const guests = params.get("guests") || "";
+  const availableOnly = params.get("available") === "1";
   const selectedId = params.get("selected") || listings[0]?.id || "";
   const selectedListing = listings.find((listing) => listing.id === selectedId);
   const selectedPin = selectedListing ? listingToPin(selectedListing) : null;
@@ -433,6 +445,10 @@ function readBrowserMapState(listings: MapListing[]) {
     pickupId: pickupPoints.some((point) => point.id === pickupId)
       ? pickupId
       : "",
+    date,
+    time,
+    guests,
+    availableOnly,
   };
 }
 
@@ -452,6 +468,12 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   );
   const [tripMessage, setTripMessage] = useState("");
   const [pickupId, setPickupId] = useState(initialMapState.pickupId);
+  const [dateFilter, setDateFilter] = useState(initialMapState.date);
+  const [timeFilter, setTimeFilter] = useState(initialMapState.time);
+  const [guestFilter, setGuestFilter] = useState(initialMapState.guests);
+  const [availableOnly, setAvailableOnly] = useState(
+    initialMapState.availableOnly,
+  );
   const [fullMap, setFullMap] = useState(false);
   const [browserStateLoaded, setBrowserStateLoaded] = useState(false);
   const [hoveredId, setHoveredId] = useState("");
@@ -497,6 +519,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       setActiveCollectionId(browserMapState.collectionId);
       setSavedTripIds(browserMapState.tripIds);
       setPickupId(browserMapState.pickupId);
+      setDateFilter(browserMapState.date);
+      setTimeFilter(browserMapState.time);
+      setGuestFilter(browserMapState.guests);
+      setAvailableOnly(browserMapState.availableOnly);
       setBrowserStateLoaded(true);
     });
   }, [listings]);
@@ -513,6 +539,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     if (zoom !== 12) params.set("zoom", String(zoom));
     if (savedTripIds.length > 0) params.set("trip", savedTripIds.join(","));
     if (pickupId) params.set("pickup", pickupId);
+    if (dateFilter) params.set("date", dateFilter);
+    if (timeFilter) params.set("time", timeFilter);
+    if (guestFilter) params.set("guests", guestFilter);
+    if (availableOnly) params.set("available", "1");
 
     const query = params.toString();
     const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
@@ -521,11 +551,15 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     activeCollectionId,
     browserStateLoaded,
     category,
+    dateFilter,
+    availableOnly,
+    guestFilter,
     location,
     pickupId,
     savedTripIds,
     search,
     selectedId,
+    timeFilter,
     zoom,
   ]);
 
@@ -606,7 +640,20 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           ? collectionMatches(listing, activeCollection)
           : true;
 
-        return matchesCategory && matchesLocation && matchesSearch && matchesCollection;
+        const matchesAvailability = listingMatchesAvailability(listing, {
+          date: dateFilter,
+          time: timeFilter,
+          guests: guestFilter,
+          availableOnly,
+        });
+
+        return (
+          matchesCategory &&
+          matchesLocation &&
+          matchesSearch &&
+          matchesCollection &&
+          matchesAvailability
+        );
       });
 
     if (selectedPickup) {
@@ -647,10 +694,14 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }, [
     activeCollection,
     category,
+    dateFilter,
+    availableOnly,
+    guestFilter,
     listings,
     location,
     search,
     selectedPickup,
+    timeFilter,
     userLocation,
   ]);
 
@@ -879,6 +930,15 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     return `${pickupFitLabel(miles)} from ${selectedPickup.label}.`;
   }
 
+  function bookingUrl(listingId: string) {
+    const params = new URLSearchParams({ listing: listingId });
+    if (dateFilter) params.set("date", dateFilter);
+    if (timeFilter) params.set("time", timeFilter);
+    if (guestFilter) params.set("guests", guestFilter);
+
+    return `/book?${params.toString()}`;
+  }
+
   return (
     <section
       className={
@@ -969,6 +1029,37 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           >
             Near me
           </button>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_120px_auto]">
+          <input
+            type="date"
+            value={dateFilter}
+            onChange={(event) => setDateFilter(event.target.value)}
+            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+          />
+          <input
+            value={timeFilter}
+            onChange={(event) => setTimeFilter(event.target.value)}
+            placeholder="Preferred time"
+            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+          />
+          <input
+            type="number"
+            min="1"
+            value={guestFilter}
+            onChange={(event) => setGuestFilter(event.target.value)}
+            placeholder="Guests"
+            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+          />
+          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#00A8A8]/20 bg-white px-4 text-sm font-bold text-[#0B3C5D]">
+            <input
+              type="checkbox"
+              checked={availableOnly}
+              onChange={(event) => setAvailableOnly(event.target.checked)}
+            />
+            Available only
+          </label>
         </div>
         {locationMessage ? (
           <p className="mt-3 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
@@ -1487,7 +1578,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             <Link
               href={
                 savedTripPins[0]
-                  ? `/book?listing=${savedTripPins[0].id}`
+                  ? bookingUrl(savedTripPins[0].id)
                   : selectedPin
                     ? `/listings/${selectedPin.id}`
                     : "/map"
@@ -1552,6 +1643,16 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               <span className="rounded-full bg-[#F7F3EA] px-3 py-1">
                 {selectedPin.reviews_count || 0} reviews
               </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {getListingTrustBadges(selectedPin).map((badge) => (
+                <span
+                  key={badge}
+                  className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-bold text-[#0B3C5D]"
+                >
+                  {badge}
+                </span>
+              ))}
             </div>
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-600">
               {selectedPin.description || "Details coming soon."}
@@ -1649,7 +1750,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 View listing
               </Link>
               <Link
-                href={`/book?listing=${selectedPin.id}`}
+                href={bookingUrl(selectedPin.id)}
                 className="rounded-xl border border-[#00A8A8] px-4 py-3 text-center text-sm font-semibold text-[#007B7B]"
               >
                 Book

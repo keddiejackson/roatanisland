@@ -11,6 +11,8 @@ export type HomeListing = {
   rating: number | null;
   reviews_count?: number | null;
   tour_times: string[] | null;
+  blocked_dates?: string[] | null;
+  max_guests?: number | null;
 };
 
 export type HomeListingFilters = {

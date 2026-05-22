@@ -6,9 +6,14 @@ import BookingForm from "./BookingForm";
 export default async function BookPage({
   searchParams,
 }: {
-  searchParams: Promise<{ listing?: string }>;
+  searchParams: Promise<{
+    listing?: string;
+    date?: string;
+    time?: string;
+    guests?: string;
+  }>;
 }) {
-  const { listing } = await searchParams;
+  const { listing, date, time, guests } = await searchParams;
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#1F2937]">
@@ -63,7 +68,12 @@ export default async function BookPage({
           </div>
         </section>
 
-        <BookingForm listingId={listing} />
+        <BookingForm
+          listingId={listing}
+          initialDate={date || ""}
+          initialTime={time || ""}
+          initialGuests={guests || ""}
+        />
       </div>
       <SiteFooter />
     </main>
