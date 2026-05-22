@@ -11,7 +11,8 @@ type ExportType =
   | "reports"
   | "promo_codes"
   | "vendor_documents"
-  | "concierge_leads";
+  | "concierge_leads"
+  | "concierge_assignments";
 
 async function verifyAdmin(request: Request) {
   const token = request.headers
@@ -182,6 +183,19 @@ async function fetchRows(type: ExportType) {
     return (data || []) as Record<string, unknown>[];
   }
 
+  if (type === "concierge_assignments") {
+    const { data, error } = await supabaseServer
+      .from("concierge_lead_assignments")
+      .select("id, lead_id, listing_id, vendor_id, status, contact_method, vendor_note, guest_quote_cents, created_at, updated_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
   const { data, error } = await supabaseServer
     .from("vendors")
     .select(
@@ -217,6 +231,7 @@ export async function GET(request: Request) {
       "promo_codes",
       "vendor_documents",
       "concierge_leads",
+      "concierge_assignments",
     ].includes(type)
   ) {
     return NextResponse.json({ error: "Unknown export type." }, { status: 400 });

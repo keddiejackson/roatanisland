@@ -26,6 +26,32 @@ export type ConciergeLeadLike = {
   priority?: string | null;
 };
 
+export const conciergeAssignmentStatuses = [
+  "recommended",
+  "contacted",
+  "quoted",
+  "confirmed",
+  "declined",
+] as const;
+
+export type ConciergeAssignmentStatus =
+  (typeof conciergeAssignmentStatuses)[number];
+
+export type ConciergeAssignmentLike = {
+  id: string;
+  status?: string | null;
+};
+
+export type ConciergeAssignmentInput = {
+  leadId?: string;
+  listingId?: string | null;
+  vendorId?: string | null;
+  status?: string | null;
+  contactMethod?: string | null;
+  vendorNote?: string | null;
+  guestQuoteCents?: string | number | null;
+};
+
 export type ConciergeContactRequest = {
   name?: string;
   email?: string;
@@ -53,6 +79,14 @@ export function normalizeConciergeLeadStatus(
   return conciergeLeadStatuses.includes(status as ConciergeLeadStatus)
     ? (status as ConciergeLeadStatus)
     : "new";
+}
+
+export function normalizeConciergeAssignmentStatus(
+  status: string | null | undefined,
+): ConciergeAssignmentStatus {
+  return conciergeAssignmentStatuses.includes(status as ConciergeAssignmentStatus)
+    ? (status as ConciergeAssignmentStatus)
+    : "recommended";
 }
 
 export function priorityForConciergeLead({
@@ -113,6 +147,20 @@ export function buildConciergeLeadInsert(body: ConciergeContactRequest) {
   };
 }
 
+export function buildConciergeAssignmentInsert(input: ConciergeAssignmentInput) {
+  const quote = Number(input.guestQuoteCents);
+
+  return {
+    lead_id: cleanText(input.leadId, 80),
+    listing_id: cleanText(input.listingId, 80) || null,
+    vendor_id: cleanText(input.vendorId, 80) || null,
+    status: normalizeConciergeAssignmentStatus(input.status),
+    contact_method: cleanText(input.contactMethod, 80) || null,
+    vendor_note: cleanText(input.vendorNote, 4000) || null,
+    guest_quote_cents: Number.isFinite(quote) && quote >= 0 ? quote : null,
+  };
+}
+
 export function conciergeLeadSummary(leads: ConciergeLeadLike[]) {
   return {
     total: leads.length,
@@ -131,5 +179,38 @@ export function conciergeLeadSummary(leads: ConciergeLeadLike[]) {
     ).length,
     cruiseCount: leads.filter((lead) => lead.priority === "cruise").length,
     airportCount: leads.filter((lead) => lead.priority === "airport").length,
+  };
+}
+
+export function conciergeFulfillmentSummary(
+  assignments: ConciergeAssignmentLike[],
+) {
+  return {
+    total: assignments.length,
+    recommendedCount: assignments.filter(
+      (assignment) =>
+        normalizeConciergeAssignmentStatus(assignment.status) === "recommended",
+    ).length,
+    contactedCount: assignments.filter(
+      (assignment) =>
+        normalizeConciergeAssignmentStatus(assignment.status) === "contacted",
+    ).length,
+    quotedCount: assignments.filter(
+      (assignment) =>
+        normalizeConciergeAssignmentStatus(assignment.status) === "quoted",
+    ).length,
+    confirmedCount: assignments.filter(
+      (assignment) =>
+        normalizeConciergeAssignmentStatus(assignment.status) === "confirmed",
+    ).length,
+    declinedCount: assignments.filter(
+      (assignment) =>
+        normalizeConciergeAssignmentStatus(assignment.status) === "declined",
+    ).length,
+    activeCount: assignments.filter((assignment) =>
+      ["recommended", "contacted", "quoted"].includes(
+        normalizeConciergeAssignmentStatus(assignment.status),
+      ),
+    ).length,
   };
 }

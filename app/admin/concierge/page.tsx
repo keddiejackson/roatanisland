@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import {
   conciergeLeadPriorities,
+  conciergeAssignmentStatuses,
+  conciergeFulfillmentSummary,
   conciergeLeadStatuses,
   conciergeLeadSummary,
+  type ConciergeAssignmentStatus,
   type ConciergeLeadPriority,
   type ConciergeLeadStatus,
 } from "@/lib/concierge-leads";
@@ -25,6 +28,36 @@ type PlanPayload = {
   name?: string;
   notes?: string;
   stops?: PlanStop[];
+};
+
+type ConciergeListingOption = {
+  id: string;
+  title: string;
+  category: string | null;
+  location: string | null;
+  vendor_id: string | null;
+};
+
+type ConciergeVendorOption = {
+  id: string;
+  business_name: string;
+  email: string | null;
+  phone: string | null;
+};
+
+type ConciergeAssignment = {
+  id: string;
+  lead_id: string;
+  listing_id: string | null;
+  vendor_id: string | null;
+  status: ConciergeAssignmentStatus;
+  contact_method: string | null;
+  vendor_note: string | null;
+  guest_quote_cents: number | null;
+  listing: ConciergeListingOption | null;
+  vendor: ConciergeVendorOption | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type ConciergeLead = {
@@ -48,6 +81,25 @@ type ConciergeLead = {
   follow_up_date: string | null;
   created_at: string;
   updated_at: string;
+  assignments: ConciergeAssignment[];
+};
+
+type AssignmentDraft = {
+  listingId: string;
+  vendorId: string;
+  status: ConciergeAssignmentStatus;
+  contactMethod: string;
+  vendorNote: string;
+  guestQuoteDollars: string;
+};
+
+const emptyAssignmentDraft: AssignmentDraft = {
+  listingId: "",
+  vendorId: "",
+  status: "recommended",
+  contactMethod: "Email",
+  vendorNote: "",
+  guestQuoteDollars: "",
 };
 
 function formatDate(value: string | null) {
@@ -59,17 +111,79 @@ function leadPlanStops(plan: PlanPayload | null) {
   return Array.isArray(plan?.stops) ? plan.stops.slice(0, 6) : [];
 }
 
+function quoteToCents(value: string) {
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) && numberValue >= 0
+    ? Math.round(numberValue * 100)
+    : null;
+}
+
+function centsToDollars(value: number | null) {
+  return value === null ? "" : (value / 100).toFixed(2);
+}
+
+function formatQuote(value: number | null) {
+  if (value === null) return "No quote";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(value / 100);
+}
+
 export default function AdminConciergePage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [leads, setLeads] = useState<ConciergeLead[]>([]);
+  const [listingOptions, setListingOptions] = useState<ConciergeListingOption[]>(
+    [],
+  );
+  const [vendorOptions, setVendorOptions] = useState<ConciergeVendorOption[]>([]);
+  const [assignmentDrafts, setAssignmentDrafts] = useState<
+    Record<string, AssignmentDraft>
+  >({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(
+    null,
+  );
   const [message, setMessage] = useState("");
+
+  const loadLeads = useCallback(async () => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const response = await fetch("/api/admin/concierge-leads", {
+      headers: {
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      setMessage(
+        result.error?.includes("concierge_leads")
+          ? "Run supabase/concierge-leads.sql in Supabase, then refresh this page."
+          : result.error || "Unable to load concierge leads.",
+      );
+      setLoading(false);
+      return;
+    }
+
+    const result = await response.json();
+    setLeads((result.leads as ConciergeLead[]) || []);
+    setListingOptions(
+      (result.options?.listings as ConciergeListingOption[] | undefined) || [],
+    );
+    setVendorOptions(
+      (result.options?.vendors as ConciergeVendorOption[] | undefined) || [],
+    );
+    setMessage(result.setupMessage || "");
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -89,36 +203,14 @@ export default function AdminConciergePage() {
   }, [router]);
 
   useEffect(() => {
-    async function fetchLeads() {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const response = await fetch("/api/admin/concierge-leads", {
-        headers: {
-          ...(sessionData.session?.access_token
-            ? { Authorization: `Bearer ${sessionData.session.access_token}` }
-            : {}),
-        },
-      });
-
-      if (!response.ok) {
-        const result = await response.json();
-        setMessage(
-          result.error?.includes("concierge_leads")
-            ? "Run supabase/concierge-leads.sql in Supabase, then refresh this page."
-            : result.error || "Unable to load concierge leads.",
-        );
-        setLoading(false);
-        return;
+    if (authorized) {
+      async function run() {
+        await loadLeads();
       }
 
-      const result = await response.json();
-      setLeads((result.leads as ConciergeLead[]) || []);
-      setLoading(false);
+      run();
     }
-
-    if (authorized) {
-      fetchLeads();
-    }
-  }, [authorized]);
+  }, [authorized, loadLeads]);
 
   const filteredLeads = useMemo(() => {
     const searchText = search.trim().toLowerCase();
@@ -138,6 +230,12 @@ export default function AdminConciergePage() {
           lead.arrival_type,
           lead.trip_style,
           lead.message,
+          ...lead.assignments.flatMap((assignment) => [
+            assignment.status,
+            assignment.vendor_note,
+            assignment.listing?.title,
+            assignment.vendor?.business_name,
+          ]),
         ]
           .filter(Boolean)
           .join(" ")
@@ -149,6 +247,10 @@ export default function AdminConciergePage() {
   }, [leads, priorityFilter, search, statusFilter]);
 
   const summary = useMemo(() => conciergeLeadSummary(leads), [leads]);
+  const fulfillmentSummary = useMemo(
+    () => conciergeFulfillmentSummary(leads.flatMap((lead) => lead.assignments)),
+    [leads],
+  );
 
   if (checkingAuth || !authorized) return null;
 
@@ -156,6 +258,51 @@ export default function AdminConciergePage() {
     setLeads((current) =>
       current.map((lead) => (lead.id === id ? { ...lead, ...updates } : lead)),
     );
+  }
+
+  function updateAssignmentDraft(
+    leadId: string,
+    updates: Partial<AssignmentDraft>,
+  ) {
+    setAssignmentDrafts((current) => ({
+      ...current,
+      [leadId]: {
+        ...(current[leadId] || emptyAssignmentDraft),
+        ...updates,
+      },
+    }));
+  }
+
+  function updateLocalAssignment(
+    leadId: string,
+    assignmentId: string,
+    updates: Partial<ConciergeAssignment>,
+  ) {
+    setLeads((current) =>
+      current.map((lead) =>
+        lead.id === leadId
+          ? {
+              ...lead,
+              assignments: lead.assignments.map((assignment) =>
+                assignment.id === assignmentId
+                  ? { ...assignment, ...updates }
+                  : assignment,
+              ),
+            }
+          : lead,
+      ),
+    );
+  }
+
+  async function authorizedHeaders() {
+    const { data: sessionData } = await supabase.auth.getSession();
+
+    return {
+      "Content-Type": "application/json",
+      ...(sessionData.session?.access_token
+        ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+        : {}),
+    };
   }
 
   async function saveLead(lead: ConciergeLead) {
@@ -191,6 +338,94 @@ export default function AdminConciergePage() {
     setMessage("Concierge lead saved.");
   }
 
+  async function createAssignment(lead: ConciergeLead) {
+    const draft = assignmentDrafts[lead.id] || emptyAssignmentDraft;
+
+    setSavingAssignmentId(`new-${lead.id}`);
+    setMessage("");
+
+    const response = await fetch(
+      `/api/admin/concierge-leads/${lead.id}/assignments`,
+      {
+        method: "POST",
+        headers: await authorizedHeaders(),
+        body: JSON.stringify({
+          listingId: draft.listingId || undefined,
+          vendorId: draft.vendorId || undefined,
+          status: draft.status,
+          contactMethod: draft.contactMethod,
+          vendorNote: draft.vendorNote,
+          guestQuoteCents: quoteToCents(draft.guestQuoteDollars),
+        }),
+      },
+    );
+
+    const result = await response.json();
+    setSavingAssignmentId(null);
+
+    if (!response.ok) {
+      setMessage(result.error || "Unable to add this assignment.");
+      return;
+    }
+
+    setAssignmentDrafts((current) => ({
+      ...current,
+      [lead.id]: emptyAssignmentDraft,
+    }));
+    await loadLeads();
+    setMessage("Fulfillment assignment added.");
+  }
+
+  async function saveAssignment(assignment: ConciergeAssignment) {
+    setSavingAssignmentId(assignment.id);
+    setMessage("");
+
+    const response = await fetch(`/api/admin/concierge-assignments/${assignment.id}`, {
+      method: "PATCH",
+      headers: await authorizedHeaders(),
+      body: JSON.stringify({
+        listingId: assignment.listing_id,
+        vendorId: assignment.vendor_id,
+        status: assignment.status,
+        contactMethod: assignment.contact_method,
+        vendorNote: assignment.vendor_note,
+        guestQuoteCents: assignment.guest_quote_cents,
+      }),
+    });
+
+    const result = await response.json();
+    setSavingAssignmentId(null);
+
+    if (!response.ok) {
+      setMessage(result.error || "Unable to save this assignment.");
+      return;
+    }
+
+    await loadLeads();
+    setMessage("Fulfillment assignment saved.");
+  }
+
+  async function deleteAssignment(assignment: ConciergeAssignment) {
+    setSavingAssignmentId(assignment.id);
+    setMessage("");
+
+    const response = await fetch(`/api/admin/concierge-assignments/${assignment.id}`, {
+      method: "DELETE",
+      headers: await authorizedHeaders(),
+    });
+
+    const result = await response.json();
+    setSavingAssignmentId(null);
+
+    if (!response.ok) {
+      setMessage(result.error || "Unable to remove this assignment.");
+      return;
+    }
+
+    await loadLeads();
+    setMessage("Fulfillment assignment removed.");
+  }
+
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
       <div className="mx-auto max-w-7xl">
@@ -209,7 +444,10 @@ export default function AdminConciergePage() {
                 Follow up with guests who ask for help building a Roatan day.
               </p>
             </div>
-            <ExportCsvButton type="concierge_leads" />
+            <div className="flex flex-wrap gap-2">
+              <ExportCsvButton type="concierge_leads" />
+              <ExportCsvButton type="concierge_assignments" />
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 md:grid-cols-4">
@@ -220,6 +458,9 @@ export default function AdminConciergePage() {
               ["Booked", summary.bookedCount],
               ["Cruise", summary.cruiseCount],
               ["Airport", summary.airportCount],
+              ["Vendor matches", fulfillmentSummary.total],
+              ["Quoted", fulfillmentSummary.quotedCount],
+              ["Confirmed", fulfillmentSummary.confirmedCount],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl bg-[#F7F3EA] p-5">
                 <p className="text-sm text-gray-600">{label}</p>
@@ -279,6 +520,10 @@ export default function AdminConciergePage() {
             <div className="mt-6 grid gap-5">
               {filteredLeads.map((lead) => {
                 const stops = leadPlanStops(lead.plan);
+                const draft = assignmentDrafts[lead.id] || emptyAssignmentDraft;
+                const leadFulfillment = conciergeFulfillmentSummary(
+                  lead.assignments,
+                );
 
                 return (
                   <article
@@ -455,6 +700,331 @@ export default function AdminConciergePage() {
                         >
                           {savingId === lead.id ? "Saving..." : "Save lead"}
                         </button>
+
+                        <div className="mt-6 border-t border-white pt-5">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="font-bold text-[#0B3C5D]">
+                              Vendor fulfillment
+                            </p>
+                            <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase text-[#0B3C5D]">
+                              {leadFulfillment.confirmedCount} confirmed
+                            </span>
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-3 gap-2">
+                            {[
+                              ["Matches", leadFulfillment.total],
+                              ["Contacted", leadFulfillment.contactedCount],
+                              ["Quoted", leadFulfillment.quotedCount],
+                            ].map(([label, value]) => (
+                              <div
+                                key={label}
+                                className="rounded-xl bg-white p-3 text-center"
+                              >
+                                <p className="text-xs text-gray-500">{label}</p>
+                                <p className="mt-1 text-lg font-black text-[#0B3C5D]">
+                                  {value}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-4 grid gap-3 rounded-xl bg-white p-4">
+                            <select
+                              value={draft.listingId}
+                              onChange={(event) => {
+                                const listing = listingOptions.find(
+                                  (option) => option.id === event.target.value,
+                                );
+
+                                updateAssignmentDraft(lead.id, {
+                                  listingId: event.target.value,
+                                  vendorId:
+                                    listing?.vendor_id || draft.vendorId || "",
+                                });
+                              }}
+                              className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                            >
+                              <option value="">Choose listing</option>
+                              {listingOptions.map((listing) => (
+                                <option key={listing.id} value={listing.id}>
+                                  {listing.title}
+                                </option>
+                              ))}
+                            </select>
+                            <select
+                              value={draft.vendorId}
+                              onChange={(event) =>
+                                updateAssignmentDraft(lead.id, {
+                                  vendorId: event.target.value,
+                                })
+                              }
+                              className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                            >
+                              <option value="">Choose vendor</option>
+                              {vendorOptions.map((vendor) => (
+                                <option key={vendor.id} value={vendor.id}>
+                                  {vendor.business_name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                              <select
+                                value={draft.status}
+                                onChange={(event) =>
+                                  updateAssignmentDraft(lead.id, {
+                                    status: event.target
+                                      .value as ConciergeAssignmentStatus,
+                                  })
+                                }
+                                className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                              >
+                                {conciergeAssignmentStatuses.map((status) => (
+                                  <option key={status} value={status}>
+                                    {status}
+                                  </option>
+                                ))}
+                              </select>
+                              <select
+                                value={draft.contactMethod}
+                                onChange={(event) =>
+                                  updateAssignmentDraft(lead.id, {
+                                    contactMethod: event.target.value,
+                                  })
+                                }
+                                className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                              >
+                                {["Email", "Phone", "WhatsApp", "In person"].map(
+                                  (method) => (
+                                    <option key={method} value={method}>
+                                      {method}
+                                    </option>
+                                  ),
+                                )}
+                              </select>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={draft.guestQuoteDollars}
+                              onChange={(event) =>
+                                updateAssignmentDraft(lead.id, {
+                                  guestQuoteDollars: event.target.value,
+                                })
+                              }
+                              placeholder="Guest quote"
+                              className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                            />
+                            <textarea
+                              value={draft.vendorNote}
+                              onChange={(event) =>
+                                updateAssignmentDraft(lead.id, {
+                                  vendorNote: event.target.value,
+                                })
+                              }
+                              rows={3}
+                              placeholder="Vendor follow-up note..."
+                              className="rounded-xl border border-gray-200 px-3 py-2 outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => createAssignment(lead)}
+                              disabled={savingAssignmentId === `new-${lead.id}`}
+                              className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+                            >
+                              {savingAssignmentId === `new-${lead.id}`
+                                ? "Adding..."
+                                : "Add vendor match"}
+                            </button>
+                          </div>
+
+                          <div className="mt-4 grid gap-3">
+                            {lead.assignments.length === 0 ? (
+                              <p className="rounded-xl border border-dashed border-gray-300 bg-white px-4 py-5 text-center text-sm text-gray-600">
+                                No vendors assigned yet.
+                              </p>
+                            ) : (
+                              lead.assignments.map((assignment) => (
+                                <div
+                                  key={assignment.id}
+                                  className="rounded-xl bg-white p-4"
+                                >
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                      <p className="font-black text-[#0B3C5D]">
+                                        {assignment.listing?.title ||
+                                          "Direct vendor"}
+                                      </p>
+                                      <p className="mt-1 text-sm text-gray-600">
+                                        {assignment.vendor?.business_name ||
+                                          "No vendor selected"}{" "}
+                                        - {formatQuote(assignment.guest_quote_cents)}
+                                      </p>
+                                    </div>
+                                    <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black uppercase text-[#0B3C5D]">
+                                      {assignment.status}
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-3 grid gap-2">
+                                    <select
+                                      value={assignment.status}
+                                      onChange={(event) =>
+                                        updateLocalAssignment(
+                                          lead.id,
+                                          assignment.id,
+                                          {
+                                            status: event.target
+                                              .value as ConciergeAssignmentStatus,
+                                          },
+                                        )
+                                      }
+                                      className="min-h-10 rounded-lg border border-gray-200 px-3 outline-none"
+                                    >
+                                      {conciergeAssignmentStatuses.map(
+                                        (status) => (
+                                          <option key={status} value={status}>
+                                            {status}
+                                          </option>
+                                        ),
+                                      )}
+                                    </select>
+                                    <select
+                                      value={assignment.listing_id || ""}
+                                      onChange={(event) => {
+                                        const listing = listingOptions.find(
+                                          (option) =>
+                                            option.id === event.target.value,
+                                        );
+
+                                        updateLocalAssignment(
+                                          lead.id,
+                                          assignment.id,
+                                          {
+                                            listing_id:
+                                              event.target.value || null,
+                                            vendor_id:
+                                              listing?.vendor_id ||
+                                              assignment.vendor_id,
+                                          },
+                                        );
+                                      }}
+                                      className="min-h-10 rounded-lg border border-gray-200 px-3 outline-none"
+                                    >
+                                      <option value="">No listing</option>
+                                      {listingOptions.map((listing) => (
+                                        <option key={listing.id} value={listing.id}>
+                                          {listing.title}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <select
+                                      value={assignment.vendor_id || ""}
+                                      onChange={(event) =>
+                                        updateLocalAssignment(
+                                          lead.id,
+                                          assignment.id,
+                                          {
+                                            vendor_id:
+                                              event.target.value || null,
+                                          },
+                                        )
+                                      }
+                                      className="min-h-10 rounded-lg border border-gray-200 px-3 outline-none"
+                                    >
+                                      <option value="">No vendor</option>
+                                      {vendorOptions.map((vendor) => (
+                                        <option key={vendor.id} value={vendor.id}>
+                                          {vendor.business_name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                                      <input
+                                        value={assignment.contact_method || ""}
+                                        onChange={(event) =>
+                                          updateLocalAssignment(
+                                            lead.id,
+                                            assignment.id,
+                                            {
+                                              contact_method:
+                                                event.target.value,
+                                            },
+                                          )
+                                        }
+                                        placeholder="Contact method"
+                                        className="min-h-10 rounded-lg border border-gray-200 px-3 outline-none"
+                                      />
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={centsToDollars(
+                                          assignment.guest_quote_cents,
+                                        )}
+                                        onChange={(event) =>
+                                          updateLocalAssignment(
+                                            lead.id,
+                                            assignment.id,
+                                            {
+                                              guest_quote_cents: quoteToCents(
+                                                event.target.value,
+                                              ),
+                                            },
+                                          )
+                                        }
+                                        placeholder="Quote"
+                                        className="min-h-10 rounded-lg border border-gray-200 px-3 outline-none"
+                                      />
+                                    </div>
+                                    <textarea
+                                      value={assignment.vendor_note || ""}
+                                      onChange={(event) =>
+                                        updateLocalAssignment(
+                                          lead.id,
+                                          assignment.id,
+                                          { vendor_note: event.target.value },
+                                        )
+                                      }
+                                      rows={3}
+                                      placeholder="Vendor notes..."
+                                      className="rounded-lg border border-gray-200 px-3 py-2 outline-none"
+                                    />
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          saveAssignment(assignment)
+                                        }
+                                        disabled={
+                                          savingAssignmentId === assignment.id
+                                        }
+                                        className="rounded-lg bg-[#00A8A8] px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
+                                      >
+                                        {savingAssignmentId === assignment.id
+                                          ? "Saving..."
+                                          : "Save match"}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          deleteAssignment(assignment)
+                                        }
+                                        disabled={
+                                          savingAssignmentId === assignment.id
+                                        }
+                                        className="rounded-lg bg-[#F7F3EA] px-3 py-2 text-sm font-bold text-[#0B3C5D] disabled:opacity-50"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </article>

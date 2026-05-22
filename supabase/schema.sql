@@ -319,6 +319,26 @@ create table if not exists public.concierge_leads (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.concierge_lead_assignments (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid not null references public.concierge_leads(id) on delete cascade,
+  listing_id uuid references public.listings(id) on delete set null,
+  vendor_id uuid references public.vendors(id) on delete set null,
+  status text not null default 'recommended'
+    check (status in ('recommended', 'contacted', 'quoted', 'confirmed', 'declined')),
+  contact_method text,
+  vendor_note text,
+  guest_quote_cents integer,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists concierge_lead_assignments_lead_id_idx
+on public.concierge_lead_assignments(lead_id);
+
+create index if not exists concierge_lead_assignments_status_idx
+on public.concierge_lead_assignments(status);
+
 create table if not exists public.vendor_documents (
   id uuid primary key default gen_random_uuid(),
   vendor_id uuid not null references public.vendors(id) on delete cascade,
@@ -451,6 +471,28 @@ add column if not exists follow_up_date date;
 alter table public.concierge_leads
 add column if not exists updated_at timestamptz not null default now();
 
+alter table public.concierge_lead_assignments
+add column if not exists listing_id uuid references public.listings(id) on delete set null;
+
+alter table public.concierge_lead_assignments
+add column if not exists vendor_id uuid references public.vendors(id) on delete set null;
+
+alter table public.concierge_lead_assignments
+add column if not exists status text not null default 'recommended'
+check (status in ('recommended', 'contacted', 'quoted', 'confirmed', 'declined'));
+
+alter table public.concierge_lead_assignments
+add column if not exists contact_method text;
+
+alter table public.concierge_lead_assignments
+add column if not exists vendor_note text;
+
+alter table public.concierge_lead_assignments
+add column if not exists guest_quote_cents integer;
+
+alter table public.concierge_lead_assignments
+add column if not exists updated_at timestamptz not null default now();
+
 alter table public.vendor_documents
 add column if not exists status text not null default 'pending'
 check (status in ('pending', 'approved', 'rejected'));
@@ -470,6 +512,7 @@ alter table public.promo_codes enable row level security;
 alter table public.listing_addons enable row level security;
 alter table public.listing_reports enable row level security;
 alter table public.concierge_leads enable row level security;
+alter table public.concierge_lead_assignments enable row level security;
 alter table public.vendor_documents enable row level security;
 
 grant usage on schema public to anon, authenticated;
@@ -494,6 +537,7 @@ grant insert on public.listing_reports to anon, authenticated;
 grant select, update on public.listing_reports to authenticated;
 grant insert on public.concierge_leads to anon, authenticated;
 grant select, update on public.concierge_leads to authenticated;
+grant select, insert, update, delete on public.concierge_lead_assignments to authenticated;
 grant select, insert, update on public.vendor_documents to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
@@ -1076,6 +1120,65 @@ using (
   )
 )
 with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can view concierge assignments" on public.concierge_lead_assignments;
+create policy "Admins can view concierge assignments"
+on public.concierge_lead_assignments
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can create concierge assignments" on public.concierge_lead_assignments;
+create policy "Admins can create concierge assignments"
+on public.concierge_lead_assignments
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can update concierge assignments" on public.concierge_lead_assignments;
+create policy "Admins can update concierge assignments"
+on public.concierge_lead_assignments
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can delete concierge assignments" on public.concierge_lead_assignments;
+create policy "Admins can delete concierge assignments"
+on public.concierge_lead_assignments
+for delete
+to authenticated
+using (
   exists (
     select 1
     from public.admin_users

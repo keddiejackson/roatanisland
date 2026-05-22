@@ -13,7 +13,8 @@ type ExportCsvButtonProps = {
     | "reports"
     | "promo_codes"
     | "vendor_documents"
-    | "concierge_leads";
+    | "concierge_leads"
+    | "concierge_assignments";
 };
 
 export default function ExportCsvButton({ type }: ExportCsvButtonProps) {
