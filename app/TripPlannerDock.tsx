@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 
 export default function TripPlannerDock() {
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [savedPlanCount, setSavedPlanCount] = useState(0);
 
   useEffect(() => {
     function loadSavedTrip() {
@@ -17,6 +18,15 @@ export default function TripPlannerDock() {
         );
       } catch {
         setSavedIds([]);
+      }
+
+      try {
+        const plans = JSON.parse(
+          localStorage.getItem("roatan-concierge-plans") || "[]",
+        );
+        setSavedPlanCount(Array.isArray(plans) ? plans.length : 0);
+      } catch {
+        setSavedPlanCount(0);
       }
     }
 
@@ -40,15 +50,27 @@ export default function TripPlannerDock() {
           <p className="mt-1 font-bold">
             {savedIds.length > 0
               ? `${savedIds.length} saved stop${savedIds.length === 1 ? "" : "s"} ready on the map`
+              : savedPlanCount > 0
+                ? `${savedPlanCount} concierge plan${
+                    savedPlanCount === 1 ? "" : "s"
+                  } saved in My Trips`
               : "Save stops from the map and build a Roatan day plan"}
           </p>
         </div>
-        <Link
-          href={tripHref}
-          className="rounded-lg bg-[#0B3C5D] px-4 py-3 text-center text-sm font-bold text-white"
-        >
-          {savedIds.length > 0 ? "Open saved plan" : "Start planning"}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href={tripHref}
+            className="rounded-lg bg-[#0B3C5D] px-4 py-3 text-center text-sm font-bold text-white"
+          >
+            {savedIds.length > 0 ? "Open saved plan" : "Start planning"}
+          </Link>
+          <Link
+            href="/concierge"
+            className="rounded-lg bg-white px-4 py-3 text-center text-sm font-bold text-[#0B3C5D]"
+          >
+            Concierge
+          </Link>
+        </div>
       </div>
     </aside>
   );

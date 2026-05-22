@@ -47,6 +47,12 @@ export default function SignInPage() {
               >
                 List your business
               </Link>
+              <Link
+                href="/concierge"
+                className="rounded-lg bg-white px-4 py-2 text-[#0B3C5D] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                Concierge
+              </Link>
             </nav>
           </header>
 

@@ -8,6 +8,7 @@ import {
   getListingTrustBadges,
   listingMatchesAvailability,
 } from "@/lib/marketplace-upgrade";
+import type { ConciergePlan } from "@/lib/guest-concierge";
 import {
   appleDirectionsUrl,
   appleMapsUrl,
@@ -877,6 +878,38 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     }
   }
 
+  function saveTripToDashboard() {
+    if (savedTripPins.length === 0) {
+      setTripMessage("Save at least one place first.");
+      return;
+    }
+
+    const plan: ConciergePlan = {
+      id: `map-plan-${Date.now()}`,
+      name: `Roatan map plan (${savedTripPins.length} stops)`,
+      pickupArea: selectedPickup?.label || location,
+      arrivalType: selectedPickup?.kind || "Map plan",
+      stops: savedTripPins.map((pin, index) => ({
+        listingId: pin.id,
+        title: pin.title,
+        timeBlock: ["Morning", "Midday", "Afternoon", "Sunset"][index] || "Flexible",
+        note: pin.location || pin.category || "",
+      })),
+    };
+
+    try {
+      const saved = JSON.parse(localStorage.getItem("roatan-concierge-plans") || "[]");
+      const plans = Array.isArray(saved) ? (saved as ConciergePlan[]) : [];
+      localStorage.setItem(
+        "roatan-concierge-plans",
+        JSON.stringify([plan, ...plans].slice(0, 12)),
+      );
+      setTripMessage("Saved to your guest dashboard.");
+    } catch {
+      setTripMessage("Unable to save this plan in your browser.");
+    }
+  }
+
   function useNearMe() {
     if (!navigator.geolocation) {
       setLocationMessage("Your browser does not support location sharing.");
@@ -1566,7 +1599,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             </div>
           )}
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <button
               type="button"
               onClick={shareTripPlan}
@@ -1574,6 +1607,14 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               className="rounded-xl bg-[#D6B56D] px-4 py-3 text-sm font-bold text-[#071F2F] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Share plan
+            </button>
+            <button
+              type="button"
+              onClick={saveTripToDashboard}
+              disabled={savedTripPins.length === 0}
+              className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Save dashboard
             </button>
             <Link
               href={

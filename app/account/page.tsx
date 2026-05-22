@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import GuestConciergePanel from "@/app/account/GuestConciergePanel";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
@@ -135,6 +136,8 @@ export default function AccountPage() {
             </div>
           ) : null}
         </section>
+
+        <GuestConciergePanel bookings={bookings} />
 
         <section className="mt-6 rounded-2xl bg-white p-8 shadow">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">

@@ -295,6 +295,9 @@ export default function Home() {
               <Link href="/map" className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Map
               </Link>
+              <Link href="/concierge" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Concierge
+              </Link>
               <Link href="/tours" className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Tours
               </Link>
@@ -331,10 +334,10 @@ export default function Home() {
                 {homepageControls.primaryCtaLabel}
               </a>
               <Link
-                href={mapUrl}
+                href="/concierge"
                 className="rounded-lg border border-white/25 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20"
               >
-                {homepageControls.secondaryCtaLabel}
+                Build a trip plan
               </Link>
             </div>
           </div>
