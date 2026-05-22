@@ -31,6 +31,13 @@ type Addon = {
   price_cents: number;
 };
 
+type AvailabilityStatus = {
+  label: string;
+  text: string;
+  tone: "available" | "limited" | "full" | "blocked" | "choose";
+  remainingGuests: number | null;
+};
+
 const DEFAULT_TOUR_TIMES = ["10:30 AM", "4:30 PM Sunset Cruise"];
 const PICKUP_OPTIONS = [
   "Hotel pickup",
@@ -47,6 +54,18 @@ function dateValueFromOffset(hours: number) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function availabilityToneClass(tone: AvailabilityStatus["tone"]) {
+  if (tone === "blocked" || tone === "full") {
+    return "border-red-200 bg-red-50 text-red-800";
+  }
+
+  if (tone === "limited") {
+    return "border-[#D6B56D]/40 bg-[#FFF8E8] text-[#7A5B12]";
+  }
+
+  return "border-[#00A8A8]/25 bg-[#EEF7F6] text-[#0B3C5D]";
 }
 
 export default function BookingForm({ listingId }: BookingFormProps) {
@@ -70,6 +89,9 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   const [accountPassword, setAccountPassword] = useState("");
   const [accountMessage, setAccountMessage] = useState("");
   const [accountLoading, setAccountLoading] = useState(false);
+  const [availabilityStatus, setAvailabilityStatus] =
+    useState<AvailabilityStatus | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   useEffect(() => {
     async function fetchListing() {
@@ -127,6 +149,56 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     fetchListing();
   }, [listingId]);
 
+  useEffect(() => {
+    if (!listingId || !tourDate || !tourTime) {
+      setAvailabilityStatus(null);
+      setCheckingAvailability(false);
+      return;
+    }
+
+    const requestedGuests = Number(guests);
+    const guestTotal =
+      Number.isFinite(requestedGuests) && requestedGuests > 0
+        ? requestedGuests
+        : 1;
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      listingId,
+      date: tourDate,
+      time: tourTime,
+      guests: String(guestTotal),
+    });
+
+    async function checkAvailability() {
+      setCheckingAvailability(true);
+
+      try {
+        const response = await fetch(`/api/availability?${params.toString()}`, {
+          signal: controller.signal,
+        });
+        const result = await response.json();
+
+        if (response.ok) {
+          setAvailabilityStatus(result as AvailabilityStatus);
+        } else {
+          setAvailabilityStatus(null);
+        }
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") {
+          console.error("Error checking availability:", err);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setCheckingAvailability(false);
+        }
+      }
+    }
+
+    checkAvailability();
+
+    return () => controller.abort();
+  }, [guests, listingId, tourDate, tourTime]);
+
   const availableTourTimes =
     listing?.tour_times && listing.tour_times.length > 0
       ? listing.tour_times
@@ -159,6 +231,8 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     tourDate && listing?.blocked_dates?.includes(tourDate)
       ? "That date is not available for this listing."
       : "";
+  const availabilityBlocksBooking =
+    availabilityStatus?.tone === "blocked" || availabilityStatus?.tone === "full";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -553,6 +627,19 @@ export default function BookingForm({ listingId }: BookingFormProps) {
             ) : null}
           </div>
 
+          {availabilityStatus ? (
+            <div
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold md:col-span-2 ${availabilityToneClass(
+                availabilityStatus.tone,
+              )}`}
+            >
+              <p>{availabilityStatus.label}</p>
+              <p className="mt-1 font-normal">
+                {checkingAvailability ? "Checking the latest availability..." : availabilityStatus.text}
+              </p>
+            </div>
+          ) : null}
+
           <div className="md:col-span-2">
             <label className="mb-2 block font-medium">Pickup preference</label>
             <div className="grid gap-2 sm:grid-cols-3">
@@ -646,7 +733,10 @@ export default function BookingForm({ listingId }: BookingFormProps) {
 
           <button
             type="submit"
-            disabled={loading || Boolean(guestWarning || dateWarning)}
+            disabled={
+              loading ||
+              Boolean(guestWarning || dateWarning || availabilityBlocksBooking)
+            }
             className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
           >
             {loading ? "Submitting..." : "Submit Booking Request"}

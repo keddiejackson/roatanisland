@@ -5,7 +5,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import PinPicker from "@/app/map/PinPicker";
 import SiteLogo from "@/app/SiteLogo";
-import { formatBookingCents, formatDepositStatus } from "@/lib/booking-flow";
+import {
+  groupBookingsByDate,
+  normalizeDateLines,
+  toggleDateLine,
+} from "@/lib/availability-calendar";
+import {
+  formatBookingCents,
+  formatBookingStatus,
+  formatDepositStatus,
+} from "@/lib/booking-flow";
 import { supabase } from "@/lib/supabase";
 import {
   countListingPhotos,
@@ -127,6 +136,7 @@ export default function VendorDashboardPage() {
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
   const [blockedDates, setBlockedDates] = useState<Record<string, string>>({});
+  const [blockedDateQuickPicks, setBlockedDateQuickPicks] = useState<Record<string, string>>({});
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
@@ -445,6 +455,33 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function updateBlockedDateQuickPick(listingId: string, value: string) {
+    setBlockedDateQuickPicks((currentDates) => ({
+      ...currentDates,
+      [listingId]: value,
+    }));
+  }
+
+  function toggleBlockedDate(listingId: string, date: string) {
+    if (!date) return;
+
+    setBlockedDates((currentDates) => ({
+      ...currentDates,
+      [listingId]: toggleDateLine(currentDates[listingId] || "", date),
+    }));
+  }
+
+  function toggleQuickBlockedDate(listingId: string) {
+    const date = blockedDateQuickPicks[listingId];
+
+    if (!date) {
+      alert("Choose a date first.");
+      return;
+    }
+
+    toggleBlockedDate(listingId, date);
+  }
+
   function updateAvailabilityNote(listingId: string, value: string) {
     setAvailabilityNotes((currentNotes) => ({
       ...currentNotes,
@@ -502,10 +539,7 @@ export default function VendorDashboardPage() {
       .split("\n")
       .map((time) => time.trim())
       .filter(Boolean);
-    const unavailableDates = (blockedDates[listingId] || "")
-      .split("\n")
-      .map((date) => date.trim())
-      .filter(Boolean);
+    const unavailableDates = normalizeDateLines(blockedDates[listingId] || "");
     let galleryImageUrls = (draft.galleryImageUrls || "")
       .split("\n")
       .map((url) => url.trim())
@@ -768,24 +802,10 @@ export default function VendorDashboardPage() {
     [sortedBookings],
   );
 
-  const groupedBookings = useMemo(() => {
-    const groups = new Map<string, BookingRow[]>();
-
-    sortedBookings.forEach((booking) => {
-      const group = groups.get(booking.tour_date) || [];
-      group.push(booking);
-      groups.set(booking.tour_date, group);
-    });
-
-    return [...groups.entries()]
-      .map(([date, dateBookings]) => ({
-        date,
-        bookings: dateBookings.sort((a, b) =>
-          a.tour_time.localeCompare(b.tour_time),
-        ),
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [sortedBookings]);
+  const groupedBookings = useMemo(
+    () => groupBookingsByDate(sortedBookings),
+    [sortedBookings],
+  );
 
   const dashboardStats = useMemo(
     () => getVendorDashboardStats({ bookings, listings }),
@@ -1287,7 +1307,9 @@ export default function VendorDashboardPage() {
                     </h3>
                     <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-semibold text-[#0B3C5D]">
                       {group.bookings.length} request
-                      {group.bookings.length === 1 ? "" : "s"}
+                      {group.bookings.length === 1 ? "" : "s"} -{" "}
+                      {group.totalGuests} guest
+                      {group.totalGuests === 1 ? "" : "s"}
                     </span>
                   </div>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -1301,7 +1323,7 @@ export default function VendorDashboardPage() {
                             {booking.tour_time} - {booking.full_name}
                           </p>
                           <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold capitalize text-[#0B3C5D]">
-                            {booking.status || "new"}
+                            {formatBookingStatus(booking.status)}
                           </span>
                         </div>
                         <p className="mt-2 text-sm text-gray-600">
@@ -1380,8 +1402,8 @@ export default function VendorDashboardPage() {
                           disabled={savingBookingId === booking.id}
                         />
                       </td>
-                      <td className="px-4 py-3 capitalize">
-                        {booking.status || "new"}
+                      <td className="px-4 py-3">
+                        {formatBookingStatus(booking.status)}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
@@ -1789,6 +1811,43 @@ export default function VendorDashboardPage() {
                         <p className="mt-2 text-sm text-gray-500">
                           Add one unavailable date per line using YYYY-MM-DD.
                         </p>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+                          <input
+                            type="date"
+                            value={blockedDateQuickPicks[listing.id] || ""}
+                            onChange={(e) =>
+                              updateBlockedDateQuickPick(
+                                listing.id,
+                                e.target.value,
+                              )
+                            }
+                            className="rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => toggleQuickBlockedDate(listing.id)}
+                            className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-sm font-semibold text-white"
+                          >
+                            Block / unblock
+                          </button>
+                        </div>
+                        {normalizeDateLines(blockedDates[listing.id] || "")
+                          .length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {normalizeDateLines(
+                              blockedDates[listing.id] || "",
+                            ).map((date) => (
+                              <button
+                                key={date}
+                                type="button"
+                                onClick={() => toggleBlockedDate(listing.id, date)}
+                                className="rounded-full border border-[#D6B56D]/40 bg-[#FFF8E8] px-3 py-1 text-xs font-semibold text-[#7A5B12]"
+                              >
+                                {date} x
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         <div>

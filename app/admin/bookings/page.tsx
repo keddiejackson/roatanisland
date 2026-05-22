@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
+import { groupBookingsByDate } from "@/lib/availability-calendar";
+import { formatBookingStatus } from "@/lib/booking-flow";
 import { supabase } from "@/lib/supabase";
 
 type BookingRow = {
@@ -160,24 +162,27 @@ export default function AdminBookingsPage() {
     [bookings, search, statusFilter],
   );
 
-  const groupedBookings = useMemo(() => {
-    const groups = new Map<string, BookingWithListingName[]>();
+  const groupedBookings = useMemo(
+    () => groupBookingsByDate(filteredBookings),
+    [filteredBookings],
+  );
 
-    filteredBookings.forEach((booking) => {
-      const group = groups.get(booking.tour_date) || [];
-      group.push(booking);
-      groups.set(booking.tour_date, group);
-    });
-
-    return [...groups.entries()]
-      .map(([date, dateBookings]) => ({
-        date,
-        bookings: dateBookings.sort((a, b) =>
-          a.tour_time.localeCompare(b.tour_time),
-        ),
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredBookings]);
+  const bookingSummary = useMemo(
+    () => ({
+      totalRequests: filteredBookings.length,
+      totalGuests: filteredBookings.reduce(
+        (total, booking) => total + booking.guests,
+        0,
+      ),
+      newRequests: filteredBookings.filter(
+        (booking) => (booking.status || "new") === "new",
+      ).length,
+      confirmedRequests: filteredBookings.filter(
+        (booking) => booking.status === "confirmed",
+      ).length,
+    }),
+    [filteredBookings],
+  );
 
   if (checkingAuth || !authorized) {
     return null;
@@ -269,6 +274,26 @@ export default function AdminBookingsPage() {
             <p className="mt-8">No bookings found.</p>
           ) : (
             <>
+            <div className="mt-8 grid gap-3 md:grid-cols-4">
+              {[
+                ["Shown requests", bookingSummary.totalRequests],
+                ["Guests", bookingSummary.totalGuests],
+                ["Needs review", bookingSummary.newRequests],
+                ["Confirmed", bookingSummary.confirmedRequests],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4"
+                >
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#9C7A2F]">
+                    {label}
+                  </p>
+                  <p className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
             <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_220px_220px_auto] lg:items-center">
               <input
                 value={search}
@@ -321,7 +346,9 @@ export default function AdminBookingsPage() {
                     </h2>
                     <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-semibold text-[#0B3C5D]">
                       {group.bookings.length} booking
-                      {group.bookings.length === 1 ? "" : "s"}
+                      {group.bookings.length === 1 ? "" : "s"} -{" "}
+                      {group.totalGuests} guest
+                      {group.totalGuests === 1 ? "" : "s"}
                     </span>
                   </div>
                   <div className="mt-4 grid gap-3 lg:grid-cols-2">
@@ -340,7 +367,7 @@ export default function AdminBookingsPage() {
                             </p>
                           </div>
                           <span className="h-fit rounded-full bg-white px-3 py-1 text-sm font-semibold capitalize text-[#0B3C5D]">
-                            {booking.status || "new"}
+                            {formatBookingStatus(booking.status)}
                           </span>
                         </div>
                         <p className="mt-3 text-sm text-gray-600">
