@@ -883,8 +883,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     <section
       className={
         fullMap
-          ? "fixed inset-0 z-50 grid min-w-0 gap-4 overflow-auto bg-[#071F2F] p-3 text-[#17324D] sm:p-5 lg:grid-cols-[minmax(0,1fr)_420px]"
-          : "grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]"
+          ? "fixed inset-0 z-50 grid min-w-0 gap-4 overflow-auto bg-[#071F2F] p-3 text-[#17324D] sm:p-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start"
+          : "grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start"
       }
     >
       <div className="min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-4 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
@@ -1356,7 +1356,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         </div>
       </div>
 
-      <aside className="grid min-w-0 gap-4 lg:max-h-[760px] lg:overflow-y-auto">
+      <aside className="grid min-w-0 gap-4 self-start lg:max-h-[760px] lg:overflow-y-auto">
         <section className="min-w-0 rounded-2xl bg-[#071F2F] p-5 text-white shadow-2xl shadow-[#071F2F]/15">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -1402,10 +1402,25 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </div>
 
           {savedTripPins.length === 0 ? (
-            <p className="mt-4 rounded-xl bg-white/10 p-4 text-sm leading-6 text-white/75">
-              Save places from the map to build a simple day plan. The numbered
-              stops will appear on the map and stay shareable in the link.
-            </p>
+            <div className="mt-4 rounded-xl bg-white/10 p-4">
+              <p className="text-sm font-bold text-[#FFF6DA]">
+                Start your route
+              </p>
+              <div className="mt-3 grid gap-2 text-sm text-white/78">
+                {[
+                  "Pick a listing",
+                  "Save it as a stop",
+                  "Add pickup context",
+                ].map((step, index) => (
+                  <div key={step} className="flex items-center gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-black text-[#D6B56D]">
+                      {index + 1}
+                    </span>
+                    <span>{step}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           ) : (
             <div className="mt-4 grid gap-2">
               {savedTripPins.map((pin, index) => (
@@ -1464,15 +1479,22 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             <button
               type="button"
               onClick={shareTripPlan}
-              className="rounded-xl bg-[#D6B56D] px-4 py-3 text-sm font-bold text-[#071F2F]"
+              disabled={savedTripPins.length === 0}
+              className="rounded-xl bg-[#D6B56D] px-4 py-3 text-sm font-bold text-[#071F2F] disabled:cursor-not-allowed disabled:opacity-50"
             >
               Share plan
             </button>
             <Link
-              href={savedTripPins[0] ? `/book?listing=${savedTripPins[0].id}` : "/map"}
+              href={
+                savedTripPins[0]
+                  ? `/book?listing=${savedTripPins[0].id}`
+                  : selectedPin
+                    ? `/listings/${selectedPin.id}`
+                    : "/map"
+              }
               className="rounded-xl border border-white/20 px-4 py-3 text-center text-sm font-bold text-white"
             >
-              Book first stop
+              {savedTripPins[0] ? "Book first stop" : "Explore listings"}
             </Link>
           </div>
           {tripMessage ? (
