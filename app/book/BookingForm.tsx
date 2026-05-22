@@ -1,7 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  estimateBookingTotalCents,
+  formatBookingCents,
+} from "@/lib/booking-flow";
 import { supabase } from "@/lib/supabase";
 
 type BookingFormProps = {
@@ -41,6 +45,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [depositLoading, setDepositLoading] = useState(false);
+  const [submitError, setSubmitError] = useState("");
   const [bookingId, setBookingId] = useState<string | null>(null);
   const [listing, setListing] = useState<ListingSummary | null>(null);
   const [addons, setAddons] = useState<Addon[]>([]);
@@ -123,6 +128,18 @@ export default function BookingForm({ listingId }: BookingFormProps) {
       ? dateValueFromOffset(listing.minimum_notice_hours)
       : undefined;
   const guestCount = Number(guests);
+  const selectedAddons = useMemo(
+    () => addons.filter((addon) => selectedAddonIds.includes(addon.id)),
+    [addons, selectedAddonIds],
+  );
+  const previewGuestCount =
+    Number.isFinite(guestCount) && guestCount > 0 ? guestCount : 1;
+  const estimatedTotalCents = estimateBookingTotalCents({
+    price: listing?.price,
+    guests: previewGuestCount,
+    selectedAddons,
+  });
+  const showEstimatedTotal = Boolean(listing?.price || selectedAddons.length > 0);
   const guestWarning =
     listing?.max_guests &&
     Number.isFinite(guestCount) &&
@@ -137,6 +154,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setSubmitError("");
 
     try {
       const response = await fetch("/api/bookings", {
@@ -160,11 +178,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(
-          `There was a problem saving the booking: ${
-            result.error || "Please try again."
-          }`,
-        );
+        setSubmitError(result.error || "Please check the form and try again.");
         return;
       }
 
@@ -172,7 +186,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
       setSubmitted(true);
     } catch (err) {
       console.error("Unexpected error:", err);
-      alert("Something unexpected went wrong while saving the booking.");
+      setSubmitError("Something unexpected went wrong while saving the booking.");
     } finally {
       setLoading(false);
     }
@@ -197,7 +211,7 @@ export default function BookingForm({ listingId }: BookingFormProps) {
     setDepositLoading(false);
 
     if (!response.ok || !result.url) {
-      alert(result.error || "Unable to start deposit checkout.");
+      setSubmitError(result.error || "Unable to start deposit checkout.");
       return;
     }
 
@@ -270,13 +284,91 @@ export default function BookingForm({ listingId }: BookingFormProps) {
         </div>
       ) : null}
 
-      {submitted ? (
-        <div className="mt-8 rounded-xl bg-green-100 p-6 text-green-800">
-          <h2 className="text-xl font-semibold">Booking Request Received</h2>
-          <p className="mt-2">
-            Thank you. Your request has been sent, and you will hear back after
-            availability is reviewed.
+      <div className="mt-6 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-5">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Request summary
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-[#0B3C5D]">
+              {listing?.title || "Roatan booking request"}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-gray-600">
+              Availability is reviewed before your plans are final.
+            </p>
+          </div>
+          <div className="rounded-xl bg-white px-4 py-3 text-right shadow-sm">
+            <p className="text-xs font-semibold uppercase text-gray-500">
+              Estimated total
+            </p>
+            <p className="mt-1 text-2xl font-black text-[#0B3C5D]">
+              {showEstimatedTotal
+                ? formatBookingCents(estimatedTotalCents)
+                : "Pending"}
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            ["Date", tourDate || "Choose a date"],
+            ["Time", tourTime || "Choose a time"],
+            ["Guests", guests || "Add guests"],
+            [
+              "Add-ons",
+              selectedAddons.length > 0
+                ? selectedAddons.map((addon) => addon.name).join(", ")
+                : "None selected",
+            ],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-xl bg-white p-4">
+              <p className="text-xs font-semibold uppercase text-gray-500">
+                {label}
+              </p>
+              <p className="mt-1 text-sm font-bold text-[#0B3C5D]">{value}</p>
+            </div>
+          ))}
+        </div>
+        {promoCode.trim() ? (
+          <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+            Promo code entered: {promoCode.trim().toUpperCase()}
           </p>
+        ) : null}
+      </div>
+
+      {submitted ? (
+        <div className="mt-8 rounded-xl border border-green-200 bg-green-50 p-6 text-green-900">
+          <p className="text-sm font-bold uppercase tracking-[0.16em] text-green-700">
+            Request received
+          </p>
+          <h2 className="mt-2 text-2xl font-black">
+            Your booking request is in.
+          </h2>
+          <p className="mt-2">
+            Thank you. The operator will review availability and follow up with
+            next steps.
+          </p>
+          {bookingId ? (
+            <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-semibold">
+              Booking ID: {bookingId}
+            </p>
+          ) : null}
+          {submitError ? (
+            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {submitError}
+            </div>
+          ) : null}
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {["Request sent", "Operator reviews", "Plans confirmed"].map(
+              (step, index) => (
+                <div key={step} className="rounded-xl bg-white/80 p-4">
+                  <p className="text-xs font-bold uppercase text-green-700">
+                    Step {index + 1}
+                  </p>
+                  <p className="mt-1 font-bold">{step}</p>
+                </div>
+              ),
+            )}
+          </div>
           <div className="mt-5 flex flex-wrap gap-3">
             {process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true" &&
             bookingId ? (
@@ -508,6 +600,12 @@ export default function BookingForm({ listingId }: BookingFormProps) {
               className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
             />
           </div>
+
+          {submitError ? (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700 md:col-span-2">
+              {submitError}
+            </div>
+          ) : null}
 
           <button
             type="submit"
