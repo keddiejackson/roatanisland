@@ -140,6 +140,8 @@ export default function AdminMapCleanupPage() {
         pinFilter === "All" ||
         (pinFilter === "Needs attention" && qualityScore(listing) < 100) ||
         (pinFilter === "Needs pin" && !exactPin) ||
+        (pinFilter === "No photo" && !listing.image_url) ||
+        (pinFilter === "No vendor" && !listing.vendor_id) ||
         (pinFilter === "Exact pins" && exactPin) ||
         (pinFilter === "Low score" && qualityScore(listing) < 70) ||
         (pinFilter === "Not live" && listing.is_active === false);
@@ -151,6 +153,8 @@ export default function AdminMapCleanupPage() {
   const needsPinCount = listings.filter((listing) => !hasExactPin(listing)).length;
   const exactPinCount = listings.length - needsPinCount;
   const lowScoreCount = listings.filter((listing) => qualityScore(listing) < 70).length;
+  const noPhotoCount = listings.filter((listing) => !listing.image_url).length;
+  const noVendorCount = listings.filter((listing) => !listing.vendor_id).length;
   const averageScore =
     listings.length === 0
       ? 100
@@ -158,6 +162,32 @@ export default function AdminMapCleanupPage() {
           listings.reduce((total, listing) => total + qualityScore(listing), 0) /
             listings.length,
         );
+  const priorityFilters = [
+    {
+      label: "Missing exact pin",
+      value: "Needs pin",
+      count: needsPinCount,
+      detail: "Area pins need exact coordinates.",
+    },
+    {
+      label: "No photo",
+      value: "No photo",
+      count: noPhotoCount,
+      detail: "Listings need a main image before they feel bookable.",
+    },
+    {
+      label: "No vendor",
+      value: "No vendor",
+      count: noVendorCount,
+      detail: "Listings should be connected to an operator.",
+    },
+    {
+      label: "Low score",
+      value: "Low score",
+      count: lowScoreCount,
+      detail: "Fix detail gaps before sending traffic here.",
+    },
+  ];
 
   async function findPin(listing: CleanupListing) {
     setBusyListingId(listing.id);
@@ -286,6 +316,50 @@ export default function AdminMapCleanupPage() {
               </div>
             </div>
 
+            <div className="mb-5 rounded-2xl border border-[#D6B56D]/25 bg-white p-4">
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                    Priority queue
+                  </p>
+                  <h2 className="mt-1 text-2xl font-bold text-[#0B3C5D]">
+                    Fix the map blockers first
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPinFilter("Needs attention")}
+                  className="rounded-xl border border-[#D6B56D]/35 px-4 py-2 text-sm font-bold text-[#0B3C5D]"
+                >
+                  Show all issues
+                </button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-4">
+                {priorityFilters.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setPinFilter(item.value)}
+                    className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                      pinFilter === item.value
+                        ? "border-[#00A8A8] bg-[#EEF7F6] shadow"
+                        : "border-gray-100 bg-[#FFFDF7]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-bold text-[#0B3C5D]">{item.label}</p>
+                      <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-[#0B3C5D] shadow-sm">
+                        {item.count}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      {item.detail}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-3 md:grid-cols-[1fr_180px]">
               <input
                 value={search}
@@ -300,6 +374,8 @@ export default function AdminMapCleanupPage() {
               >
                 <option>Needs attention</option>
                 <option>Needs pin</option>
+                <option>No photo</option>
+                <option>No vendor</option>
                 <option>Low score</option>
                 <option>Not live</option>
                 <option>Exact pins</option>

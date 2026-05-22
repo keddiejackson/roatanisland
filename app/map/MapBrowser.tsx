@@ -1691,64 +1691,118 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </article>
         ) : null}
 
-        {pins.map((pin) => (
-          <button
-            key={pin.id}
-            ref={(element) => {
-              listingRefs.current[pin.id] = element;
-            }}
-            type="button"
-            onMouseEnter={() => setHoveredId(pin.id)}
-            onMouseLeave={() => setHoveredId("")}
-            onClick={() => focusPin(pin)}
-            className={`rounded-2xl p-4 text-left shadow transition ${
-              selectedPin?.id === pin.id
-                ? "bg-[#0B3C5D] text-white"
-                : hoveredId === pin.id
-                  ? "bg-[#FFF3D2] text-[#17324D] ring-2 ring-[#D6B56D]"
-                : "bg-white text-[#17324D] hover:-translate-y-0.5"
-            }`}
-          >
-            <div className="flex gap-3">
-              <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#D8EFEC]">
-                {pin.image_url ? (
-                  <Image
-                    src={pin.image_url}
-                    alt={pin.title}
-                    fill
-                    sizes="80px"
-                    unoptimized
-                    className="object-cover"
-                  />
-                ) : null}
-              </div>
-              <div>
-                <p className="font-bold">{pin.title}</p>
+        {pins.map((pin) => {
+          const isSelected = selectedPin?.id === pin.id;
+          const isSaved = savedTripIds.includes(pin.id);
+
+          return (
+            <article
+              key={pin.id}
+              onMouseEnter={() => setHoveredId(pin.id)}
+              onMouseLeave={() => setHoveredId("")}
+              className={`rounded-2xl p-4 shadow transition ${
+                isSelected
+                  ? "bg-[#0B3C5D] text-white"
+                  : hoveredId === pin.id
+                    ? "bg-[#FFF3D2] text-[#17324D] ring-2 ring-[#D6B56D]"
+                    : "bg-white text-[#17324D] hover:-translate-y-0.5"
+              }`}
+            >
+              <button
+                ref={(element) => {
+                  listingRefs.current[pin.id] = element;
+                }}
+                type="button"
+                onClick={() => focusPin(pin)}
+                className="block w-full text-left"
+              >
+                <div className="flex gap-3">
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#D8EFEC]">
+                    {pin.image_url ? (
+                      <Image
+                        src={pin.image_url}
+                        alt={pin.title}
+                        fill
+                        sizes="80px"
+                        unoptimized
+                        className="object-cover"
+                      />
+                    ) : null}
+                  </div>
+                  <div>
+                    <p className="font-bold">{pin.title}</p>
+                    <p
+                      className={`mt-1 text-sm ${
+                        isSelected ? "text-white/75" : "text-gray-600"
+                      }`}
+                    >
+                      {pin.location || "Roatan"} -{" "}
+                      {selectedPickup || userLocation
+                        ? pinDistanceLabel(pin)
+                        : formatPrice(pin.price)}
+                    </p>
+                    <p
+                      className={`mt-1 text-xs font-semibold ${
+                        isSelected ? "text-[#9EE8E3]" : "text-[#007B7B]"
+                      }`}
+                    >
+                      {selectedPickup
+                        ? pickupNoteForPin(pin)
+                        : pin.hasExactPin
+                          ? "Exact pin"
+                          : "Area pin"}
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              <div
+                className={`mt-3 border-t pt-3 ${
+                  isSelected ? "border-white/15" : "border-[#D6B56D]/20"
+                }`}
+              >
                 <p
-                  className={`mt-1 text-sm ${
-                    selectedPin?.id === pin.id ? "text-white/75" : "text-gray-600"
+                  className={`text-xs font-bold uppercase tracking-wide ${
+                    isSelected ? "text-white/60" : "text-[#7A6A43]"
                   }`}
                 >
-                  {pin.location || "Roatan"} -{" "}
-                  {selectedPickup || userLocation
-                    ? pinDistanceLabel(pin)
-                    : formatPrice(pin.price)}
+                  Quick actions
                 </p>
-                <p
-                  className={`mt-1 text-xs font-semibold ${
-                    selectedPin?.id === pin.id ? "text-[#9EE8E3]" : "text-[#007B7B]"
-                  }`}
-                >
-                  {selectedPickup
-                    ? pickupNoteForPin(pin)
-                    : pin.hasExactPin
-                      ? "Exact pin"
-                      : "Area pin"}
-                </p>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleTripStop(pin)}
+                    className={`rounded-xl px-3 py-2 text-xs font-bold ${
+                      isSaved
+                        ? "bg-[#FFF3D2] text-[#0B3C5D]"
+                        : isSelected
+                          ? "bg-white/10 text-white ring-1 ring-white/15"
+                          : "bg-[#071F2F] text-white"
+                    }`}
+                  >
+                    {isSaved ? "Saved" : "Save stop"}
+                  </button>
+                  <Link
+                    href={`/listings/${pin.id}`}
+                    className={`rounded-xl px-3 py-2 text-center text-xs font-bold ${
+                      isSelected
+                        ? "bg-white/10 text-white ring-1 ring-white/15"
+                        : "bg-[#EEF7F6] text-[#007B7B]"
+                    }`}
+                  >
+                    View
+                  </Link>
+                  <Link
+                    href={`/book?listing=${pin.id}`}
+                    className="rounded-xl bg-[#D6B56D] px-3 py-2 text-center text-xs font-bold text-[#071F2F]"
+                  >
+                    Book
+                  </Link>
+                </div>
               </div>
-            </div>
-          </button>
-        ))}
+            </article>
+          );
+        })}
       </aside>
     </section>
   );

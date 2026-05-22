@@ -132,6 +132,31 @@ export default async function VendorProfilePage({
     .order("created_at", { ascending: false });
 
   const listings = (listingsData as Listing[]) || [];
+  const publicContactCount = [
+    vendor.show_contact_name !== false && vendor.contact_name,
+    vendor.show_phone !== false && vendor.phone,
+    vendor.show_email !== false && vendor.email,
+    vendor.show_website !== false && vendor.website,
+  ].filter(Boolean).length;
+  const profileHighlights = [
+    {
+      label: "Active listings",
+      value: `${listings.length}`,
+      detail: listings.length === 1 ? "Live experience" : "Live experiences",
+    },
+    {
+      label: "Verified status",
+      value: vendor.is_verified ? "Verified" : "Reviewing",
+      detail: vendor.is_verified
+        ? "Admin approved operator"
+        : "Profile information is visible",
+    },
+    {
+      label: "Contact details shown",
+      value: `${publicContactCount}`,
+      detail: "Vendor controls what stays public",
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
@@ -170,7 +195,7 @@ export default async function VendorProfilePage({
             ) : null}
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
-                Local operator
+                Vendor profile
               </p>
               <h1 className="mt-3 text-4xl font-bold sm:text-6xl">
                 {vendor.business_name}
@@ -210,6 +235,38 @@ export default async function VendorProfilePage({
       </section>
 
       <section className="mx-auto max-w-7xl px-6 py-14">
+        <div className="mb-8 rounded-2xl border border-[#D6B56D]/25 bg-white p-6 shadow">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Profile at a glance
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                Fast trust signals for guests
+              </h2>
+            </div>
+            <Link
+              href="/map"
+              className="rounded-xl bg-[#071F2F] px-4 py-3 text-center text-sm font-bold text-white"
+            >
+              Find on map
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-3">
+            {profileHighlights.map((item) => (
+              <div key={item.label} className="rounded-2xl bg-[#F7F3EA] p-4">
+                <p className="text-sm font-semibold text-gray-600">{item.label}</p>
+                <p className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  {item.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {vendor.show_contact_name !== false && vendor.contact_name ? (
           <div className="mb-8 rounded-2xl bg-white p-6 shadow">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">

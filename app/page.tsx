@@ -58,6 +58,45 @@ const tripTypes = [
   },
 ];
 
+const categoryHighlights = [
+  {
+    title: "Tours",
+    category: "Tours",
+    text: "Guided island days, wildlife stops, beach time, and water experiences.",
+    href: "/tours",
+  },
+  {
+    title: "Hotels",
+    category: "Hotels",
+    text: "Places to stay by area, from beach zones to quieter island bases.",
+    href: "/hotels",
+  },
+  {
+    title: "Transport",
+    category: "Transport",
+    text: "Airport rides, port transfers, private drivers, and easy pickup planning.",
+    href: "/transport",
+  },
+  {
+    title: "Food",
+    category: "Food",
+    text: "Restaurants, beach bars, and local stops to add around your plans.",
+    href: "/map?category=Food",
+  },
+  {
+    title: "Beaches",
+    category: "Beaches",
+    text: "Beach areas and coastal stops to anchor an easy Roatan day.",
+    href: "/map?category=Beaches",
+  },
+  {
+    title: "Private Charters",
+    category: "Private Charters",
+    text: "Custom boats, private days, and flexible high-touch island plans.",
+    href: "/map?category=Private%20Charters",
+  },
+];
+
 function formatPrice(price: number | null) {
   if (!price) {
     return "Ask";
@@ -152,6 +191,14 @@ export default function Home() {
   );
 
   const visibleListings = filteredListings.slice(0, 9);
+  const categoryCards = useMemo(
+    () =>
+      categoryHighlights.map((item) => ({
+        ...item,
+        count: listings.filter((listing) => listing.category === item.category).length,
+      })),
+    [listings],
+  );
 
   async function handleLeadSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -409,6 +456,51 @@ export default function Home() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#F7F3EA] px-5 py-16 sm:px-6">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase text-[#00A8A8]">
+                Explore by category
+              </p>
+              <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
+                Choose the kind of trip first.
+              </h2>
+            </div>
+            <Link href="/map" className="text-sm font-black text-[#007B7B]">
+              Open full map
+            </Link>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {categoryCards.map((item) => (
+              <Link
+                key={item.title}
+                href={item.href}
+                className="group rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase text-[#D6B56D]">
+                      {item.count} live
+                    </p>
+                    <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                      {item.title}
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-black text-[#007B7B]">
+                    View
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                  {item.text}
+                </p>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
