@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
@@ -20,6 +21,8 @@ type Vendor = {
 };
 
 export default async function VendorsPage() {
+  await connection();
+
   const { data } = await supabaseServer
     .from("vendors")
     .select("id, business_name, notes, profile_image_url, is_verified")

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { connection } from "next/server";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
@@ -36,6 +37,8 @@ export default async function CategoryPage({
   title: string;
   description: string;
 }) {
+  await connection();
+
   const { data } = await supabaseServer
     .from("listings")
     .select("id, title, description, price, location, image_url, rating")
