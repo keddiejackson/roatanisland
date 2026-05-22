@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
+import { conciergeLeadSummary } from "@/lib/concierge-leads";
 import { getMarketplaceCommandCenter } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 
@@ -46,6 +47,13 @@ type Review = {
   is_approved: boolean;
 };
 
+type ConciergeLead = {
+  id: string;
+  status: string | null;
+  priority: string | null;
+  created_at: string;
+};
+
 function todayValue() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -58,6 +66,7 @@ export default function AdminDashboardPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [conciergeLeads, setConciergeLeads] = useState<ConciergeLead[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -79,8 +88,13 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     async function fetchDashboard() {
-      const [bookingsResult, listingsResult, vendorsResult, reviewsResult] =
-        await Promise.all([
+      const [
+        bookingsResult,
+        listingsResult,
+        vendorsResult,
+        reviewsResult,
+        conciergeResult,
+      ] = await Promise.all([
           supabase
             .from("bookings")
             .select("id, full_name, tour_date, tour_time, guests, status, listing_id, commission_amount_cents, commission_status, created_at")
@@ -91,12 +105,18 @@ export default function AdminDashboardPage() {
             .select("id, title, is_active, approval_status, vendor_id, image_url, latitude, longitude, is_featured, rating, reviews_count"),
           supabase.from("vendors").select("id, is_active"),
           supabase.from("listing_reviews").select("id, is_approved"),
+          supabase
+            .from("concierge_leads")
+            .select("id, status, priority, created_at")
+            .order("created_at", { ascending: false })
+            .limit(200),
         ]);
 
       setBookings((bookingsResult.data as Booking[]) || []);
       setListings((listingsResult.data as Listing[]) || []);
       setVendors((vendorsResult.data as Vendor[]) || []);
       setReviews((reviewsResult.data as Review[]) || []);
+      setConciergeLeads((conciergeResult.data as ConciergeLead[]) || []);
       setLoading(false);
     }
 
@@ -120,6 +140,7 @@ export default function AdminDashboardPage() {
       vendors,
       reviews,
     });
+    const concierge = conciergeLeadSummary(conciergeLeads);
 
     return {
       newBookings: bookings.filter((booking) => (booking.status || "new") === "new")
@@ -134,6 +155,7 @@ export default function AdminDashboardPage() {
         .length,
       activeVendors: vendors.filter((vendor) => vendor.is_active !== false).length,
       pendingReviews: reviews.filter((review) => !review.is_approved).length,
+      concierge,
       exactPins: listings.filter(
         (listing) => listing.latitude !== null && listing.longitude !== null,
       ).length,
@@ -151,7 +173,7 @@ export default function AdminDashboardPage() {
       nextBookings: upcomingBookings.slice(0, 8),
       commandCenter,
     };
-  }, [bookings, listings, reviews, vendors]);
+  }, [bookings, conciergeLeads, listings, reviews, vendors]);
 
   if (checkingAuth || !authorized) {
     return null;
@@ -189,6 +211,7 @@ export default function AdminDashboardPage() {
                   ["New bookings", summary.newBookings],
                   ["Upcoming", summary.upcomingBookings.length],
                   ["Pending listings", summary.pendingListings],
+                  ["Concierge leads", summary.concierge.activeCount],
                   ["Review queue", summary.reviewQueue],
                   ["Active listings", summary.activeListings],
                   ["Active vendors", summary.activeVendors],
@@ -299,6 +322,12 @@ export default function AdminDashboardPage() {
                   </h2>
                   <div className="mt-4 grid gap-3">
                     <Link
+                      href="/admin/concierge"
+                      className="rounded-xl bg-[#F7F3EA] px-4 py-3 font-semibold text-[#0B3C5D]"
+                    >
+                      Work concierge leads
+                    </Link>
+                    <Link
                       href="/admin/listings"
                       className="rounded-xl bg-[#F7F3EA] px-4 py-3 font-semibold text-[#0B3C5D]"
                     >
@@ -364,6 +393,7 @@ export default function AdminDashboardPage() {
                   <ExportCsvButton type="reviews" />
                   <ExportCsvButton type="activity" />
                   <ExportCsvButton type="vendor_invites" />
+                  <ExportCsvButton type="concierge_leads" />
                 </div>
               </section>
             </>

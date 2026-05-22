@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildConciergeLeadInsert } from "@/lib/concierge-leads";
 import { logAppError } from "@/lib/error-log";
 import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -9,6 +10,15 @@ type ContactRequest = {
   phone?: string;
   interest?: string;
   message?: string;
+  leadType?: string;
+  travelDate?: string;
+  guests?: string | number;
+  pickupArea?: string;
+  arrivalType?: string;
+  tripStyle?: string;
+  budget?: string;
+  plan?: unknown;
+  sourcePath?: string;
 };
 
 export async function POST(request: Request) {
@@ -19,6 +29,33 @@ export async function POST(request: Request) {
       { error: "Please add your name, email, and message." },
       { status: 400 },
     );
+  }
+
+  const isConciergeLead =
+    body.leadType === "concierge_plan" ||
+    (body.interest || "").toLowerCase().includes("concierge");
+  let conciergeLeadId: string | null = null;
+
+  if (isConciergeLead) {
+    const { data: lead, error: leadError } = await supabaseServer
+      .from("concierge_leads")
+      .insert([buildConciergeLeadInsert(body)])
+      .select("id")
+      .single();
+
+    if (leadError) {
+      await logAppError({
+        source: "concierge_lead_insert",
+        message: leadError.message,
+        details: {
+          code: leadError.code,
+          email: body.email,
+        },
+        severity: "warning",
+      });
+    } else {
+      conciergeLeadId = lead.id;
+    }
   }
 
   await sendAdminNotification({
@@ -46,9 +83,11 @@ export async function POST(request: Request) {
   const { error: analyticsError } = await supabaseServer.from("analytics_events").insert([
     {
       event_type: "planning_lead",
-      path: "/",
+      path: body.sourcePath || "/",
       metadata: {
         interest: body.interest || "",
+        lead_type: body.leadType || "planning_lead",
+        concierge_lead_id: conciergeLeadId,
       },
     },
   ]);
@@ -59,10 +98,11 @@ export async function POST(request: Request) {
       message: analyticsError.message,
       details: {
         interest: body.interest || "",
+        concierge_lead_id: conciergeLeadId,
       },
       severity: "warning",
     });
   }
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, conciergeLeadId });
 }

@@ -293,6 +293,32 @@ create table if not exists public.listing_reports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.concierge_leads (
+  id uuid primary key default gen_random_uuid(),
+  guest_name text not null,
+  guest_email text not null,
+  guest_phone text,
+  lead_type text not null default 'planning_lead',
+  status text not null default 'new'
+    check (status in ('new', 'reviewing', 'contacted', 'quoted', 'booked', 'closed')),
+  priority text not null default 'general'
+    check (priority in ('urgent', 'cruise', 'airport', 'family', 'luxury', 'general')),
+  interest text,
+  message text not null,
+  travel_date date,
+  guests integer,
+  pickup_area text,
+  arrival_type text,
+  trip_style text,
+  budget text,
+  plan jsonb not null default '{}'::jsonb,
+  source_path text,
+  admin_notes text,
+  follow_up_date date,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.vendor_documents (
   id uuid primary key default gen_random_uuid(),
   vendor_id uuid not null references public.vendors(id) on delete cascade,
@@ -399,6 +425,32 @@ alter table public.listing_reports
 add column if not exists status text not null default 'new'
 check (status in ('new', 'reviewing', 'resolved'));
 
+alter table public.concierge_leads
+add column if not exists lead_type text not null default 'planning_lead';
+
+alter table public.concierge_leads
+add column if not exists status text not null default 'new'
+check (status in ('new', 'reviewing', 'contacted', 'quoted', 'booked', 'closed'));
+
+alter table public.concierge_leads
+add column if not exists priority text not null default 'general'
+check (priority in ('urgent', 'cruise', 'airport', 'family', 'luxury', 'general'));
+
+alter table public.concierge_leads
+add column if not exists plan jsonb not null default '{}'::jsonb;
+
+alter table public.concierge_leads
+add column if not exists source_path text;
+
+alter table public.concierge_leads
+add column if not exists admin_notes text;
+
+alter table public.concierge_leads
+add column if not exists follow_up_date date;
+
+alter table public.concierge_leads
+add column if not exists updated_at timestamptz not null default now();
+
 alter table public.vendor_documents
 add column if not exists status text not null default 'pending'
 check (status in ('pending', 'approved', 'rejected'));
@@ -417,6 +469,7 @@ alter table public.site_settings enable row level security;
 alter table public.promo_codes enable row level security;
 alter table public.listing_addons enable row level security;
 alter table public.listing_reports enable row level security;
+alter table public.concierge_leads enable row level security;
 alter table public.vendor_documents enable row level security;
 
 grant usage on schema public to anon, authenticated;
@@ -439,6 +492,8 @@ grant select, insert, update, delete on public.listing_addons to authenticated;
 grant select on public.listing_addons to anon, authenticated;
 grant insert on public.listing_reports to anon, authenticated;
 grant select, update on public.listing_reports to authenticated;
+grant insert on public.concierge_leads to anon, authenticated;
+grant select, update on public.concierge_leads to authenticated;
 grant select, insert, update on public.vendor_documents to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
@@ -971,6 +1026,46 @@ using (
 drop policy if exists "Admins can update bookings" on public.bookings;
 create policy "Admins can update bookings"
 on public.bookings
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Anyone can create concierge leads" on public.concierge_leads;
+create policy "Anyone can create concierge leads"
+on public.concierge_leads
+for insert
+to anon, authenticated
+with check (true);
+
+drop policy if exists "Admins can view concierge leads" on public.concierge_leads;
+create policy "Admins can view concierge leads"
+on public.concierge_leads
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can update concierge leads" on public.concierge_leads;
+create policy "Admins can update concierge leads"
+on public.concierge_leads
 for update
 to authenticated
 using (

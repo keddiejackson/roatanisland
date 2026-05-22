@@ -126,6 +126,15 @@ export default function ConciergePlanner({
         phone: guestPhone,
         interest: "Concierge trip plan",
         message: serializePlanForConciergeLead({ ...plan, notes }),
+        leadType: "concierge_plan",
+        travelDate: date,
+        guests,
+        pickupArea,
+        arrivalType,
+        tripStyle,
+        budget,
+        plan: { ...plan, notes },
+        sourcePath: "/concierge",
       }),
     });
     const result = await response.json();

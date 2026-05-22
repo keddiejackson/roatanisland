@@ -10,7 +10,8 @@ type ExportType =
   | "vendor_invites"
   | "reports"
   | "promo_codes"
-  | "vendor_documents";
+  | "vendor_documents"
+  | "concierge_leads";
 
 async function verifyAdmin(request: Request) {
   const token = request.headers
@@ -38,7 +39,12 @@ async function verifyAdmin(request: Request) {
 }
 
 function csvValue(value: unknown) {
-  const text = value === null || value === undefined ? "" : String(value);
+  const text =
+    value === null || value === undefined
+      ? ""
+      : typeof value === "object"
+        ? JSON.stringify(value)
+        : String(value);
   return `"${text.replaceAll('"', '""')}"`;
 }
 
@@ -163,6 +169,19 @@ async function fetchRows(type: ExportType) {
     return (data || []) as Record<string, unknown>[];
   }
 
+  if (type === "concierge_leads") {
+    const { data, error } = await supabaseServer
+      .from("concierge_leads")
+      .select("id, guest_name, guest_email, guest_phone, lead_type, status, priority, interest, message, travel_date, guests, pickup_area, arrival_type, trip_style, budget, plan, admin_notes, follow_up_date, created_at, updated_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
   const { data, error } = await supabaseServer
     .from("vendors")
     .select(
@@ -197,6 +216,7 @@ export async function GET(request: Request) {
       "reports",
       "promo_codes",
       "vendor_documents",
+      "concierge_leads",
     ].includes(type)
   ) {
     return NextResponse.json({ error: "Unknown export type." }, { status: 400 });
