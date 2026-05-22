@@ -7,21 +7,16 @@ import BrandAbout from "@/app/BrandAbout";
 import EmptyState from "@/app/EmptyState";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
+import {
+  filterHomeListings,
+  selectHomeSpotlightListings,
+  type HomeListing,
+} from "@/lib/home-listings";
 import { supabase } from "@/lib/supabase";
 
-type Listing = {
-  id: string;
-  title: string;
-  description: string | null;
-  price: number | null;
-  location: string | null;
+type Listing = HomeListing & {
   image_url: string | null;
-  category: string | null;
-  is_active: boolean | null;
-  is_featured: boolean | null;
-  rating: number | null;
   reviews_count: number | null;
-  tour_times: string[] | null;
 };
 
 const categories = [
@@ -144,52 +139,21 @@ export default function Home() {
   }, []);
 
   const filteredListings = useMemo(
-    () => {
-      const priceLimit = maxPrice ? Number(maxPrice) : null;
-
-      return listings
-        .filter((listing) => {
-          const listingRating = listing.rating ?? 5;
-          const searchBlob =
-            `${listing.title} ${listing.location} ${listing.description} ${(listing.tour_times || []).join(" ")}`.toLowerCase();
-
-          const matchesSearch = searchBlob.includes(search.toLowerCase());
-          const matchesCategory =
-            category === "All" || listing.category === category;
-          const matchesLocation =
-            locationFilter === "All" || listing.location === locationFilter;
-          const matchesPrice =
-            !priceLimit || !listing.price || listing.price <= priceLimit;
-          const matchesRating =
-            minimumRating === "All" || listingRating >= Number(minimumRating);
-
-          return (
-            matchesSearch &&
-            matchesCategory &&
-            matchesLocation &&
-            matchesPrice &&
-            matchesRating
-          );
-        })
-        .sort((a, b) => {
-          if (sortBy === "Price low") return (a.price || 0) - (b.price || 0);
-          if (sortBy === "Price high") return (b.price || 0) - (a.price || 0);
-          if (sortBy === "Rating") return (b.rating || 5) - (a.rating || 5);
-          if (Boolean(a.is_featured) === Boolean(b.is_featured)) {
-            return (b.rating || 5) - (a.rating || 5);
-          }
-          return a.is_featured ? -1 : 1;
-        });
-    },
+    () =>
+      filterHomeListings(listings, {
+        search,
+        category,
+        location: locationFilter,
+        maxPrice,
+        minimumRating,
+        sortBy,
+      }),
     [category, listings, locationFilter, maxPrice, minimumRating, search, sortBy],
   );
 
-  const featuredListings = useMemo(
-    () =>
-      listings
-        .filter((listing) => listing.is_featured)
-        .slice(0, 3),
-    [listings],
+  const spotlightListings = useMemo(
+    () => selectHomeSpotlightListings(listings, filteredListings),
+    [filteredListings, listings],
   );
 
   const locations = useMemo(
@@ -527,9 +491,9 @@ export default function Home() {
             </div>
           </div>
 
-          {featuredListings.length > 0 ? (
+          {spotlightListings.length > 0 ? (
             <div className="mt-10 grid gap-5 lg:grid-cols-3">
-              {featuredListings.map((listing) => (
+              {spotlightListings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} featured />
               ))}
             </div>
