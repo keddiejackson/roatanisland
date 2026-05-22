@@ -9,6 +9,7 @@ import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import {
   filterHomeListings,
+  homeListingFilterDefaults,
   selectHomeSpotlightListings,
   type HomeListing,
 } from "@/lib/home-listings";
@@ -27,12 +28,6 @@ const categories = [
   "Food",
   "Beaches",
   "Private Charters",
-];
-
-const metrics = [
-  ["Real operators", "Local vendors manage profiles, times, and availability."],
-  ["Live map", "Airport, cruise ports, beach areas, and nearby stops in one view."],
-  ["Request-first", "Guests send trip details before operators confirm."],
 ];
 
 const tripTypes = [
@@ -56,20 +51,6 @@ const tripTypes = [
     text: "Charters, custom drivers, private add-ons, and VIP pacing.",
     href: "/map",
   },
-];
-
-const productHighlights = [
-  ["Map-first discovery", "Pins, areas, pickup points, and trip stops stay connected."],
-  ["Vendor workspace", "Operators can update listings, photos, times, and profiles."],
-  ["Booking requests", "Guests submit dates, guests, notes, add-ons, and promo codes."],
-  ["Admin review", "Listings, vendors, reviews, reports, and content stay controlled."],
-];
-
-const workflow = [
-  ["01", "Discover", "Search active island listings by category, area, rating, and price."],
-  ["02", "Plan", "Compare places on the map around the airport, cruise ports, and beaches."],
-  ["03", "Request", "Send date, time, guests, notes, add-ons, and contact details."],
-  ["04", "Confirm", "The operator reviews availability before plans are final."],
 ];
 
 function formatPrice(price: number | null) {
@@ -104,6 +85,7 @@ export default function Home() {
   const [locationFilter, setLocationFilter] = useState("All");
   const [minimumRating, setMinimumRating] = useState("All");
   const [sortBy, setSortBy] = useState("Featured");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
   const [leadPhone, setLeadPhone] = useState("");
@@ -208,7 +190,7 @@ export default function Home() {
 
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#F7F3EA] text-[#102A43]">
-      <section className="relative min-h-[760px] overflow-hidden bg-[#071F2F] text-white">
+      <section className="relative min-h-[720px] overflow-hidden bg-[#071F2F] text-white">
         <Image
           src="/images/roatan.jpeg"
           alt="Roatan coastline"
@@ -217,24 +199,24 @@ export default function Home() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-[#071F2F]/70" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.1)_0%,rgba(7,31,47,0.85)_72%,#F7F3EA_100%)]" />
+        <div className="absolute inset-0 bg-[#071F2F]/65" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.06)_0%,rgba(7,31,47,0.82)_76%,#F7F3EA_100%)]" />
 
-        <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col px-5 py-5 sm:px-6">
-          <header className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/15 bg-white/10 p-2 shadow-2xl shadow-black/20 backdrop-blur-md">
+        <div className="relative mx-auto flex min-h-[720px] max-w-7xl flex-col px-5 py-5 sm:px-6">
+          <header className="flex flex-wrap items-center justify-between gap-3">
             <SiteLogo variant="light" priority />
-            <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-semibold text-white/85">
+            <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-semibold text-white/90">
               <a href="#marketplace" className="rounded-lg px-3 py-2 hover:bg-white/10">
-                Marketplace
+                Listings
               </a>
               <Link href="/map" className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Map
               </Link>
+              <Link href="/tours" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                Tours
+              </Link>
               <Link href="/vendors" className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Vendors
-              </Link>
-              <Link href="/vendor/login" className="rounded-lg px-3 py-2 hover:bg-white/10">
-                Login
               </Link>
               <Link
                 href="/vendor/signup"
@@ -247,7 +229,7 @@ export default function Home() {
 
           <div className="motion-rise flex flex-1 flex-col justify-center py-20">
             <p className="text-sm font-bold uppercase tracking-[0.24em] text-[#9EE8E3]">
-              Island marketplace platform
+              Roatan experiences
             </p>
             <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] tracking-tight sm:text-7xl">
               {siteSettings.homepageHeadline}
@@ -266,162 +248,44 @@ export default function Home() {
                 href="/map"
                 className="rounded-lg border border-white/25 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20"
               >
-                Open island map
-              </Link>
-            </div>
-          </div>
-
-          <div className="grid gap-3 pb-10 md:grid-cols-3">
-            {metrics.map(([title, text], index) => (
-              <div
-                key={title}
-                className="motion-rise rounded-lg border border-white/15 bg-white/10 p-5 backdrop-blur"
-                style={{ animationDelay: `${index * 90}ms` }}
-              >
-                <p className="text-lg font-black">{title}</p>
-                <p className="mt-2 text-sm leading-6 text-white/75">{text}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="relative z-10 mx-auto -mt-16 max-w-7xl px-5 sm:px-6">
-        <div className="motion-rise grid gap-4 rounded-lg border border-[#D6B56D]/25 bg-white p-4 shadow-2xl shadow-[#071F2F]/10 lg:grid-cols-[1fr_380px]">
-          <div className="rounded-lg bg-[#071F2F] p-5 text-white">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#D6B56D]">
-                  Live planning dashboard
-                </p>
-                <h2 className="mt-2 text-2xl font-black">Roatan Command Center</h2>
-              </div>
-              <Link
-                href="/map"
-                className="rounded-lg border border-white/20 px-4 py-2 text-sm font-bold"
-              >
                 View map
               </Link>
             </div>
-
-            <div className="mt-5 grid gap-3 md:grid-cols-3">
-              {[
-                ["Listings", listings.length || 0],
-                ["Areas", Math.max(locations.length - 1, 0)],
-                ["Visible now", filteredListings.length],
-              ].map(([label, value]) => (
-                <div key={label} className="rounded-lg bg-white/10 p-4">
-                  <p className="text-sm text-white/60">{label}</p>
-                  <p className="mt-1 text-3xl font-black text-[#FFF3D2]">
-                    {value}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-5 grid gap-3">
-              {productHighlights.map(([title, text], index) => (
-                <div
-                  key={title}
-                  className="flex gap-3 rounded-lg bg-white/10 p-4 ring-1 ring-white/10"
-                >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#D6B56D] text-sm font-black text-[#071F2F]">
-                    {index + 1}
-                  </span>
-                  <div>
-                    <p className="font-bold">{title}</p>
-                    <p className="mt-1 text-sm leading-6 text-white/70">{text}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-lg bg-[#F7F3EA] p-5">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
-              Quick launch
-            </p>
-            <div className="mt-4 grid gap-3">
-              {[
-                ["Traveler", "Find tours, stays, transport, food, and charters.", "/#marketplace"],
-                ["Vendor", "Create an account and submit your listings.", "/vendor/signup"],
-                ["Operator", "Manage bookings, photos, times, and profile privacy.", "/vendor/login"],
-                ["Admin", "Review vendors, listings, bookings, and reports.", "/admin/login"],
-              ].map(([title, text, href]) => (
-                <Link
-                  key={title}
-                  href={href}
-                  className="rounded-lg bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg"
-                >
-                  <p className="font-black text-[#0B3C5D]">{title}</p>
-                  <p className="mt-1 text-sm leading-6 text-gray-600">{text}</p>
-                </Link>
-              ))}
-            </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6">
-        <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
-              Plan by trip type
-            </p>
-            <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
-              Start with the day you want.
-            </h2>
-          </div>
-          <Link href="/map" className="text-sm font-black text-[#007B7B]">
-            Explore all areas
-          </Link>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-4">
-          {tripTypes.map((item, index) => (
-            <Link
-              key={item.title}
-              href={item.href}
-              className="motion-rise group rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-              style={{ animationDelay: `${index * 70}ms` }}
-            >
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-                Route
-              </p>
-              <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
-                {item.title}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
-              <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
-                Build plan
-              </span>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section id="marketplace" className="bg-white px-5 py-16 sm:px-6">
+      <section id="marketplace" className="relative z-10 -mt-14 bg-white px-5 py-16 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
-                Live marketplace
+                Explore listings
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
-                Search Roatan like a product.
+                Find the Roatan day that fits.
               </h2>
               <p className="mt-3 max-w-2xl leading-7 text-gray-600">
-                Browse active listings with filters for category, area, rating, and
-                budget.
+                Start with a search or a category. Open more filters when the
+                details matter.
               </p>
             </div>
-            <p className="rounded-lg bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
-              {filteredListings.length} result
-              {filteredListings.length === 1 ? "" : "s"}
-            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="rounded-lg bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+                {filteredListings.length} result
+                {filteredListings.length === 1 ? "" : "s"}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters((current) => !current)}
+                className="rounded-lg border border-[#D6B56D]/30 bg-white px-4 py-3 text-sm font-bold text-[#0B3C5D] transition hover:bg-[#FFF8E8]"
+              >
+                {showAdvancedFilters ? "Hide filters" : "More filters"}
+              </button>
+            </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-[#F7F3EA] p-4">
+          <div className="rounded-lg border border-[#D6B56D]/20 bg-[#F7F3EA] p-4">
             <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
               <input
                 type="text"
@@ -448,47 +312,49 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mt-3 grid gap-3 md:grid-cols-4">
-              <select
-                value={locationFilter}
-                onChange={(e) => setLocationFilter(e.target.value)}
-                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-              >
-                {locations.map((location) => (
-                  <option key={location} value={location}>
-                    {location === "All" ? "All locations" : location}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                min="0"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-                placeholder="Max price"
-                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-              />
-              <select
-                value={minimumRating}
-                onChange={(e) => setMinimumRating(e.target.value)}
-                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-              >
-                <option value="All">Any rating</option>
-                <option value="5">5 stars</option>
-                <option value="4">4+ stars</option>
-                <option value="3">3+ stars</option>
-              </select>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
-              >
-                <option value="Featured">Featured first</option>
-                <option value="Rating">Highest rated</option>
-                <option value="Price low">Price low to high</option>
-                <option value="Price high">Price high to low</option>
-              </select>
-            </div>
+            {showAdvancedFilters ? (
+              <div className="mt-3 grid gap-3 border-t border-[#D6B56D]/20 pt-3 md:grid-cols-4">
+                <select
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+                >
+                  {locations.map((location) => (
+                    <option key={location} value={location}>
+                      {location === "All" ? "All locations" : location}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  min="0"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="Max price"
+                  className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+                />
+                <select
+                  value={minimumRating}
+                  onChange={(e) => setMinimumRating(e.target.value)}
+                  className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+                >
+                  <option value="All">Any rating</option>
+                  <option value="5">5 stars</option>
+                  <option value="4">4+ stars</option>
+                  <option value="3">3+ stars</option>
+                </select>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="min-h-12 rounded-lg border border-gray-200 bg-white px-4 text-[#17324D] outline-none focus:border-[#00A8A8]"
+                >
+                  <option value="Featured">Featured first</option>
+                  <option value="Rating">Highest rated</option>
+                  <option value="Price low">Price low to high</option>
+                  <option value="Price high">Price high to low</option>
+                </select>
+              </div>
+            ) : null}
           </div>
 
           {spotlightListings.length > 0 ? (
@@ -513,12 +379,13 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => {
-                    setSearch("");
-                    setCategory("All");
-                    setLocationFilter("All");
-                    setMaxPrice("");
-                    setMinimumRating("All");
-                    setSortBy("Featured");
+                    setSearch(homeListingFilterDefaults.search);
+                    setCategory(homeListingFilterDefaults.category);
+                    setLocationFilter(homeListingFilterDefaults.location);
+                    setMaxPrice(homeListingFilterDefaults.maxPrice);
+                    setMinimumRating(homeListingFilterDefaults.minimumRating);
+                    setSortBy(homeListingFilterDefaults.sortBy);
+                    setShowAdvancedFilters(false);
                   }}
                   className="mx-auto mt-5 block rounded-lg bg-[#071F2F] px-5 py-3 font-bold text-white"
                 >
@@ -536,24 +403,82 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-[#071F2F] px-5 py-16 text-white sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <div className="max-w-3xl">
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#D6B56D]">
-              Platform workflow
+      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6">
+        <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#00A8A8]">
+              Explore your way
             </p>
-            <h2 className="mt-3 text-3xl font-black sm:text-5xl">
-              Built for travelers, vendors, and admins.
+            <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
+              Start with the day you want.
             </h2>
           </div>
-          <div className="mt-8 grid gap-4 md:grid-cols-4">
-            {workflow.map(([number, title, text]) => (
-              <div key={number} className="rounded-lg bg-white/10 p-5 ring-1 ring-white/10">
-                <p className="text-sm font-black text-[#D6B56D]">{number}</p>
-                <h3 className="mt-3 text-xl font-black">{title}</h3>
-                <p className="mt-2 text-sm leading-6 text-white/70">{text}</p>
-              </div>
-            ))}
+          <Link href="/map" className="text-sm font-black text-[#007B7B]">
+            See every area
+          </Link>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-4">
+          {tripTypes.map((item, index) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              className="motion-rise group rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+              style={{ animationDelay: `${index * 70}ms` }}
+            >
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                Route
+              </p>
+              <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
+                {item.title}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
+              <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
+                Explore
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="px-5 pb-16 sm:px-6">
+        <div className="mx-auto grid max-w-7xl overflow-hidden rounded-lg bg-[#071F2F] text-white shadow-2xl shadow-[#071F2F]/15 lg:grid-cols-[1fr_0.9fr]">
+          <div className="p-6 sm:p-10">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#D6B56D]">
+              Plan by place
+            </p>
+            <h2 className="mt-3 text-3xl font-black sm:text-5xl">
+              See Roatan around your day.
+            </h2>
+            <p className="mt-4 max-w-xl leading-8 text-white/75">
+              Check beach areas, cruise ports, the airport, and nearby
+              experiences before you request a booking.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2 text-sm font-semibold text-white/85">
+              {["Airport pickup", "Cruise ports", "Beach areas"].map((item) => (
+                <span
+                  key={item}
+                  className="rounded-lg border border-white/15 bg-white/10 px-3 py-2"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+            <Link
+              href="/map"
+              className="mt-7 inline-flex rounded-lg bg-[#D6B56D] px-5 py-3 font-black text-[#071F2F] transition hover:-translate-y-0.5"
+            >
+              Open the map
+            </Link>
+          </div>
+          <div className="relative min-h-72">
+            <Image
+              src="/images/roatan.jpeg"
+              alt="Roatan island water and coast"
+              fill
+              sizes="(min-width: 1024px) 40vw, 100vw"
+              className="object-cover"
+            />
           </div>
         </div>
       </section>
