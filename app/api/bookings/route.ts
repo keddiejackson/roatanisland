@@ -5,6 +5,7 @@ import {
   sendEmailNotification,
 } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
+import { formatBookingCents } from "@/lib/booking-flow";
 import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -275,6 +276,14 @@ export async function POST(request: Request) {
       <p><strong>Date:</strong> ${escapeHtml(booking.tour_date)}</p>
       <p><strong>Time:</strong> ${escapeHtml(booking.tour_time)}</p>
       <p><strong>Guests:</strong> ${escapeHtml(booking.guests)}</p>
+      <p><strong>Estimated value:</strong> ${escapeHtml(formatBookingCents(estimatedBookingValueCents))}</p>
+      ${
+        selectedAddons.length > 0
+          ? `<p><strong>Add-ons:</strong> ${escapeHtml(
+              selectedAddons.map((addon) => addon.name).join(", "),
+            )}</p>`
+          : ""
+      }
       ${
         booking.guest_message
           ? `<p><strong>Guest message:</strong> ${escapeHtml(booking.guest_message)}</p>`
@@ -289,6 +298,10 @@ export async function POST(request: Request) {
       `Date: ${booking.tour_date}`,
       `Time: ${booking.tour_time}`,
       `Guests: ${booking.guests}`,
+      `Estimated value: ${formatBookingCents(estimatedBookingValueCents)}`,
+      selectedAddons.length > 0
+        ? `Add-ons: ${selectedAddons.map((addon) => addon.name).join(", ")}`
+        : "",
       booking.guest_message ? `Guest message: ${booking.guest_message}` : "",
     ].join("\n"),
   });
@@ -319,6 +332,14 @@ export async function POST(request: Request) {
         <p><strong>Date:</strong> ${escapeHtml(booking.tour_date)}</p>
         <p><strong>Time:</strong> ${escapeHtml(booking.tour_time)}</p>
         <p><strong>Guests:</strong> ${escapeHtml(booking.guests)}</p>
+        <p><strong>Estimated value:</strong> ${escapeHtml(formatBookingCents(estimatedBookingValueCents))}</p>
+        ${
+          selectedAddons.length > 0
+            ? `<p><strong>Add-ons:</strong> ${escapeHtml(
+                selectedAddons.map((addon) => addon.name).join(", "),
+              )}</p>`
+            : ""
+        }
         ${
           booking.guest_message
             ? `<p><strong>Guest message:</strong> ${escapeHtml(booking.guest_message)}</p>`
@@ -334,6 +355,10 @@ export async function POST(request: Request) {
         `Date: ${booking.tour_date}`,
         `Time: ${booking.tour_time}`,
         `Guests: ${booking.guests}`,
+        `Estimated value: ${formatBookingCents(estimatedBookingValueCents)}`,
+        selectedAddons.length > 0
+          ? `Add-ons: ${selectedAddons.map((addon) => addon.name).join(", ")}`
+          : "",
         booking.guest_message ? `Guest message: ${booking.guest_message}` : "",
       ].join("\n"),
     });

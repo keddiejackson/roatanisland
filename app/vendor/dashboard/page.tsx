@@ -5,7 +5,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import PinPicker from "@/app/map/PinPicker";
 import SiteLogo from "@/app/SiteLogo";
+import { formatBookingCents, formatDepositStatus } from "@/lib/booking-flow";
 import { supabase } from "@/lib/supabase";
+import {
+  countListingPhotos,
+  getListingStatusSummary,
+  getProfileCompletionItems,
+  getVendorDashboardStats,
+  sortVendorBookings,
+} from "@/lib/vendor-dashboard";
 
 type VendorAccount = {
   vendor_id: string;
@@ -69,6 +77,8 @@ type BookingRow = {
   vendor_note: string | null;
   status: string | null;
   deposit_status: string | null;
+  booking_value_cents: number | null;
+  selected_addons: { name?: string; price_cents?: number }[] | null;
 };
 
 type AddonRow = {
@@ -120,6 +130,7 @@ export default function VendorDashboardPage() {
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
+  const [expandedListingIds, setExpandedListingIds] = useState<Record<string, boolean>>({});
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -455,6 +466,13 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function toggleListingEditor(listingId: string) {
+    setExpandedListingIds((currentIds) => ({
+      ...currentIds,
+      [listingId]: !currentIds[listingId],
+    }));
+  }
+
   async function findListingMapPin(listingId: string) {
     const draft = listingDrafts[listingId];
     if (!draft) return;
@@ -742,10 +760,18 @@ export default function VendorDashboardPage() {
     setDocumentFile(null);
   }
 
+  const sortedBookings = useMemo(() => sortVendorBookings(bookings), [bookings]);
+
+  const pendingBookings = useMemo(
+    () =>
+      sortedBookings.filter((booking) => (booking.status || "new") === "new"),
+    [sortedBookings],
+  );
+
   const groupedBookings = useMemo(() => {
     const groups = new Map<string, BookingRow[]>();
 
-    bookings.forEach((booking) => {
+    sortedBookings.forEach((booking) => {
       const group = groups.get(booking.tour_date) || [];
       group.push(booking);
       groups.set(booking.tour_date, group);
@@ -759,43 +785,26 @@ export default function VendorDashboardPage() {
         ),
       }))
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [bookings]);
+  }, [sortedBookings]);
 
-  const notifications = useMemo(() => {
-    const newBookings = bookings.filter(
-      (booking) => (booking.status || "new") === "new",
-    ).length;
-    const waitingListings = listings.filter(
-      (listing) => listing.is_active === false,
-    ).length;
-    const confirmedBookings = bookings.filter(
-      (booking) => booking.status === "confirmed",
-    ).length;
+  const dashboardStats = useMemo(
+    () => getVendorDashboardStats({ bookings, listings }),
+    [bookings, listings],
+  );
 
-    return [
-      {
-        label: "New booking requests",
-        value: newBookings,
-        text:
-          newBookings === 0
-            ? "No new requests waiting."
-            : "Review and confirm or cancel these requests.",
-      },
-      {
-        label: "Listings waiting for review",
-        value: waitingListings,
-        text:
-          waitingListings === 0
-            ? "No listing changes waiting."
-            : "These listings are hidden until admin approves them.",
-      },
-      {
-        label: "Confirmed bookings",
-        value: confirmedBookings,
-        text: "Keep guest pickup and trip details up to date.",
-      },
-    ];
-  }, [bookings, listings]);
+  const profileCompletionItems = useMemo(
+    () =>
+      getProfileCompletionItems({
+        profile: profileForm,
+        listings,
+        documents,
+      }),
+    [documents, listings, profileForm],
+  );
+
+  const completedProfileItems = profileCompletionItems.filter(
+    (item) => item.complete,
+  ).length;
 
   if (loading) {
     return (
@@ -832,22 +841,9 @@ export default function VendorDashboardPage() {
           </div>
         </header>
 
-        <section className="mb-8 grid gap-4 md:grid-cols-3">
-          {notifications.map((notification) => (
-            <div key={notification.label} className="rounded-2xl bg-white p-5 shadow">
-              <p className="text-sm text-gray-600">{notification.label}</p>
-              <p className="mt-2 text-3xl font-bold text-[#0B3C5D]">
-                {notification.value}
-              </p>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                {notification.text}
-              </p>
-            </div>
-          ))}
-        </section>
-
-        <section className="rounded-2xl bg-white p-8 shadow">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <section className="rounded-2xl bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D8EFEC] text-3xl font-bold text-[#0B3C5D]">
               {profileForm.profileImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -861,51 +857,108 @@ export default function VendorDashboardPage() {
               )}
             </div>
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
                 Vendor dashboard
               </p>
-              <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+              <h1 className="mt-2 text-3xl font-bold text-white">
                 {vendorAccount?.vendors?.business_name || "Your Business"}
               </h1>
-              <p className="mt-2 text-gray-600">
-                Track bookings, manage listings, and update your public profile.
+              <p className="mt-2 max-w-2xl text-white/75">
+                Review new requests, keep listings polished, and finish your
+                public profile from one cleaner workspace.
               </p>
+            </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/vendor/add-listing"
+                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-bold text-white"
+              >
+                Add Listing
+              </Link>
+              <Link
+                href={vendorAccount?.vendor_id ? `/vendors/${vendorAccount.vendor_id}` : "/vendors"}
+                className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-bold text-white"
+              >
+                View Profile
+              </Link>
             </div>
           </div>
         </section>
 
-        <section className="mt-8 grid gap-4 md:grid-cols-3">
+        <section className="mt-6 grid gap-4 md:grid-cols-4">
           {[
             {
-              title: "Public profile",
-              text: "Keep your brand photo, website, and public details current.",
-              href: vendorAccount?.vendor_id
-                ? `/vendors/${vendorAccount.vendor_id}`
-                : "/vendors",
+              label: "New requests",
+              value: dashboardStats.newBookings,
+              text: "Need an answer",
             },
             {
-              title: "New listing",
-              text: "Add another tour, stay, transfer, food stop, or charter.",
-              href: "/vendor/add-listing",
+              label: "Confirmed",
+              value: dashboardStats.confirmedBookings,
+              text: "Trips to prepare",
             },
             {
-              title: "Map quality",
-              text: "Use photos, exact pins, tour times, and pickup notes to stand out.",
-              href: "/map",
+              label: "Live listings",
+              value: dashboardStats.liveListings,
+              text: "Visible to travelers",
+            },
+            {
+              label: "In review",
+              value: dashboardStats.reviewListings,
+              text: "Waiting or needs edits",
             },
           ].map((item) => (
-            <Link
-              key={item.title}
-              href={item.href}
-              className="rounded-2xl border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-            >
-              <p className="text-sm font-bold text-[#00A8A8]">{item.title}</p>
-              <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
-            </Link>
+            <div key={item.label} className="rounded-xl bg-white p-5 shadow-sm">
+              <p className="text-sm font-bold text-[#00A8A8]">{item.label}</p>
+              <p className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                {item.value}
+              </p>
+              <p className="mt-1 text-sm text-gray-600">{item.text}</p>
+            </div>
           ))}
         </section>
 
-        <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Profile checklist
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                {completedProfileItems}/{profileCompletionItems.length} complete
+              </h2>
+            </div>
+            <Link
+              href="#profile"
+              className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm font-bold text-[#0B3C5D]"
+            >
+              Update profile
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {profileCompletionItems.map((item) => (
+              <div
+                key={item.label}
+                className={`rounded-xl border p-4 ${
+                  item.complete
+                    ? "border-green-200 bg-green-50"
+                    : "border-[#D6B56D]/30 bg-[#FFF9EC]"
+                }`}
+              >
+                <p className="font-bold text-[#0B3C5D]">
+                  {item.complete ? "Done: " : "Next: "}
+                  {item.label}
+                </p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  {item.text}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section id="profile" className="mt-8 rounded-2xl bg-white p-8 shadow">
           <h2 className="text-2xl font-bold text-[#0B3C5D]">
             Public Vendor Profile
           </h2>
@@ -1104,13 +1157,22 @@ export default function VendorDashboardPage() {
         </section>
 
         <section className="mt-8 rounded-2xl bg-white p-8 shadow">
-          <div>
-            <h2 className="text-2xl font-bold text-[#0B3C5D]">
-              Booking Requests
-            </h2>
-            <p className="mt-2 text-gray-600">
-              Recent requests for your active listings.
-            </p>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Booking controls
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                Booking command center
+              </h2>
+              <p className="mt-2 text-gray-600">
+                Confirm requests, decline unavailable dates, and send pickup or
+                payment notes back to guests.
+              </p>
+            </div>
+            <span className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+              {pendingBookings.length} new
+            </span>
           </div>
 
           {bookings.length === 0 ? (
@@ -1119,6 +1181,100 @@ export default function VendorDashboardPage() {
             </div>
           ) : (
             <>
+            {pendingBookings.length > 0 ? (
+              <div className="mt-8 grid gap-4 lg:grid-cols-2">
+                {pendingBookings.slice(0, 4).map((booking) => (
+                  <article
+                    key={booking.id}
+                    className="rounded-xl border border-[#00A8A8]/25 bg-[#EEF7F6] p-5"
+                  >
+                    <div className="flex flex-wrap justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-bold uppercase text-[#007B7B]">
+                          New request
+                        </p>
+                        <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                          {booking.full_name}
+                        </h3>
+                      </div>
+                      <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-[#0B3C5D]">
+                        {booking.guests} guest{booking.guests === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-gray-700">
+                      {booking.listing_name} on {booking.tour_date} at{" "}
+                      {booking.tour_time}
+                    </p>
+                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                      <div className="rounded-lg bg-white p-3">
+                        <p className="text-xs font-bold uppercase text-gray-500">
+                          Payment
+                        </p>
+                        <p className="mt-1 font-bold text-[#0B3C5D]">
+                          {formatDepositStatus(booking.deposit_status)}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white p-3">
+                        <p className="text-xs font-bold uppercase text-gray-500">
+                          Estimated value
+                        </p>
+                        <p className="mt-1 font-bold text-[#0B3C5D]">
+                          {formatBookingCents(booking.booking_value_cents)}
+                        </p>
+                      </div>
+                    </div>
+                    {booking.selected_addons?.length ? (
+                      <div className="mt-3 rounded-lg bg-white p-3 text-sm text-gray-700">
+                        <p className="font-bold text-[#0B3C5D]">Add-ons</p>
+                        <p className="mt-1">
+                          {booking.selected_addons
+                            .map((addon) => addon.name || "Add-on")
+                            .join(", ")}
+                        </p>
+                      </div>
+                    ) : null}
+                    {booking.guest_message ? (
+                      <p className="mt-3 rounded-lg bg-white p-3 text-sm text-gray-700">
+                        {booking.guest_message}
+                      </p>
+                    ) : null}
+                    <label className="mt-4 block text-sm font-bold text-[#0B3C5D]">
+                      Note sent to guest
+                    </label>
+                    <textarea
+                      value={vendorNotes[booking.id] || ""}
+                      onChange={(e) =>
+                        setVendorNotes((currentNotes) => ({
+                          ...currentNotes,
+                          [booking.id]: e.target.value,
+                        }))
+                      }
+                      rows={2}
+                      maxLength={1000}
+                      placeholder="Pickup details or confirmation note"
+                      className="mt-4 w-full rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                      disabled={savingBookingId === booking.id}
+                    />
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => updateBookingStatus(booking.id, "confirmed")}
+                        disabled={savingBookingId === booking.id}
+                        className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => updateBookingStatus(booking.id, "cancelled")}
+                        disabled={savingBookingId === booking.id}
+                        className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : null}
             <div className="mt-8 grid gap-4">
               {groupedBookings.slice(0, 6).map((group) => (
                 <section
@@ -1152,6 +1308,10 @@ export default function VendorDashboardPage() {
                           {booking.listing_name} - {booking.guests} guest
                           {booking.guests === 1 ? "" : "s"}
                         </p>
+                        <p className="mt-2 text-sm font-semibold text-[#0B3C5D]">
+                          {formatDepositStatus(booking.deposit_status)} -{" "}
+                          {formatBookingCents(booking.booking_value_cents)}
+                        </p>
                       </article>
                     ))}
                   </div>
@@ -1159,7 +1319,7 @@ export default function VendorDashboardPage() {
               ))}
             </div>
             <div className="mt-8 overflow-x-auto">
-              <table className="min-w-[1100px] border-collapse">
+              <table className="min-w-[1320px] border-collapse">
                 <thead>
                   <tr className="border-b text-left">
                     <th className="px-4 py-3">Listing</th>
@@ -1168,6 +1328,9 @@ export default function VendorDashboardPage() {
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3">Time</th>
                     <th className="px-4 py-3">Guests</th>
+                    <th className="px-4 py-3">Payment</th>
+                    <th className="px-4 py-3">Value</th>
+                    <th className="px-4 py-3">Add-ons</th>
                     <th className="px-4 py-3">Message</th>
                     <th className="px-4 py-3">Your note</th>
                     <th className="px-4 py-3">Status</th>
@@ -1175,7 +1338,7 @@ export default function VendorDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map((booking) => (
+                  {sortedBookings.map((booking) => (
                     <tr key={booking.id} className="border-b">
                       <td className="px-4 py-3 font-medium">
                         {booking.listing_name}
@@ -1185,6 +1348,19 @@ export default function VendorDashboardPage() {
                       <td className="px-4 py-3">{booking.tour_date}</td>
                       <td className="px-4 py-3">{booking.tour_time}</td>
                       <td className="px-4 py-3">{booking.guests}</td>
+                      <td className="px-4 py-3">
+                        {formatDepositStatus(booking.deposit_status)}
+                      </td>
+                      <td className="px-4 py-3">
+                        {formatBookingCents(booking.booking_value_cents)}
+                      </td>
+                      <td className="max-w-56 px-4 py-3 text-sm text-gray-600">
+                        {booking.selected_addons?.length
+                          ? booking.selected_addons
+                              .map((addon) => addon.name || "Add-on")
+                              .join(", ")
+                          : "None"}
+                      </td>
                       <td className="max-w-72 px-4 py-3 text-sm text-gray-600">
                         {booking.guest_message || "No message"}
                       </td>
@@ -1281,13 +1457,20 @@ export default function VendorDashboardPage() {
                   return null;
                 }
 
+                const status = getListingStatusSummary(listing);
+                const photoCount = countListingPhotos(listing);
+                const timeCount = (listing.tour_times || []).length;
+                const hasMapPin =
+                  listing.latitude != null && listing.longitude != null;
+                const isExpanded = Boolean(expandedListingIds[listing.id]);
+
                 return (
                 <article
                   key={listing.id}
-                  className="rounded-xl border border-gray-200 p-5"
+                  className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
                   <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-lg font-bold text-[#0B3C5D]">
                         {listing.title}
                       </h3>
@@ -1296,6 +1479,55 @@ export default function VendorDashboardPage() {
                         {listing.location || "Roatan"}
                         {listing.price ? ` - $${listing.price}` : ""}
                       </p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                        {[
+                          {
+                            label: "Photos",
+                            value: photoCount,
+                          },
+                          {
+                            label: "Tour times",
+                            value: timeCount,
+                          },
+                          {
+                            label: "Map pin",
+                            value: hasMapPin ? "Set" : "Missing",
+                          },
+                          {
+                            label: "Max guests",
+                            value: listing.max_guests || "Ask",
+                          },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="rounded-xl bg-[#F7F3EA] p-3"
+                          >
+                            <p className="text-xs font-bold uppercase text-[#007B7B]">
+                              {item.label}
+                            </p>
+                            <p className="mt-1 font-black text-[#0B3C5D]">
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => toggleListingEditor(listing.id)}
+                          className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-semibold text-white"
+                        >
+                          {isExpanded ? "Hide details" : "Edit details"}
+                        </button>
+                        <Link
+                          href={`/listings/${listing.id}`}
+                          className="rounded-xl border border-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#007B7B]"
+                        >
+                          View
+                        </Link>
+                      </div>
+                      {isExpanded ? (
+                      <>
                       <div className="mt-5 grid gap-4 md:grid-cols-2">
                         <div className="md:col-span-2">
                           <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
@@ -1640,23 +1872,24 @@ export default function VendorDashboardPage() {
                           </button>
                         </div>
                       </div>
+                      </>
+                      ) : null}
                     </div>
                     <div className="flex flex-col items-start gap-3 sm:items-end">
                       <span
                         className={`rounded-full px-3 py-1 text-sm font-semibold ${
-                          listing.is_active
+                          status.tone === "live"
                             ? "bg-green-100 text-green-700"
-                            : listing.approval_status === "rejected"
+                            : status.tone === "rejected"
                               ? "bg-red-100 text-red-700"
                             : "bg-yellow-100 text-yellow-800"
                         }`}
                       >
-                        {listing.is_active
-                          ? "Live"
-                          : listing.approval_status === "rejected"
-                            ? "Needs changes"
-                            : "Waiting for review"}
+                        {status.label}
                       </span>
+                      <p className="max-w-56 text-right text-sm leading-6 text-gray-600">
+                        {status.text}
+                      </p>
                       {listing.approval_note ? (
                         <p className="max-w-56 rounded-xl bg-yellow-100 p-3 text-sm text-yellow-900">
                           {listing.approval_note}
