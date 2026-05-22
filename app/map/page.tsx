@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import MapBrowser from "@/app/map/MapBrowser";
@@ -19,6 +20,8 @@ export type MapListing = {
 };
 
 export default async function MapPage() {
+  await connection();
+
   const { data } = await supabaseServer
     .from("listings")
     .select(
