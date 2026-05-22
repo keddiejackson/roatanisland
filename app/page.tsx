@@ -13,6 +13,11 @@ import {
   selectHomeSpotlightListings,
   type HomeListing,
 } from "@/lib/home-listings";
+import {
+  defaultHomepageControls,
+  normalizeHomepageControls,
+  type HomepageControls,
+} from "@/lib/homepage-settings";
 import { supabase } from "@/lib/supabase";
 
 type Listing = HomeListing & {
@@ -65,20 +70,17 @@ function formatPrice(price: number | null) {
   }).format(price);
 }
 
-function listingBadge(listing: Listing) {
-  if (listing.is_featured) return "Featured";
-  if ((listing.rating || 0) >= 4.8) return "Top rated";
+function listingBadge(listing: Listing, homepageControls: HomepageControls) {
+  if (listing.is_featured) return homepageControls.featuredBadgeLabel;
+  if ((listing.rating || 0) >= 4.8) return homepageControls.topRatedBadgeLabel;
   return listing.category || "Listing";
 }
 
 export default function Home() {
   const [listings, setListings] = useState<Listing[]>([]);
-  const [siteSettings, setSiteSettings] = useState({
-    siteName: "RoatanIsland.life",
-    homepageHeadline: "The operating system for a better Roatan day.",
-    homepageSubhead:
-      "A polished island marketplace where travelers discover local experiences, plan around the map, and request bookings from trusted Roatan operators.",
-  });
+  const [homepageControls, setHomepageControls] = useState(
+    defaultHomepageControls,
+  );
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [maxPrice, setMaxPrice] = useState("");
@@ -110,10 +112,7 @@ export default function Home() {
         .maybeSingle();
 
       if (settingsData?.value && typeof settingsData.value === "object") {
-        setSiteSettings((current) => ({
-          ...current,
-          ...(settingsData.value as Partial<typeof current>),
-        }));
+        setHomepageControls(normalizeHomepageControls(settingsData.value));
       }
     }
 
@@ -229,26 +228,26 @@ export default function Home() {
 
           <div className="motion-rise flex flex-1 flex-col justify-center py-20">
             <p className="text-sm font-bold uppercase text-[#9EE8E3]">
-              Roatan experiences
+              {homepageControls.heroEyebrow}
             </p>
             <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl">
-              {siteSettings.homepageHeadline}
+              {homepageControls.homepageHeadline}
             </h1>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-white/84 sm:text-xl">
-              {siteSettings.homepageSubhead}
+              {homepageControls.homepageSubhead}
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
               <a
                 href="#marketplace"
                 className="rounded-lg bg-[#00A8A8] px-6 py-3 font-bold text-white shadow-2xl shadow-[#00A8A8]/25 transition hover:-translate-y-0.5 hover:bg-[#078F8F]"
               >
-                Explore listings
+                {homepageControls.primaryCtaLabel}
               </a>
               <Link
                 href="/map"
                 className="rounded-lg border border-white/25 bg-white/10 px-6 py-3 font-bold text-white backdrop-blur transition hover:-translate-y-0.5 hover:bg-white/20"
               >
-                View map
+                {homepageControls.secondaryCtaLabel}
               </Link>
             </div>
           </div>
@@ -260,14 +259,13 @@ export default function Home() {
           <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
               <p className="text-sm font-bold uppercase text-[#00A8A8]">
-                Explore listings
+                {homepageControls.listingsEyebrow}
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
-                Find the Roatan day that fits.
+                {homepageControls.listingsTitle}
               </h2>
               <p className="mt-3 max-w-2xl leading-7 text-gray-600">
-                Start with a search or a category. Open more filters when the
-                details matter.
+                {homepageControls.listingsIntro}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
@@ -357,10 +355,15 @@ export default function Home() {
             ) : null}
           </div>
 
-          {spotlightListings.length > 0 ? (
+          {homepageControls.showFeaturedListings && spotlightListings.length > 0 ? (
             <div className="mt-10 grid gap-5 lg:grid-cols-3">
               {spotlightListings.map((listing) => (
-                <ListingCard key={listing.id} listing={listing} featured />
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  homepageControls={homepageControls}
+                  featured
+                />
               ))}
             </div>
           ) : null}
@@ -395,7 +398,11 @@ export default function Home() {
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {visibleListings.map((listing) => (
-                  <ListingCard key={listing.id} listing={listing} />
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    homepageControls={homepageControls}
+                  />
                 ))}
               </div>
             )}
@@ -403,6 +410,7 @@ export default function Home() {
         </div>
       </section>
 
+      {homepageControls.showExploreRoutes ? (
       <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6">
         <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -440,22 +448,24 @@ export default function Home() {
           ))}
         </div>
       </section>
+      ) : null}
 
+      {homepageControls.showMapCallout ? (
       <section className="px-5 pb-16 sm:px-6">
         <div className="mx-auto grid max-w-7xl overflow-hidden rounded-lg bg-[#071F2F] text-white shadow-2xl shadow-[#071F2F]/15 lg:grid-cols-[1fr_0.9fr]">
           <div className="p-6 sm:p-10">
             <p className="text-sm font-bold uppercase text-[#D6B56D]">
-              Plan by place
+              {homepageControls.mapEyebrow}
             </p>
             <h2 className="mt-3 text-3xl font-black sm:text-5xl">
-              See Roatan around your day.
+              {homepageControls.mapTitle}
             </h2>
             <p className="mt-4 max-w-xl leading-8 text-white/75">
-              Check beach areas, cruise ports, the airport, and nearby
-              experiences before you request a booking.
+              {homepageControls.mapBody}
             </p>
+            {homepageControls.mapChips.length > 0 ? (
             <div className="mt-6 flex flex-wrap gap-2 text-sm font-semibold text-white/85">
-              {["Airport pickup", "Cruise ports", "Beach areas"].map((item) => (
+              {homepageControls.mapChips.map((item) => (
                 <span
                   key={item}
                   className="rounded-lg border border-white/15 bg-white/10 px-3 py-2"
@@ -464,11 +474,12 @@ export default function Home() {
                 </span>
               ))}
             </div>
+            ) : null}
             <Link
               href="/map"
               className="mt-7 inline-flex rounded-lg bg-[#D6B56D] px-5 py-3 font-black text-[#071F2F] transition hover:-translate-y-0.5"
             >
-              Open the map
+              {homepageControls.mapCtaLabel}
             </Link>
           </div>
           <div className="relative min-h-72">
@@ -482,24 +493,33 @@ export default function Home() {
           </div>
         </div>
       </section>
+      ) : null}
 
-      <BrandAbout />
+      {homepageControls.showTrustSection ? (
+        <BrandAbout
+          eyebrow={homepageControls.trustEyebrow}
+          title={homepageControls.trustTitle}
+          body={homepageControls.trustBody}
+          trustPoints={homepageControls.trustPoints}
+        />
+      ) : null}
 
+      {homepageControls.showPlanningHelp ? (
       <section className="px-5 pb-16 sm:px-6">
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.82fr_1fr] lg:items-start">
           <div>
             <p className="text-sm font-bold uppercase text-[#00A8A8]">
-              Planning help
+              {homepageControls.planningEyebrow}
             </p>
             <h2 className="mt-3 text-3xl font-black text-[#0B3C5D] sm:text-4xl">
-              Need help choosing?
+              {homepageControls.planningTitle}
             </h2>
             <p className="mt-4 max-w-lg leading-7 text-gray-600">
-              Send your dates, group size, pickup area, and the kind of day you
-              want. We can point you toward a closer fit.
+              {homepageControls.planningBody}
             </p>
+            {homepageControls.planningChips.length > 0 ? (
             <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold text-[#0B3C5D]">
-              {["Cruise timing", "Airport pickup", "Private days"].map((item) => (
+              {homepageControls.planningChips.map((item) => (
                 <span
                   key={item}
                   className="rounded-lg border border-[#D6B56D]/25 bg-white px-3 py-2"
@@ -508,6 +528,7 @@ export default function Home() {
                 </span>
               ))}
             </div>
+            ) : null}
           </div>
 
           <div className="rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm sm:p-6">
@@ -596,6 +617,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      ) : null}
       <SiteFooter />
     </main>
   );
@@ -603,9 +625,11 @@ export default function Home() {
 
 function ListingCard({
   listing,
+  homepageControls,
   featured = false,
 }: {
   listing: Listing;
+  homepageControls: HomepageControls;
   featured?: boolean;
 }) {
   return (
@@ -629,7 +653,7 @@ function ListingCard({
           </div>
         )}
         <span className="absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs font-black uppercase text-[#0B3C5D] shadow">
-          {listingBadge(listing)}
+          {listingBadge(listing, homepageControls)}
         </span>
         <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
           {formatPrice(listing.price)}
