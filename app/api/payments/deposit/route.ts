@@ -73,10 +73,17 @@ export async function POST(request: Request) {
   let listingTitle = "Roatan booking deposit";
   let checkoutAmountCents = depositAmountCents;
   let paymentLabel = "deposit";
+  const { data: conciergeQuote } = await supabaseServer
+    .from("concierge_quotes")
+    .select("id, title, deposit_amount_cents")
+    .eq("booking_id", booking.id)
+    .maybeSingle();
 
   if (body.paymentType === "full" && booking.booking_value_cents) {
     checkoutAmountCents = booking.booking_value_cents;
     paymentLabel = "full payment";
+  } else if (conciergeQuote?.deposit_amount_cents) {
+    checkoutAmountCents = conciergeQuote.deposit_amount_cents;
   }
 
   if (booking.listing_id) {
@@ -89,6 +96,10 @@ export async function POST(request: Request) {
     if (listing?.title) {
       listingTitle = `${listing.title} ${paymentLabel}`;
     }
+  }
+
+  if (conciergeQuote?.title) {
+    listingTitle = `${conciergeQuote.title} ${paymentLabel}`;
   }
 
   const baseUrl = getBaseUrl(request);
@@ -154,6 +165,16 @@ export async function POST(request: Request) {
       stripe_checkout_session_id: checkoutSession.id,
     })
     .eq("id", booking.id);
+
+  if (conciergeQuote?.id) {
+    await supabaseServer
+      .from("concierge_quotes")
+      .update({
+        status: "deposit_started",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", conciergeQuote.id);
+  }
 
   return NextResponse.json({ url: checkoutSession.url });
 }

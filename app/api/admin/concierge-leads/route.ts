@@ -18,6 +18,25 @@ type AssignmentRow = {
   updated_at: string;
 };
 
+type QuoteRow = {
+  id: string;
+  lead_id: string;
+  public_token: string;
+  status: string;
+  title: string;
+  line_items: unknown;
+  total_amount_cents: number;
+  deposit_amount_cents: number | null;
+  guest_note: string | null;
+  admin_note: string | null;
+  guest_response: string | null;
+  booking_id: string | null;
+  expires_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type ListingOption = {
   id: string;
   title: string;
@@ -76,6 +95,7 @@ export async function GET(request: Request) {
   const leadRows = (leads || []) as ConciergeLeadRow[];
   const leadIds = leadRows.map((lead) => lead.id);
   let assignments: AssignmentRow[] = [];
+  let quotes: QuoteRow[] = [];
   let setupMessage: string | null = null;
 
   if (leadIds.length > 0) {
@@ -92,6 +112,21 @@ export async function GET(request: Request) {
         "Run the updated supabase/concierge-leads.sql to enable vendor fulfillment.";
     } else {
       assignments = (assignmentRows || []) as AssignmentRow[];
+    }
+
+    const { data: quoteRows, error: quoteError } = await supabaseServer
+      .from("concierge_quotes")
+      .select(
+        "id, lead_id, public_token, status, title, line_items, total_amount_cents, deposit_amount_cents, guest_note, admin_note, guest_response, booking_id, expires_at, approved_at, created_at, updated_at",
+      )
+      .in("lead_id", leadIds)
+      .order("created_at", { ascending: false });
+
+    if (quoteError) {
+      setupMessage =
+        "Run the updated supabase/concierge-leads.sql to enable guest quote approval.";
+    } else {
+      quotes = (quoteRows || []) as QuoteRow[];
     }
   }
 
@@ -117,11 +152,18 @@ export async function GET(request: Request) {
   const listingMap = mapById(listingOptions);
   const vendorMap = mapById(vendorOptions);
   const assignmentsByLead = new Map<string, AssignmentRow[]>();
+  const quotesByLead = new Map<string, QuoteRow[]>();
 
   for (const assignment of assignments) {
     const current = assignmentsByLead.get(assignment.lead_id) || [];
     current.push(assignment);
     assignmentsByLead.set(assignment.lead_id, current);
+  }
+
+  for (const quote of quotes) {
+    const current = quotesByLead.get(quote.lead_id) || [];
+    current.push(quote);
+    quotesByLead.set(quote.lead_id, current);
   }
 
   const enrichedLeads = (leads || []).map((lead) => ({
@@ -135,6 +177,7 @@ export async function GET(request: Request) {
         ? vendorMap.get(assignment.vendor_id) || null
         : null,
     })),
+    quotes: quotesByLead.get(lead.id) || [],
   }));
 
   return NextResponse.json({

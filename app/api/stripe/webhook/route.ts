@@ -65,6 +65,26 @@ async function markBookingPaid(session: StripeCheckoutSession) {
       paid_at: session.payment_status === "paid" ? new Date().toISOString() : null,
     })
     .eq("id", bookingId);
+
+  if (session.payment_status === "paid") {
+    const { data: quote } = await supabaseServer
+      .from("concierge_quotes")
+      .select("id, lead_id")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+
+    if (quote?.id) {
+      await supabaseServer
+        .from("concierge_quotes")
+        .update({ status: "paid", updated_at: new Date().toISOString() })
+        .eq("id", quote.id);
+
+      await supabaseServer
+        .from("concierge_leads")
+        .update({ status: "booked", updated_at: new Date().toISOString() })
+        .eq("id", quote.lead_id);
+    }
+  }
 }
 
 export async function POST(request: Request) {
@@ -110,6 +130,11 @@ export async function POST(request: Request) {
         .from("bookings")
         .update({ deposit_status: "failed" })
         .eq("id", bookingId);
+
+      await supabaseServer
+        .from("concierge_quotes")
+        .update({ status: "approved", updated_at: new Date().toISOString() })
+        .eq("booking_id", bookingId);
     }
   }
 

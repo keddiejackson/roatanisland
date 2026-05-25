@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
@@ -11,6 +12,7 @@ import {
   conciergeFulfillmentSummary,
   conciergeLeadStatuses,
   conciergeLeadSummary,
+  conciergeQuoteSummary,
   type ConciergeAssignmentStatus,
   type ConciergeLeadPriority,
   type ConciergeLeadStatus,
@@ -60,6 +62,25 @@ type ConciergeAssignment = {
   updated_at: string;
 };
 
+type ConciergeQuote = {
+  id: string;
+  lead_id: string;
+  public_token: string;
+  status: string;
+  title: string;
+  line_items: unknown;
+  total_amount_cents: number;
+  deposit_amount_cents: number | null;
+  guest_note: string | null;
+  admin_note: string | null;
+  guest_response: string | null;
+  booking_id: string | null;
+  expires_at: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type ConciergeLead = {
   id: string;
   guest_name: string;
@@ -82,6 +103,7 @@ type ConciergeLead = {
   created_at: string;
   updated_at: string;
   assignments: ConciergeAssignment[];
+  quotes: ConciergeQuote[];
 };
 
 type AssignmentDraft = {
@@ -100,6 +122,15 @@ const emptyAssignmentDraft: AssignmentDraft = {
   contactMethod: "Email",
   vendorNote: "",
   guestQuoteDollars: "",
+};
+
+type QuoteDraft = {
+  title: string;
+  totalDollars: string;
+  depositDollars: string;
+  guestNote: string;
+  adminNote: string;
+  expiresAt: string;
 };
 
 function formatDate(value: string | null) {
@@ -130,6 +161,28 @@ function formatQuote(value: number | null) {
   }).format(value / 100);
 }
 
+function assignmentTotalCents(assignments: ConciergeAssignment[]) {
+  return assignments
+    .filter((assignment) => assignment.status !== "declined")
+    .reduce((total, assignment) => total + (assignment.guest_quote_cents || 0), 0);
+}
+
+function quoteDraftForLead(
+  lead: ConciergeLead,
+  quote: ConciergeQuote | undefined,
+): QuoteDraft {
+  const totalCents = quote?.total_amount_cents || assignmentTotalCents(lead.assignments);
+
+  return {
+    title: quote?.title || `${lead.guest_name} Roatan concierge quote`,
+    totalDollars: centsToDollars(totalCents),
+    depositDollars: centsToDollars(quote?.deposit_amount_cents || null),
+    guestNote: quote?.guest_note || "",
+    adminNote: quote?.admin_note || "",
+    expiresAt: quote?.expires_at || "",
+  };
+}
+
 export default function AdminConciergePage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
@@ -142,6 +195,7 @@ export default function AdminConciergePage() {
   const [assignmentDrafts, setAssignmentDrafts] = useState<
     Record<string, AssignmentDraft>
   >({});
+  const [quoteDrafts, setQuoteDrafts] = useState<Record<string, QuoteDraft>>({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
@@ -150,6 +204,7 @@ export default function AdminConciergePage() {
   const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(
     null,
   );
+  const [savingQuoteId, setSavingQuoteId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
   const loadLeads = useCallback(async () => {
@@ -251,6 +306,10 @@ export default function AdminConciergePage() {
     () => conciergeFulfillmentSummary(leads.flatMap((lead) => lead.assignments)),
     [leads],
   );
+  const quoteSummary = useMemo(
+    () => conciergeQuoteSummary(leads.flatMap((lead) => lead.quotes)),
+    [leads],
+  );
 
   if (checkingAuth || !authorized) return null;
 
@@ -268,6 +327,26 @@ export default function AdminConciergePage() {
       ...current,
       [leadId]: {
         ...(current[leadId] || emptyAssignmentDraft),
+        ...updates,
+      },
+    }));
+  }
+
+  function updateQuoteDraft(leadId: string, updates: Partial<QuoteDraft>) {
+    const lead = leads.find((item) => item.id === leadId);
+
+    setQuoteDrafts((current) => ({
+      ...current,
+      [leadId]: {
+        ...(current[leadId] ||
+          (lead ? quoteDraftForLead(lead, lead.quotes[0]) : {
+            title: "",
+            totalDollars: "",
+            depositDollars: "",
+            guestNote: "",
+            adminNote: "",
+            expiresAt: "",
+          })),
         ...updates,
       },
     }));
@@ -426,6 +505,44 @@ export default function AdminConciergePage() {
     setMessage("Fulfillment assignment removed.");
   }
 
+  async function saveQuote(lead: ConciergeLead, quote?: ConciergeQuote) {
+    const draft = quoteDrafts[lead.id] || quoteDraftForLead(lead, quote);
+
+    setSavingQuoteId(lead.id);
+    setMessage("");
+
+    const response = await fetch(`/api/admin/concierge-leads/${lead.id}/quote`, {
+      method: "POST",
+      headers: await authorizedHeaders(),
+      body: JSON.stringify({
+        quoteId: quote?.id,
+        title: draft.title,
+        totalAmountCents: quoteToCents(draft.totalDollars),
+        depositAmountCents: quoteToCents(draft.depositDollars),
+        guestNote: draft.guestNote,
+        adminNote: draft.adminNote,
+        expiresAt: draft.expiresAt,
+      }),
+    });
+
+    const result = await response.json();
+    setSavingQuoteId(null);
+
+    if (!response.ok) {
+      setMessage(result.error || "Unable to save this quote.");
+      return;
+    }
+
+    await loadLeads();
+    setMessage(`Guest quote saved: ${result.approvalUrl}`);
+  }
+
+  async function copyQuoteLink(token: string) {
+    const url = `${window.location.origin}/concierge/quote/${token}`;
+    await navigator.clipboard.writeText(url);
+    setMessage("Quote link copied.");
+  }
+
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
       <div className="mx-auto max-w-7xl">
@@ -447,6 +564,7 @@ export default function AdminConciergePage() {
             <div className="flex flex-wrap gap-2">
               <ExportCsvButton type="concierge_leads" />
               <ExportCsvButton type="concierge_assignments" />
+              <ExportCsvButton type="concierge_quotes" />
             </div>
           </div>
 
@@ -461,6 +579,9 @@ export default function AdminConciergePage() {
               ["Vendor matches", fulfillmentSummary.total],
               ["Quoted", fulfillmentSummary.quotedCount],
               ["Confirmed", fulfillmentSummary.confirmedCount],
+              ["Guest quotes", quoteSummary.total],
+              ["Approved quotes", quoteSummary.approvedCount],
+              ["Paid quotes", quoteSummary.paidCount],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl bg-[#F7F3EA] p-5">
                 <p className="text-sm text-gray-600">{label}</p>
@@ -524,6 +645,12 @@ export default function AdminConciergePage() {
                 const leadFulfillment = conciergeFulfillmentSummary(
                   lead.assignments,
                 );
+                const latestQuote = lead.quotes[0];
+                const quoteDraft =
+                  quoteDrafts[lead.id] || quoteDraftForLead(lead, latestQuote);
+                const approvalPath = latestQuote
+                  ? `/concierge/quote/${latestQuote.public_token}`
+                  : "";
 
                 return (
                   <article
@@ -1023,6 +1150,144 @@ export default function AdminConciergePage() {
                                 </div>
                               ))
                             )}
+                          </div>
+                        </div>
+
+                        <div className="mt-6 border-t border-white pt-5">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="font-bold text-[#0B3C5D]">
+                              Guest quote approval
+                            </p>
+                            {latestQuote ? (
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-black uppercase text-[#0B3C5D]">
+                                {latestQuote.status.replaceAll("_", " ")}
+                              </span>
+                            ) : null}
+                          </div>
+
+                          {latestQuote ? (
+                            <div className="mt-3 rounded-xl bg-white p-4">
+                              <p className="text-sm font-bold text-[#0B3C5D]">
+                                Latest quote link
+                              </p>
+                              <div className="mt-3 grid gap-2">
+                                <Link
+                                  href={approvalPath}
+                                  className="break-all rounded-lg bg-[#EEF7F6] px-3 py-2 text-sm font-bold text-[#0B3C5D]"
+                                >
+                                  {approvalPath}
+                                </Link>
+                                <div className="grid gap-2 sm:grid-cols-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      copyQuoteLink(latestQuote.public_token)
+                                    }
+                                    className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-sm font-bold text-white"
+                                  >
+                                    Copy link
+                                  </button>
+                                  {latestQuote.booking_id ? (
+                                    <Link
+                                      href={`/book/status/${latestQuote.booking_id}`}
+                                      className="rounded-lg bg-[#00A8A8] px-3 py-2 text-center text-sm font-bold text-white"
+                                    >
+                                      Booking status
+                                    </Link>
+                                  ) : null}
+                                </div>
+                              </div>
+                              {latestQuote.guest_response ? (
+                                <p className="mt-3 rounded-lg bg-[#FFF8E8] px-3 py-2 text-sm text-gray-700">
+                                  Guest requested: {latestQuote.guest_response}
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
+
+                          <div className="mt-4 grid gap-3 rounded-xl bg-white p-4">
+                            <input
+                              value={quoteDraft.title}
+                              onChange={(event) =>
+                                updateQuoteDraft(lead.id, {
+                                  title: event.target.value,
+                                })
+                              }
+                              placeholder="Quote title"
+                              className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                            />
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={quoteDraft.totalDollars}
+                                onChange={(event) =>
+                                  updateQuoteDraft(lead.id, {
+                                    totalDollars: event.target.value,
+                                  })
+                                }
+                                placeholder="Total quote"
+                                className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                              />
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={quoteDraft.depositDollars}
+                                onChange={(event) =>
+                                  updateQuoteDraft(lead.id, {
+                                    depositDollars: event.target.value,
+                                  })
+                                }
+                                placeholder="Deposit override"
+                                className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                              />
+                            </div>
+                            <input
+                              type="date"
+                              value={quoteDraft.expiresAt}
+                              onChange={(event) =>
+                                updateQuoteDraft(lead.id, {
+                                  expiresAt: event.target.value,
+                                })
+                              }
+                              className="min-h-11 rounded-xl border border-gray-200 px-3 outline-none"
+                            />
+                            <textarea
+                              value={quoteDraft.guestNote}
+                              onChange={(event) =>
+                                updateQuoteDraft(lead.id, {
+                                  guestNote: event.target.value,
+                                })
+                              }
+                              rows={4}
+                              placeholder="Guest-facing quote note..."
+                              className="rounded-xl border border-gray-200 px-3 py-2 outline-none"
+                            />
+                            <textarea
+                              value={quoteDraft.adminNote}
+                              onChange={(event) =>
+                                updateQuoteDraft(lead.id, {
+                                  adminNote: event.target.value,
+                                })
+                              }
+                              rows={3}
+                              placeholder="Private admin quote note..."
+                              className="rounded-xl border border-gray-200 px-3 py-2 outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => saveQuote(lead, latestQuote)}
+                              disabled={savingQuoteId === lead.id}
+                              className="rounded-xl bg-[#D6B56D] px-4 py-3 text-sm font-black text-[#071F2F] disabled:opacity-50"
+                            >
+                              {savingQuoteId === lead.id
+                                ? "Saving quote..."
+                                : latestQuote
+                                  ? "Update guest quote"
+                                  : "Create guest quote"}
+                            </button>
                           </div>
                         </div>
                       </div>

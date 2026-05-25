@@ -339,6 +339,38 @@ on public.concierge_lead_assignments(lead_id);
 create index if not exists concierge_lead_assignments_status_idx
 on public.concierge_lead_assignments(status);
 
+create table if not exists public.concierge_quotes (
+  id uuid primary key default gen_random_uuid(),
+  lead_id uuid not null references public.concierge_leads(id) on delete cascade,
+  public_token uuid not null unique default gen_random_uuid(),
+  status text not null default 'draft'
+    check (status in ('draft', 'sent', 'approved', 'change_requested', 'deposit_started', 'paid', 'expired', 'cancelled')),
+  title text not null default 'Roatan concierge quote',
+  line_items jsonb not null default '[]'::jsonb,
+  total_amount_cents integer not null default 0,
+  deposit_amount_cents integer,
+  guest_note text,
+  admin_note text,
+  guest_response text,
+  booking_id uuid references public.bookings(id) on delete set null,
+  expires_at date,
+  approved_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.concierge_quotes
+add column if not exists public_token uuid not null default gen_random_uuid();
+
+create index if not exists concierge_quotes_lead_id_idx
+on public.concierge_quotes(lead_id);
+
+create index if not exists concierge_quotes_public_token_idx
+on public.concierge_quotes(public_token);
+
+create unique index if not exists concierge_quotes_public_token_unique_idx
+on public.concierge_quotes(public_token);
+
 create table if not exists public.vendor_documents (
   id uuid primary key default gen_random_uuid(),
   vendor_id uuid not null references public.vendors(id) on delete cascade,
@@ -493,6 +525,46 @@ add column if not exists guest_quote_cents integer;
 alter table public.concierge_lead_assignments
 add column if not exists updated_at timestamptz not null default now();
 
+alter table public.concierge_quotes
+add column if not exists public_token uuid not null default gen_random_uuid();
+
+alter table public.concierge_quotes
+add column if not exists status text not null default 'draft'
+check (status in ('draft', 'sent', 'approved', 'change_requested', 'deposit_started', 'paid', 'expired', 'cancelled'));
+
+alter table public.concierge_quotes
+add column if not exists title text not null default 'Roatan concierge quote';
+
+alter table public.concierge_quotes
+add column if not exists line_items jsonb not null default '[]'::jsonb;
+
+alter table public.concierge_quotes
+add column if not exists total_amount_cents integer not null default 0;
+
+alter table public.concierge_quotes
+add column if not exists deposit_amount_cents integer;
+
+alter table public.concierge_quotes
+add column if not exists guest_note text;
+
+alter table public.concierge_quotes
+add column if not exists admin_note text;
+
+alter table public.concierge_quotes
+add column if not exists guest_response text;
+
+alter table public.concierge_quotes
+add column if not exists booking_id uuid references public.bookings(id) on delete set null;
+
+alter table public.concierge_quotes
+add column if not exists expires_at date;
+
+alter table public.concierge_quotes
+add column if not exists approved_at timestamptz;
+
+alter table public.concierge_quotes
+add column if not exists updated_at timestamptz not null default now();
+
 alter table public.vendor_documents
 add column if not exists status text not null default 'pending'
 check (status in ('pending', 'approved', 'rejected'));
@@ -513,6 +585,7 @@ alter table public.listing_addons enable row level security;
 alter table public.listing_reports enable row level security;
 alter table public.concierge_leads enable row level security;
 alter table public.concierge_lead_assignments enable row level security;
+alter table public.concierge_quotes enable row level security;
 alter table public.vendor_documents enable row level security;
 
 grant usage on schema public to anon, authenticated;
@@ -538,6 +611,7 @@ grant select, update on public.listing_reports to authenticated;
 grant insert on public.concierge_leads to anon, authenticated;
 grant select, update on public.concierge_leads to authenticated;
 grant select, insert, update, delete on public.concierge_lead_assignments to authenticated;
+grant select, insert, update, delete on public.concierge_quotes to authenticated;
 grant select, insert, update on public.vendor_documents to authenticated;
 grant select, update on public.vendors to authenticated;
 grant select, update on public.listings to authenticated;
@@ -1176,6 +1250,65 @@ with check (
 drop policy if exists "Admins can delete concierge assignments" on public.concierge_lead_assignments;
 create policy "Admins can delete concierge assignments"
 on public.concierge_lead_assignments
+for delete
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can view concierge quotes" on public.concierge_quotes;
+create policy "Admins can view concierge quotes"
+on public.concierge_quotes
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can create concierge quotes" on public.concierge_quotes;
+create policy "Admins can create concierge quotes"
+on public.concierge_quotes
+for insert
+to authenticated
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can update concierge quotes" on public.concierge_quotes;
+create policy "Admins can update concierge quotes"
+on public.concierge_quotes
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can delete concierge quotes" on public.concierge_quotes;
+create policy "Admins can delete concierge quotes"
+on public.concierge_quotes
 for delete
 to authenticated
 using (

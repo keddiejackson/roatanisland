@@ -52,6 +52,43 @@ export type ConciergeAssignmentInput = {
   guestQuoteCents?: string | number | null;
 };
 
+export const conciergeQuoteStatuses = [
+  "draft",
+  "sent",
+  "approved",
+  "change_requested",
+  "deposit_started",
+  "paid",
+  "expired",
+  "cancelled",
+] as const;
+
+export type ConciergeQuoteStatus = (typeof conciergeQuoteStatuses)[number];
+
+export type ConciergeQuoteLike = {
+  id: string;
+  status?: string | null;
+  total_amount_cents?: number | null;
+};
+
+export type ConciergeQuoteAssignment = {
+  id: string;
+  status?: string | null;
+  guest_quote_cents?: number | null;
+  vendor_note?: string | null;
+  listing?: { title?: string | null } | null;
+  vendor?: { business_name?: string | null } | null;
+};
+
+export type ConciergeQuoteLineItem = {
+  assignmentId: string;
+  title: string;
+  vendorName: string;
+  status: ConciergeAssignmentStatus;
+  note: string | null;
+  amountCents: number;
+};
+
 export type ConciergeContactRequest = {
   name?: string;
   email?: string;
@@ -87,6 +124,14 @@ export function normalizeConciergeAssignmentStatus(
   return conciergeAssignmentStatuses.includes(status as ConciergeAssignmentStatus)
     ? (status as ConciergeAssignmentStatus)
     : "recommended";
+}
+
+export function normalizeConciergeQuoteStatus(
+  status: string | null | undefined,
+): ConciergeQuoteStatus {
+  return conciergeQuoteStatuses.includes(status as ConciergeQuoteStatus)
+    ? (status as ConciergeQuoteStatus)
+    : "draft";
 }
 
 export function priorityForConciergeLead({
@@ -161,6 +206,28 @@ export function buildConciergeAssignmentInsert(input: ConciergeAssignmentInput) 
   };
 }
 
+export function buildConciergeQuoteLineItems(
+  assignments: ConciergeQuoteAssignment[],
+): ConciergeQuoteLineItem[] {
+  return assignments
+    .filter(
+      (assignment) =>
+        normalizeConciergeAssignmentStatus(assignment.status) !== "declined",
+    )
+    .map((assignment) => ({
+      assignmentId: assignment.id,
+      title: assignment.listing?.title || "Concierge service",
+      vendorName: assignment.vendor?.business_name || "Roatan partner",
+      status: normalizeConciergeAssignmentStatus(assignment.status),
+      note: cleanText(assignment.vendor_note, 4000) || null,
+      amountCents:
+        Number.isFinite(assignment.guest_quote_cents) &&
+        (assignment.guest_quote_cents || 0) > 0
+          ? assignment.guest_quote_cents || 0
+          : 0,
+    }));
+}
+
 export function conciergeLeadSummary(leads: ConciergeLeadLike[]) {
   return {
     total: leads.length,
@@ -212,5 +279,24 @@ export function conciergeFulfillmentSummary(
         normalizeConciergeAssignmentStatus(assignment.status),
       ),
     ).length,
+  };
+}
+
+export function conciergeQuoteSummary(quotes: ConciergeQuoteLike[]) {
+  return {
+    total: quotes.length,
+    sentCount: quotes.filter(
+      (quote) => normalizeConciergeQuoteStatus(quote.status) === "sent",
+    ).length,
+    approvedCount: quotes.filter(
+      (quote) => normalizeConciergeQuoteStatus(quote.status) === "approved",
+    ).length,
+    paidCount: quotes.filter(
+      (quote) => normalizeConciergeQuoteStatus(quote.status) === "paid",
+    ).length,
+    totalValueCents: quotes.reduce(
+      (total, quote) => total + (quote.total_amount_cents || 0),
+      0,
+    ),
   };
 }
