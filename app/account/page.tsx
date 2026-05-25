@@ -7,6 +7,7 @@ import GuestConciergePanel from "@/app/account/GuestConciergePanel";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
+import { getGuestSignOutLabel } from "@/lib/guest-account-actions";
 import { supabase } from "@/lib/supabase";
 
 type Booking = {
@@ -47,6 +48,8 @@ export default function AccountPage() {
   const [authMessageTone, setAuthMessageTone] = useState<"error" | "success">(
     "success",
   );
+  const [signOutLoading, setSignOutLoading] = useState(false);
+  const [signOutError, setSignOutError] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -135,6 +138,28 @@ export default function AccountPage() {
     setAuthMessage("");
   }
 
+  async function signOut() {
+    setSignOutLoading(true);
+    setSignOutError("");
+
+    const { error } = await supabase.auth.signOut();
+
+    setSignOutLoading(false);
+
+    if (error) {
+      setSignOutError(error.message);
+      return;
+    }
+
+    setEmail("");
+    setSignedInEmail("");
+    setPassword("");
+    setBookings([]);
+    setAuthMode("signin");
+    router.refresh();
+    window.location.reload();
+  }
+
   if (loading) {
     return <main className="min-h-screen bg-[#F7F3EA] p-8">Loading account...</main>;
   }
@@ -212,11 +237,27 @@ export default function AccountPage() {
               </h2>
             </div>
             {hasSignedIn ? (
-              <p className="rounded-xl bg-[#EEF7F6] px-4 py-2 text-sm font-bold text-[#0B3C5D]">
-                Signed in as {signedInEmail}
-              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="rounded-xl bg-[#EEF7F6] px-4 py-2 text-sm font-bold text-[#0B3C5D]">
+                  Signed in as {signedInEmail}
+                </p>
+                <button
+                  type="button"
+                  onClick={signOut}
+                  disabled={signOutLoading}
+                  className="rounded-xl border border-[#0B3C5D]/20 bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] transition hover:-translate-y-0.5 hover:border-[#00A8A8] disabled:opacity-50"
+                >
+                  {getGuestSignOutLabel(signOutLoading)}
+                </button>
+              </div>
             ) : null}
           </div>
+
+          {signOutError ? (
+            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {signOutError}
+            </p>
+          ) : null}
 
           {bookings.length === 0 && !hasSignedIn ? (
             <form
