@@ -20,6 +20,8 @@ export const signInDestinations: readonly SignInDestination[] = [
       "View booking status, deposit updates, and trip details from one place.",
     href: "/account",
     cta: "Guest Sign In",
+    secondaryHref: "/account?mode=signup",
+    secondaryLabel: "Create guest account",
   },
   {
     kind: "vendor",

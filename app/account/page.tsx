@@ -21,6 +21,8 @@ type Booking = {
   listing_id: string | null;
 };
 
+type AuthMode = "signin" | "signup";
+
 function statusBadgeClass(status: string | null) {
   switch ((status || "new").toLowerCase()) {
     case "confirmed":
@@ -39,11 +41,21 @@ export default function AccountPage() {
   const [email, setEmail] = useState("");
   const [signedInEmail, setSignedInEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [authMode, setAuthMode] = useState<AuthMode>("signin");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+  const [authMessageTone, setAuthMessageTone] = useState<"error" | "success">(
+    "success",
+  );
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadAccount() {
+      if (new URLSearchParams(window.location.search).get("mode") === "signup") {
+        setAuthMode("signup");
+      }
+
       const { data } = await supabase.auth.getUser();
       if (!data.user?.email) {
         setLoading(false);
@@ -64,13 +76,63 @@ export default function AccountPage() {
 
   async function signIn(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setAuthLoading(true);
+    setAuthMessage("");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    setAuthLoading(false);
+
     if (error) {
-      alert(error.message);
+      setAuthMessageTone("error");
+      setAuthMessage(error.message);
       return;
     }
+
     router.refresh();
     window.location.reload();
+  }
+
+  async function signUp(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthMessage("");
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/account`,
+      },
+    });
+
+    setAuthLoading(false);
+
+    if (error) {
+      setAuthMessageTone("error");
+      setAuthMessage(error.message);
+      return;
+    }
+
+    if (data.session) {
+      router.refresh();
+      window.location.reload();
+      return;
+    }
+
+    setPassword("");
+    setAuthMessageTone("success");
+    setAuthMessage(
+      "Check your email to confirm your guest account. After confirmation, this page will open so you can sign in.",
+    );
+  }
+
+  function chooseAuthMode(mode: AuthMode) {
+    setAuthMode(mode);
+    setAuthMessage("");
   }
 
   if (loading) {
@@ -157,7 +219,39 @@ export default function AccountPage() {
           </div>
 
           {bookings.length === 0 && !hasSignedIn ? (
-            <form onSubmit={signIn} className="mt-8 grid gap-4">
+            <form
+              onSubmit={authMode === "signup" ? signUp : signIn}
+              className="mt-8 grid gap-4"
+            >
+              <div className="grid gap-2 rounded-xl bg-[#EEF7F6] p-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => chooseAuthMode("signin")}
+                  className={`rounded-lg px-4 py-3 text-sm font-black transition ${
+                    authMode === "signin"
+                      ? "bg-white text-[#0B3C5D] shadow-sm"
+                      : "text-[#466176] hover:bg-white/60"
+                  }`}
+                >
+                  Sign in
+                </button>
+                <button
+                  type="button"
+                  onClick={() => chooseAuthMode("signup")}
+                  className={`rounded-lg px-4 py-3 text-sm font-black transition ${
+                    authMode === "signup"
+                      ? "bg-white text-[#0B3C5D] shadow-sm"
+                      : "text-[#466176] hover:bg-white/60"
+                  }`}
+                >
+                  Create account
+                </button>
+              </div>
+              <p className="text-sm leading-6 text-gray-600">
+                {authMode === "signup"
+                  ? "Create a free guest account with the same email you use for bookings."
+                  : "Sign in with the email you used for your booking requests."}
+              </p>
               <input
                 type="email"
                 value={email}
@@ -172,10 +266,31 @@ export default function AccountPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Password"
                 className="rounded-xl border border-gray-300 px-4 py-3"
+                minLength={6}
                 required
               />
-              <button className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white">
-                Login
+              {authMessage ? (
+                <p
+                  className={`rounded-xl px-4 py-3 text-sm font-semibold ${
+                    authMessageTone === "error"
+                      ? "bg-red-50 text-red-700"
+                      : "bg-green-50 text-green-800"
+                  }`}
+                >
+                  {authMessage}
+                </p>
+              ) : null}
+              <button
+                disabled={authLoading}
+                className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white disabled:opacity-50"
+              >
+                {authLoading
+                  ? authMode === "signup"
+                    ? "Creating..."
+                    : "Signing in..."
+                  : authMode === "signup"
+                    ? "Create guest account"
+                    : "Sign in"}
               </button>
             </form>
           ) : bookings.length === 0 ? (
