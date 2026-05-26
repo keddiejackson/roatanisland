@@ -197,9 +197,12 @@ export function bookingChatQuickReplies(viewerRole: BookingThreadViewerRole) {
   ];
 }
 
-export function bookingDrawerStats(summaries: BookingThreadSummary[]) {
+export function bookingDrawerStats(
+  summaries: BookingThreadSummary[],
+  threadCount = summaries.length,
+) {
   return {
-    threadCount: summaries.length,
+    threadCount,
     needsResponseCount: summaries.filter((summary) => summary.needsResponse)
       .length,
     messageCount: summaries.reduce(

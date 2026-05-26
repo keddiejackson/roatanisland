@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   bookingChatQuickReplies,
   bookingDrawerStats,
@@ -57,7 +57,7 @@ function bubbleClass(
 
 function threadBadgeClass(summary?: BookingThreadSummary) {
   if (!summary || summary.messageCount === 0) {
-    return "bg-white/10 text-white/70";
+    return "border border-[#0B3C5D]/10 bg-[#F7F3EA] text-[#466176]";
   }
 
   if (summary.needsResponse) {
@@ -85,12 +85,14 @@ export default function BookingChatDrawer({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const drawerOpen = open ?? internalOpen;
   const activeThreadId = selectedThreadId ?? internalSelectedThreadId;
   const quickReplies = bookingChatQuickReplies(viewerRole);
-  const stats = bookingDrawerStats(
-    threads.map((thread) => thread.summary).filter(Boolean) as BookingThreadSummary[],
-  );
+  const threadSummaries = threads
+    .map((thread) => thread.summary)
+    .filter(Boolean) as BookingThreadSummary[];
+  const stats = bookingDrawerStats(threadSummaries, threads.length);
   const selectedThread = useMemo(
     () =>
       threads.find((thread) => thread.id === activeThreadId) ||
@@ -98,6 +100,7 @@ export default function BookingChatDrawer({
       threads[0],
     [activeThreadId, threads],
   );
+  const selectedApiPath = selectedThread?.apiPath;
 
   function changeOpen(nextOpen: boolean) {
     onOpenChange?.(nextOpen);
@@ -107,6 +110,12 @@ export default function BookingChatDrawer({
   }
 
   function changeSelectedThread(threadId: string) {
+    if (threadId !== activeThreadId) {
+      setDraft("");
+      setError("");
+      setIsInternal(false);
+    }
+
     onSelectedThreadIdChange?.(threadId);
     if (selectedThreadId === undefined) {
       setInternalSelectedThreadId(threadId);
@@ -114,35 +123,70 @@ export default function BookingChatDrawer({
   }
 
   useEffect(() => {
-    if (!drawerOpen || !selectedThread) return;
+    if (!drawerOpen || !selectedApiPath) return;
+
+    const controller = new AbortController();
 
     async function loadConversation() {
       setLoading(true);
       setError("");
 
-      const { data } = await supabase.auth.getSession();
-      const response = await fetch(selectedThread.apiPath, {
-        headers: {
-          ...(data.session?.access_token
-            ? { Authorization: `Bearer ${data.session.access_token}` }
-            : {}),
-        },
-      });
-      const result = (await response.json()) as ConversationResponse;
+      try {
+        const { data } = await supabase.auth.getSession();
+        const response = await fetch(selectedApiPath, {
+          signal: controller.signal,
+          headers: {
+            ...(data.session?.access_token
+              ? { Authorization: `Bearer ${data.session.access_token}` }
+              : {}),
+          },
+        });
+        const result = (await response.json()) as ConversationResponse;
 
-      if (!response.ok) {
-        setError(result.error || "Unable to load messages.");
-        setMessages([]);
-        setLoading(false);
-        return;
+        if (!response.ok) {
+          setError(result.error || "Unable to load messages.");
+          setMessages([]);
+          return;
+        }
+
+        setMessages(result.messages || []);
+      } catch {
+        if (!controller.signal.aborted) {
+          setError("Unable to load messages.");
+          setMessages([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
-
-      setMessages(result.messages || []);
-      setLoading(false);
     }
 
     loadConversation();
-  }, [drawerOpen, selectedThread]);
+    return () => controller.abort();
+  }, [drawerOpen, selectedApiPath]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+  }, [drawerOpen, messages.length, selectedThread?.id]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    function closeWithEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onOpenChange?.(false);
+        if (open === undefined) {
+          setInternalOpen(false);
+        }
+      }
+    }
+
+    window.addEventListener("keydown", closeWithEscape);
+    return () => window.removeEventListener("keydown", closeWithEscape);
+  }, [drawerOpen, open, onOpenChange]);
 
   async function sendMessage(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -192,11 +236,11 @@ export default function BookingChatDrawer({
       <button
         type="button"
         onClick={() => changeOpen(true)}
-        className="fixed bottom-5 right-5 z-40 rounded-full bg-[#071F2F] px-5 py-4 text-left font-bold text-white shadow-2xl shadow-[#071F2F]/25 transition hover:-translate-y-1"
+        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#071F2F] px-4 py-3 text-left font-bold text-white shadow-2xl shadow-[#071F2F]/25 ring-1 ring-white/10 transition hover:-translate-y-1 sm:right-5 sm:px-5 sm:py-4"
         aria-label="Open booking messages"
       >
-        <span className="block text-sm">Messages</span>
-        <span className="mt-1 block text-xs text-white/70">
+        <span className="block text-sm leading-none">Messages</span>
+        <span className="mt-1 block text-xs leading-tight text-white/70">
           {stats.needsResponseCount > 0
             ? `${stats.needsResponseCount} need response`
             : `${stats.threadCount} thread${stats.threadCount === 1 ? "" : "s"}`}
@@ -204,16 +248,24 @@ export default function BookingChatDrawer({
       </button>
 
       {drawerOpen ? (
-        <div className="fixed inset-0 z-50 bg-[#071F2F]/35 backdrop-blur-sm">
-          <aside className="fixed inset-x-0 bottom-0 flex max-h-[92vh] flex-col overflow-hidden rounded-t-2xl bg-[#F7F3EA] shadow-2xl md:inset-y-6 md:left-auto md:right-6 md:w-[440px] md:rounded-2xl">
-            <div className="bg-[#071F2F] p-5 text-white">
+        <div
+          className="fixed inset-0 z-50 bg-[#071F2F]/35 backdrop-blur-sm"
+          onClick={() => changeOpen(false)}
+        >
+          <aside
+            className="fixed inset-x-0 bottom-0 flex h-[min(100dvh,720px)] max-h-[100dvh] flex-col overflow-hidden rounded-t-2xl bg-[#F7F3EA] shadow-2xl ring-1 ring-[#071F2F]/10 md:inset-y-4 md:left-auto md:right-4 md:h-auto md:w-[min(480px,calc(100vw-2rem))] md:rounded-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="shrink-0 bg-[#071F2F] p-4 text-white sm:p-5">
               <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
                     Booking chat
                   </p>
-                  <h2 className="mt-1 text-2xl font-black">Messages</h2>
-                  <p className="mt-1 text-sm text-white/70">
+                  <h2 className="mt-1 truncate text-2xl font-black leading-tight">
+                    Messages
+                  </h2>
+                  <p className="mt-1 text-sm leading-5 text-white/70">
                     {stats.messageCount} message
                     {stats.messageCount === 1 ? "" : "s"} across{" "}
                     {stats.threadCount} thread
@@ -223,33 +275,34 @@ export default function BookingChatDrawer({
                 <button
                   type="button"
                   onClick={() => changeOpen(false)}
-                  className="rounded-full bg-white/10 px-3 py-2 text-sm font-bold text-white"
+                  className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-xl font-black leading-none text-white transition hover:bg-white/20"
+                  aria-label="Close booking messages"
                 >
-                  Close
+                  x
                 </button>
               </div>
             </div>
 
-            <div className="grid min-h-0 flex-1 grid-rows-[auto_1fr_auto]">
-              <div className="border-b border-[#D6B56D]/20 bg-white p-3">
-                <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_1fr_auto]">
+              <div className="shrink-0 border-b border-[#D6B56D]/20 bg-white px-3 py-2">
+                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
                   {threads.map((thread) => (
                     <button
                       key={thread.id}
                       type="button"
                       onClick={() => changeSelectedThread(thread.id)}
-                      className={`min-w-56 rounded-xl border px-3 py-2 text-left text-sm transition ${
+                      className={`min-w-56 snap-start rounded-xl border px-3 py-2 text-left text-sm transition ${
                         selectedThread?.id === thread.id
-                          ? "border-[#00A8A8] bg-[#EEF7F6]"
+                          ? "border-[#00A8A8] bg-[#EEF7F6] shadow-sm"
                           : "border-gray-200 bg-white hover:border-[#00A8A8]"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <p className="truncate font-black text-[#0B3C5D]">
+                        <p className="min-w-0 truncate font-black text-[#0B3C5D]">
                           {thread.title}
                         </p>
                         <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${threadBadgeClass(
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold leading-4 ${threadBadgeClass(
                             thread.summary,
                           )}`}
                         >
@@ -264,17 +317,39 @@ export default function BookingChatDrawer({
                 </div>
               </div>
 
-              <div className="min-h-0 overflow-y-auto p-4">
+              {selectedThread ? (
+                <div className="shrink-0 border-b border-[#D6B56D]/20 bg-[#F7F3EA]/95 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-[#0B3C5D]">
+                        {selectedThread.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-gray-600">
+                        {selectedThread.subtitle}
+                      </p>
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-black ${threadBadgeClass(
+                        selectedThread.summary,
+                      )}`}
+                    >
+                      {selectedThread.summary?.badgeLabel || "No messages"}
+                    </span>
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="min-h-0 overflow-y-auto px-3 py-4 sm:px-4">
                 {!selectedThread ? (
-                  <p className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-sm text-gray-600">
+                  <p className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm leading-6 text-gray-600">
                     {emptyText}
                   </p>
                 ) : loading ? (
-                  <p className="rounded-xl bg-white p-5 text-sm text-gray-600">
+                  <p className="rounded-xl bg-white p-5 text-center text-sm leading-6 text-gray-600">
                     Loading messages...
                   </p>
                 ) : messages.length === 0 ? (
-                  <p className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-sm text-gray-600">
+                  <p className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm leading-6 text-gray-600">
                     No messages yet. Send the first update below.
                   </p>
                 ) : (
@@ -282,17 +357,17 @@ export default function BookingChatDrawer({
                     {messages.map((message, index) => (
                       <div
                         key={`${message.created_at || index}-${message.sender_role}`}
-                        className={`max-w-[86%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${bubbleClass(
+                        className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${bubbleClass(
                           message,
                           viewerRole,
                         )}`}
                       >
-                        <p className="text-xs font-black uppercase opacity-70">
+                        <p className="text-[11px] font-black uppercase tracking-[0.06em] opacity-70">
                           {message.is_internal
                             ? "Internal admin note"
                             : senderLabel(message.sender_role)}
                         </p>
-                        <p className="mt-1 whitespace-pre-line">
+                        <p className="mt-1 whitespace-pre-line break-words">
                           {message.message}
                         </p>
                         {message.created_at ? (
@@ -302,26 +377,22 @@ export default function BookingChatDrawer({
                         ) : null}
                       </div>
                     ))}
+                    <div ref={messagesEndRef} />
                   </div>
                 )}
               </div>
 
               <form
                 onSubmit={sendMessage}
-                className="border-t border-[#D6B56D]/20 bg-white p-4"
+                className="shrink-0 border-t border-[#D6B56D]/20 bg-white p-3 sm:p-4"
               >
-                {selectedThread?.summary?.lastMessagePreview ? (
-                  <p className="mb-3 rounded-xl bg-[#F7F3EA] px-3 py-2 text-xs text-gray-600">
-                    {selectedThread.summary.lastMessagePreview}
-                  </p>
-                ) : null}
-                <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
                   {quickReplies.map((reply) => (
                     <button
                       key={reply}
                       type="button"
                       onClick={() => setDraft(reply)}
-                      className="shrink-0 rounded-full border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-1.5 text-xs font-bold text-[#0B3C5D]"
+                      className="shrink-0 rounded-full border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-1.5 text-xs font-bold leading-none text-[#0B3C5D] transition hover:border-[#00A8A8]"
                     >
                       {reply}
                     </button>
@@ -333,10 +404,10 @@ export default function BookingChatDrawer({
                   rows={3}
                   maxLength={1200}
                   placeholder="Write a message..."
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none focus:border-[#00A8A8]"
+                  className="max-h-28 min-h-24 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#00A8A8]"
                 />
                 {allowInternalNotes ? (
-                  <label className="mt-2 flex items-center gap-2 text-sm font-semibold text-gray-600">
+                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-gray-600">
                     <input
                       type="checkbox"
                       checked={isInternal}
@@ -346,14 +417,14 @@ export default function BookingChatDrawer({
                   </label>
                 ) : null}
                 {error ? (
-                  <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                  <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold leading-5 text-red-700">
                     {error}
                   </p>
                 ) : null}
                 <button
                   type="submit"
                   disabled={sending || !draft.trim() || !selectedThread}
-                  className="mt-3 w-full rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+                  className="mt-3 w-full rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white transition hover:bg-[#008F8F] disabled:opacity-50"
                 >
                   {sending ? "Sending..." : "Send message"}
                 </button>
