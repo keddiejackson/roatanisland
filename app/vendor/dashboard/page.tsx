@@ -12,6 +12,11 @@ import {
   toggleDateLine,
 } from "@/lib/availability-calendar";
 import {
+  bookingThreadSummary,
+  type BookingMessageLike,
+  type BookingThreadSummary,
+} from "@/lib/booking-communication";
+import {
   formatBookingCents,
   formatBookingStatus,
   formatDepositStatus,
@@ -93,6 +98,10 @@ type BookingRow = {
   selected_addons: { name?: string; price_cents?: number }[] | null;
 };
 
+type BookingMessageRow = BookingMessageLike & {
+  booking_id: string;
+};
+
 type AddonRow = {
   id: string;
   listing_id: string;
@@ -111,6 +120,36 @@ type VendorDocument = {
 
 function currentMonthValue() {
   return new Date().toISOString().slice(0, 7);
+}
+
+function summarizeThreads(messages: BookingMessageRow[]) {
+  const grouped = new Map<string, BookingMessageLike[]>();
+
+  for (const message of messages) {
+    grouped.set(message.booking_id, [
+      ...(grouped.get(message.booking_id) || []),
+      message,
+    ]);
+  }
+
+  return Object.fromEntries(
+    [...grouped.entries()].map(([bookingId, bookingMessages]) => [
+      bookingId,
+      bookingThreadSummary(bookingMessages, "vendor"),
+    ]),
+  );
+}
+
+function threadBadgeClass(summary?: BookingThreadSummary) {
+  if (!summary || summary.messageCount === 0) {
+    return "bg-gray-100 text-gray-600";
+  }
+
+  if (summary.needsResponse) {
+    return "bg-[#D6B56D] text-[#0B3C5D]";
+  }
+
+  return "bg-[#EEF7F6] text-[#0B3C5D]";
 }
 
 export default function VendorDashboardPage() {
@@ -134,6 +173,9 @@ export default function VendorDashboardPage() {
   const [listingDrafts, setListingDrafts] = useState<Record<string, ListingDraft>>({});
   const [listingImageFiles, setListingImageFiles] = useState<Record<string, File[]>>({});
   const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [threadSummaries, setThreadSummaries] = useState<
+    Record<string, BookingThreadSummary>
+  >({});
   const [addons, setAddons] = useState<AddonRow[]>([]);
   const [addonForms, setAddonForms] = useState<Record<string, { name: string; priceCents: string }>>({});
   const [documents, setDocuments] = useState<VendorDocument[]>([]);
@@ -150,6 +192,9 @@ export default function VendorDashboardPage() {
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
   const [expandedListingIds, setExpandedListingIds] = useState<Record<string, boolean>>({});
   const [selectedBookingId, setSelectedBookingId] = useState("");
+  const [bookingResponseFilter, setBookingResponseFilter] = useState<
+    "all" | "needs_response"
+  >("all");
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -328,6 +373,24 @@ export default function VendorDashboardPage() {
             ]),
           ),
         );
+        if (bookingRows.length > 0) {
+          const { data: messageRows, error: messageError } = await supabase
+            .from("booking_messages")
+            .select("booking_id, sender_role, sender_email, message, is_internal, created_at")
+            .in(
+              "booking_id",
+              bookingRows.map((booking) => booking.id),
+            )
+            .order("created_at", { ascending: true });
+
+          if (!messageError) {
+            setThreadSummaries(
+              summarizeThreads((messageRows as BookingMessageRow[]) || []),
+            );
+          }
+        } else {
+          setThreadSummaries({});
+        }
       }
 
       setLoading(false);
@@ -814,20 +877,32 @@ export default function VendorDashboardPage() {
   }
 
   const sortedBookings = useMemo(() => sortVendorBookings(bookings), [bookings]);
+  const filteredVendorBookings = useMemo(
+    () =>
+      sortedBookings.filter(
+        (booking) =>
+          bookingResponseFilter === "all" ||
+          Boolean(threadSummaries[booking.id]?.needsResponse),
+      ),
+    [bookingResponseFilter, sortedBookings, threadSummaries],
+  );
   const selectedBooking =
-    sortedBookings.find((booking) => booking.id === selectedBookingId) ||
-    sortedBookings[0];
+    filteredVendorBookings.find((booking) => booking.id === selectedBookingId) ||
+    filteredVendorBookings[0];
 
   const pendingBookings = useMemo(
     () =>
-      sortedBookings.filter((booking) => (booking.status || "new") === "new"),
-    [sortedBookings],
+      filteredVendorBookings.filter((booking) => (booking.status || "new") === "new"),
+    [filteredVendorBookings],
   );
 
   const groupedBookings = useMemo(
-    () => groupBookingsByDate(sortedBookings),
-    [sortedBookings],
+    () => groupBookingsByDate(filteredVendorBookings),
+    [filteredVendorBookings],
   );
+  const needsResponseCount = bookings.filter(
+    (booking) => threadSummaries[booking.id]?.needsResponse,
+  ).length;
 
   const dashboardStats = useMemo(
     () => getVendorDashboardStats({ bookings, listings }),
@@ -1212,9 +1287,23 @@ export default function VendorDashboardPage() {
                 payment notes back to guests.
               </p>
             </div>
-            <span className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
-              {pendingBookings.length} new
-            </span>
+            <div className="flex flex-wrap gap-2">
+              <select
+                value={bookingResponseFilter}
+                onChange={(e) =>
+                  setBookingResponseFilter(
+                    e.target.value as "all" | "needs_response",
+                  )
+                }
+                className="rounded-xl border border-gray-200 bg-[#F7F3EA] px-4 py-3 text-sm font-bold text-[#0B3C5D] outline-none"
+              >
+                <option value="all">All booking threads</option>
+                <option value="needs_response">Needs response</option>
+              </select>
+              <span className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+                {pendingBookings.length} new / {needsResponseCount} need response
+              </span>
+            </div>
           </div>
 
           {bookings.length === 0 ? (
@@ -1241,6 +1330,14 @@ export default function VendorDashboardPage() {
                       </div>
                       <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-[#0B3C5D]">
                         {booking.guests} guest{booking.guests === 1 ? "" : "s"}
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-sm font-bold ${threadBadgeClass(
+                          threadSummaries[booking.id],
+                        )}`}
+                      >
+                        {threadSummaries[booking.id]?.badgeLabel ||
+                          "No messages"}
                       </span>
                     </div>
                     <p className="mt-3 text-sm leading-6 text-gray-700">
@@ -1280,6 +1377,10 @@ export default function VendorDashboardPage() {
                         {booking.guest_message}
                       </p>
                     ) : null}
+                    <p className="mt-3 rounded-lg bg-white p-3 text-sm text-gray-700">
+                      {threadSummaries[booking.id]?.lastMessagePreview ||
+                        "No thread messages yet."}
+                    </p>
                     <label className="mt-4 block text-sm font-bold text-[#0B3C5D]">
                       Note sent to guest
                     </label>
@@ -1376,6 +1477,14 @@ export default function VendorDashboardPage() {
                           <span className="rounded-full bg-white px-3 py-1 text-sm font-semibold capitalize text-[#0B3C5D]">
                             {formatBookingStatus(booking.status)}
                           </span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-sm font-semibold ${threadBadgeClass(
+                              threadSummaries[booking.id],
+                            )}`}
+                          >
+                            {threadSummaries[booking.id]?.badgeLabel ||
+                              "No messages"}
+                          </span>
                         </div>
                         <p className="mt-2 text-sm text-gray-600">
                           {booking.listing_name} - {booking.guests} guest
@@ -1384,6 +1493,10 @@ export default function VendorDashboardPage() {
                         <p className="mt-2 text-sm font-semibold text-[#0B3C5D]">
                           {formatDepositStatus(booking.deposit_status)} -{" "}
                           {formatBookingCents(booking.booking_value_cents)}
+                        </p>
+                        <p className="mt-2 rounded-lg bg-white px-3 py-2 text-sm text-gray-600">
+                          {threadSummaries[booking.id]?.lastMessagePreview ||
+                            "No thread messages yet."}
                         </p>
                       </article>
                     ))}
@@ -1405,13 +1518,14 @@ export default function VendorDashboardPage() {
                     <th className="px-4 py-3">Value</th>
                     <th className="px-4 py-3">Add-ons</th>
                     <th className="px-4 py-3">Message</th>
+                    <th className="px-4 py-3">Thread</th>
                     <th className="px-4 py-3">Your note</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedBookings.map((booking) => (
+                  {filteredVendorBookings.map((booking) => (
                     <tr key={booking.id} className="border-b">
                       <td className="px-4 py-3 font-medium">
                         {booking.listing_name}
@@ -1436,6 +1550,20 @@ export default function VendorDashboardPage() {
                       </td>
                       <td className="max-w-72 px-4 py-3 text-sm text-gray-600">
                         {booking.guest_message || "No message"}
+                      </td>
+                      <td className="max-w-72 px-4 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${threadBadgeClass(
+                            threadSummaries[booking.id],
+                          )}`}
+                        >
+                          {threadSummaries[booking.id]?.badgeLabel ||
+                            "No messages"}
+                        </span>
+                        <p className="mt-2 text-sm text-gray-600">
+                          {threadSummaries[booking.id]?.lastMessagePreview ||
+                            "No thread messages yet."}
+                        </p>
                       </td>
                       <td className="px-4 py-3">
                         <textarea

@@ -36,6 +36,17 @@ export type BookingTimelineItem = {
   tone: "info" | "success" | "warning" | "danger";
 };
 
+export type BookingThreadViewerRole = "guest" | "vendor" | "admin";
+
+export type BookingThreadSummary = {
+  messageCount: number;
+  internalCount: number;
+  lastMessagePreview: string;
+  lastSenderRole: BookingSenderRole | null;
+  badgeLabel: string;
+  needsResponse: boolean;
+};
+
 export const vendorResponseActions = [
   {
     value: "confirmed",
@@ -82,6 +93,78 @@ export function bookingMessagePreview(message: BookingMessageLike) {
     : `${bookingRoleLabel(message.sender_role)}${message.sender_email ? "" : ""}`;
 
   return `${prefix}: ${normalizeBookingMessage(message.message, 140)}`;
+}
+
+function shouldThreadNeedResponse(
+  lastSenderRole: BookingSenderRole | null,
+  viewerRole: BookingThreadViewerRole,
+) {
+  if (!lastSenderRole) return false;
+
+  if (viewerRole === "guest") {
+    return lastSenderRole === "vendor" || lastSenderRole === "admin";
+  }
+
+  return lastSenderRole === "guest";
+}
+
+function threadBadgeLabel({
+  lastSenderRole,
+  viewerRole,
+  needsResponse,
+  messageCount,
+}: {
+  lastSenderRole: BookingSenderRole | null;
+  viewerRole: BookingThreadViewerRole;
+  needsResponse: boolean;
+  messageCount: number;
+}) {
+  if (messageCount === 0) return "No messages";
+  if (needsResponse) {
+    return viewerRole === "guest" ? "New reply" : "Needs response";
+  }
+  if (lastSenderRole === viewerRole) return "Sent";
+  return "Updated";
+}
+
+export function bookingThreadSummary(
+  messages: BookingMessageLike[],
+  viewerRole: BookingThreadViewerRole,
+): BookingThreadSummary {
+  const visibleMessages =
+    viewerRole === "admin"
+      ? messages
+      : messages.filter((message) => !message.is_internal);
+  const publicMessages = visibleMessages.filter((message) => !message.is_internal);
+  const internalCount =
+    viewerRole === "admin"
+      ? messages.filter((message) => message.is_internal).length
+      : 0;
+  const lastMessage = [...publicMessages].sort((first, second) => {
+    const firstTime = first.created_at
+      ? new Date(first.created_at).getTime()
+      : 0;
+    const secondTime = second.created_at
+      ? new Date(second.created_at).getTime()
+      : 0;
+    return firstTime - secondTime;
+  }).at(-1);
+  const lastSenderRole = lastMessage?.sender_role || null;
+  const needsResponse = shouldThreadNeedResponse(lastSenderRole, viewerRole);
+
+  return {
+    messageCount: publicMessages.length,
+    internalCount,
+    lastMessagePreview: lastMessage ? bookingMessagePreview(lastMessage) : "",
+    lastSenderRole,
+    badgeLabel: threadBadgeLabel({
+      lastSenderRole,
+      viewerRole,
+      needsResponse,
+      messageCount: publicMessages.length,
+    }),
+    needsResponse,
+  };
 }
 
 function paymentTimelineItem(

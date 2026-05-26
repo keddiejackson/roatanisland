@@ -1187,6 +1187,13 @@ using (
   )
 );
 
+drop policy if exists "Guests can view own bookings" on public.bookings;
+create policy "Guests can view own bookings"
+on public.bookings
+for select
+to authenticated
+using (lower(email) = lower(auth.jwt() ->> 'email'));
+
 drop policy if exists "Admins can update bookings" on public.bookings;
 create policy "Admins can update bookings"
 on public.bookings

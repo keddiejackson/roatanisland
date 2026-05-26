@@ -7,6 +7,11 @@ import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import { groupBookingsByDate } from "@/lib/availability-calendar";
+import {
+  bookingThreadSummary,
+  type BookingMessageLike,
+  type BookingThreadSummary,
+} from "@/lib/booking-communication";
 import { formatBookingStatus } from "@/lib/booking-flow";
 import { supabase } from "@/lib/supabase";
 
@@ -40,6 +45,10 @@ type BookingWithListingName = BookingRow & {
   listing_name: string;
 };
 
+type BookingMessageRow = BookingMessageLike & {
+  booking_id: string;
+};
+
 function formatDeposit(booking: BookingWithListingName) {
   if (!booking.deposit_status || booking.deposit_status === "not_requested") {
     return "Not requested";
@@ -66,16 +75,52 @@ function formatMoney(cents: number | null) {
   }).format(cents / 100);
 }
 
+function summarizeThreads(messages: BookingMessageRow[]) {
+  const grouped = new Map<string, BookingMessageLike[]>();
+
+  for (const message of messages) {
+    grouped.set(message.booking_id, [
+      ...(grouped.get(message.booking_id) || []),
+      message,
+    ]);
+  }
+
+  return Object.fromEntries(
+    [...grouped.entries()].map(([bookingId, bookingMessages]) => [
+      bookingId,
+      bookingThreadSummary(bookingMessages, "admin"),
+    ]),
+  );
+}
+
+function threadBadgeClass(summary?: BookingThreadSummary) {
+  if (!summary || summary.messageCount === 0) {
+    return "bg-gray-100 text-gray-600";
+  }
+
+  if (summary.needsResponse) {
+    return "bg-[#D6B56D] text-[#0B3C5D]";
+  }
+
+  return "bg-[#EEF7F6] text-[#0B3C5D]";
+}
+
 export default function AdminBookingsPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [bookings, setBookings] = useState<BookingWithListingName[]>([]);
+  const [threadSummaries, setThreadSummaries] = useState<
+    Record<string, BookingThreadSummary>
+  >({});
   const [loading, setLoading] = useState(true);
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedBookingId, setSelectedBookingId] = useState("");
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
+  const [responseFilter, setResponseFilter] = useState<"all" | "needs_response">(
+    "all",
+  );
   const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar");
 
   useEffect(() => {
@@ -131,6 +176,24 @@ export default function AdminBookingsPage() {
       }));
 
       setBookings(enrichedBookings);
+      if (enrichedBookings.length > 0) {
+        const { data: messageRows, error: messageError } = await supabase
+          .from("booking_messages")
+          .select("booking_id, sender_role, sender_email, message, is_internal, created_at")
+          .in(
+            "booking_id",
+            enrichedBookings.map((booking) => booking.id),
+          )
+          .order("created_at", { ascending: true });
+
+        if (!messageError) {
+          setThreadSummaries(
+            summarizeThreads((messageRows as BookingMessageRow[]) || []),
+          );
+        }
+      } else {
+        setThreadSummaries({});
+      }
       setLoading(false);
     }
 
@@ -154,14 +217,18 @@ export default function AdminBookingsPage() {
           booking.guest_message || "",
           booking.vendor_note || "",
           booking.admin_notes || "",
+          threadSummaries[booking.id]?.lastMessagePreview || "",
         ]
           .join(" ")
           .toLowerCase()
           .includes(search.toLowerCase());
+        const matchesResponse =
+          responseFilter === "all" ||
+          Boolean(threadSummaries[booking.id]?.needsResponse);
 
-        return matchesStatus && matchesSearch;
+        return matchesStatus && matchesSearch && matchesResponse;
       }),
-    [bookings, search, statusFilter],
+    [bookings, responseFilter, search, statusFilter, threadSummaries],
   );
 
   const groupedBookings = useMemo(
@@ -185,8 +252,11 @@ export default function AdminBookingsPage() {
       confirmedRequests: filteredBookings.filter(
         (booking) => booking.status === "confirmed",
       ).length,
+      needsResponse: bookings.filter(
+        (booking) => threadSummaries[booking.id]?.needsResponse,
+      ).length,
     }),
-    [filteredBookings],
+    [bookings, filteredBookings, threadSummaries],
   );
 
   if (checkingAuth || !authorized) {
@@ -284,7 +354,7 @@ export default function AdminBookingsPage() {
                 ["Shown requests", bookingSummary.totalRequests],
                 ["Guests", bookingSummary.totalGuests],
                 ["Needs review", bookingSummary.newRequests],
-                ["Confirmed", bookingSummary.confirmedRequests],
+                ["Needs response", bookingSummary.needsResponse],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -299,7 +369,7 @@ export default function AdminBookingsPage() {
                 </div>
               ))}
             </div>
-            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_220px_220px_auto] lg:items-center">
+            <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_190px_190px_190px_auto] lg:items-center">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -328,6 +398,16 @@ export default function AdminBookingsPage() {
               >
                 <option value="calendar">Calendar view</option>
                 <option value="table">Table view</option>
+              </select>
+              <select
+                value={responseFilter}
+                onChange={(e) =>
+                  setResponseFilter(e.target.value as "all" | "needs_response")
+                }
+                className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none focus:border-[#00A8A8]"
+              >
+                <option value="all">All threads</option>
+                <option value="needs_response">Needs response</option>
               </select>
               <p className="text-sm font-semibold text-[#0B3C5D]">
                 {filteredBookings.length} shown
@@ -387,6 +467,14 @@ export default function AdminBookingsPage() {
                           <span className="h-fit rounded-full bg-white px-3 py-1 text-sm font-semibold capitalize text-[#0B3C5D]">
                             {formatBookingStatus(booking.status)}
                           </span>
+                          <span
+                            className={`h-fit rounded-full px-3 py-1 text-sm font-semibold ${threadBadgeClass(
+                              threadSummaries[booking.id],
+                            )}`}
+                          >
+                            {threadSummaries[booking.id]?.badgeLabel ||
+                              "No messages"}
+                          </span>
                         </div>
                         <p className="mt-3 text-sm text-gray-600">
                           {booking.guests} guest
@@ -399,6 +487,10 @@ export default function AdminBookingsPage() {
                               ""}
                           </p>
                         ) : null}
+                        <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm text-gray-600">
+                          {threadSummaries[booking.id]?.lastMessagePreview ||
+                            "No thread messages yet."}
+                        </p>
                         <button
                           type="button"
                           onClick={() => setSelectedBookingId(booking.id)}
@@ -430,6 +522,7 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Commission</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Notes</th>
+                  <th className="px-4 py-3">Messages</th>
                   <th className="px-4 py-3">Thread</th>
                 </tr>
               </thead>
@@ -522,6 +615,20 @@ export default function AdminBookingsPage() {
                         placeholder="Add follow-up notes"
                         disabled={savingBookingId === booking.id}
                       />
+                    </td>
+                    <td className="max-w-72 px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${threadBadgeClass(
+                          threadSummaries[booking.id],
+                        )}`}
+                      >
+                        {threadSummaries[booking.id]?.badgeLabel ||
+                          "No messages"}
+                      </span>
+                      <p className="mt-2 text-sm text-gray-600">
+                        {threadSummaries[booking.id]?.lastMessagePreview ||
+                          "No thread messages yet."}
+                      </p>
                     </td>
                     <td className="px-4 py-3">
                       <button

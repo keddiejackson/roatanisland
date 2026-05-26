@@ -9,6 +9,11 @@ import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import {
+  bookingThreadSummary,
+  type BookingMessageLike,
+  type BookingThreadSummary,
+} from "@/lib/booking-communication";
+import {
   buildGuestPasswordResetRedirect,
   getGuestAuthSubmitLabel,
   getGuestSignOutLabel,
@@ -28,6 +33,10 @@ type Booking = {
   listing_id: string | null;
 };
 
+type BookingMessageRow = BookingMessageLike & {
+  booking_id: string;
+};
+
 function statusBadgeClass(status: string | null) {
   switch ((status || "new").toLowerCase()) {
     case "confirmed":
@@ -39,6 +48,36 @@ function statusBadgeClass(status: string | null) {
     default:
       return "bg-[#FFF3D2] text-[#7A5A00]";
   }
+}
+
+function threadBadgeClass(summary?: BookingThreadSummary) {
+  if (!summary || summary.messageCount === 0) {
+    return "bg-gray-100 text-gray-600";
+  }
+
+  if (summary.needsResponse) {
+    return "bg-[#00A8A8] text-white";
+  }
+
+  return "bg-[#EEF7F6] text-[#0B3C5D]";
+}
+
+function summarizeThreads(messages: BookingMessageRow[]) {
+  const grouped = new Map<string, BookingMessageLike[]>();
+
+  for (const message of messages) {
+    grouped.set(message.booking_id, [
+      ...(grouped.get(message.booking_id) || []),
+      message,
+    ]);
+  }
+
+  return Object.fromEntries(
+    [...grouped.entries()].map(([bookingId, bookingMessages]) => [
+      bookingId,
+      bookingThreadSummary(bookingMessages, "guest"),
+    ]),
+  );
 }
 
 export default function AccountPage() {
@@ -56,6 +95,9 @@ export default function AccountPage() {
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [threadSummaries, setThreadSummaries] = useState<
+    Record<string, BookingThreadSummary>
+  >({});
   const [selectedBookingId, setSelectedBookingId] = useState("");
   const [loading, setLoading] = useState(true);
 
@@ -83,7 +125,28 @@ export default function AccountPage() {
         .select("id, full_name, email, tour_date, tour_time, guests, status, deposit_status, listing_id")
         .eq("email", data.user.email)
         .order("tour_date", { ascending: false });
-      setBookings((bookingRows as Booking[]) || []);
+      const accountBookings = (bookingRows as Booking[]) || [];
+      setBookings(accountBookings);
+
+      if (accountBookings.length > 0) {
+        const { data: messageRows, error: messageError } = await supabase
+          .from("booking_messages")
+          .select("booking_id, sender_role, sender_email, message, is_internal, created_at")
+          .in(
+            "booking_id",
+            accountBookings.map((booking) => booking.id),
+          )
+          .order("created_at", { ascending: true });
+
+        if (!messageError) {
+          setThreadSummaries(
+            summarizeThreads((messageRows as BookingMessageRow[]) || []),
+          );
+        }
+      } else {
+        setThreadSummaries({});
+      }
+
       setLoading(false);
     }
 
@@ -491,14 +554,27 @@ export default function AccountPage() {
                         {booking.deposit_status || "not requested"}
                       </p>
                     </div>
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusBadgeClass(
-                        booking.status,
-                      )}`}
-                    >
-                      {booking.status || "new"}
-                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusBadgeClass(
+                          booking.status,
+                        )}`}
+                      >
+                        {booking.status || "new"}
+                      </span>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${threadBadgeClass(
+                          threadSummaries[booking.id],
+                        )}`}
+                      >
+                        {threadSummaries[booking.id]?.badgeLabel || "No messages"}
+                      </span>
+                    </div>
                   </div>
+                  <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">
+                    {threadSummaries[booking.id]?.lastMessagePreview ||
+                      "No booking messages yet."}
+                  </p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
