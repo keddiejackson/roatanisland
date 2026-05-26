@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AnalyticsTracker from "./AnalyticsTracker";
+import GlobalAccountButton from "./GlobalAccountButton";
 import SiteBrandingProvider from "./SiteBrandingProvider";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default function RootLayout({
         <SiteBrandingProvider>
           <AnalyticsTracker />
           {children}
+          <GlobalAccountButton />
         </SiteBrandingProvider>
       </body>
     </html>

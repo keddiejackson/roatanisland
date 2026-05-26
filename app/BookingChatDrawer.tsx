@@ -9,6 +9,7 @@ import {
   type BookingThreadSummary,
   type BookingThreadViewerRole,
 } from "@/lib/booking-communication";
+import { profileInitials } from "@/lib/user-profile";
 import { supabase } from "@/lib/supabase";
 
 export type BookingChatThread = {
@@ -50,13 +51,47 @@ function bubbleClass(
   viewerRole: BookingThreadViewerRole,
 ) {
   if (message.is_internal) {
-    return "ml-auto border border-[#D6B56D]/35 bg-[#FFF8E8] text-[#0B3C5D]";
+    return "border border-[#D6B56D]/35 bg-[#FFF8E8] text-[#0B3C5D]";
   }
 
   const isMine = message.sender_role === viewerRole;
   return isMine
-    ? "ml-auto bg-[#00A8A8] text-white"
-    : "mr-auto bg-white text-[#17324D]";
+    ? "bg-[#00A8A8] text-white"
+    : "bg-white text-[#17324D]";
+}
+
+function messageDisplayName(message: BookingMessageLike) {
+  if (message.is_internal) return "Internal admin note";
+
+  return message.sender_display_name || senderLabel(message.sender_role);
+}
+
+function messageIsMine(
+  message: BookingMessageLike,
+  viewerRole: BookingThreadViewerRole,
+) {
+  return !message.is_internal && message.sender_role === viewerRole;
+}
+
+function MessageAvatar({ message }: { message: BookingMessageLike }) {
+  const initials = profileInitials(
+    message.sender_display_name,
+    message.sender_email,
+  );
+
+  return (
+    <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[11px] font-black text-[#0B3C5D] shadow-sm ring-1 ring-[#0B3C5D]/10">
+      {message.sender_profile_image_url ? (
+        <img
+          src={message.sender_profile_image_url}
+          alt=""
+          className="size-full object-cover"
+        />
+      ) : (
+        initials
+      )}
+    </span>
+  );
 }
 
 function threadBadgeClass(summary?: BookingThreadSummary) {
@@ -415,32 +450,44 @@ export default function BookingChatDrawer({
                           </span>
                           <span className="h-px flex-1 bg-[#D6B56D]/20" />
                         </div>
-                        {group.messages.map((message, index) => (
-                          <div
-                            key={`${message.id || message.created_at || index}-${message.sender_role}`}
-                            className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${bubbleClass(
-                              message,
-                              viewerRole,
-                            )}`}
-                          >
-                            <p className="text-[11px] font-black uppercase tracking-[0.06em] opacity-70">
-                              {message.is_internal
-                                ? "Internal admin note"
-                                : senderLabel(message.sender_role)}
-                            </p>
-                            <p className="mt-1 whitespace-pre-line break-words">
-                              {message.message}
-                            </p>
-                            {message.created_at ? (
-                              <p className="mt-2 text-[11px] opacity-70">
-                                {new Date(message.created_at).toLocaleTimeString([], {
-                                  hour: "numeric",
-                                  minute: "2-digit",
-                                })}
-                              </p>
-                            ) : null}
-                          </div>
-                        ))}
+                        {group.messages.map((message, index) => {
+                          const isMine = messageIsMine(message, viewerRole);
+
+                          return (
+                            <div
+                              key={`${message.id || message.created_at || index}-${message.sender_role}`}
+                              className={`flex items-end gap-2 ${
+                                isMine ? "justify-end" : "justify-start"
+                              }`}
+                            >
+                              {isMine ? null : <MessageAvatar message={message} />}
+                              <div
+                                className={`max-w-[min(82%,420px)] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${bubbleClass(
+                                  message,
+                                  viewerRole,
+                                )}`}
+                              >
+                                <p className="truncate text-[11px] font-black uppercase tracking-[0.06em] opacity-70">
+                                  {messageDisplayName(message)}
+                                </p>
+                                <p className="mt-1 whitespace-pre-line break-words">
+                                  {message.message}
+                                </p>
+                                {message.created_at ? (
+                                  <p className="mt-2 text-[11px] opacity-70">
+                                    {new Date(
+                                      message.created_at,
+                                    ).toLocaleTimeString([], {
+                                      hour: "numeric",
+                                      minute: "2-digit",
+                                    })}
+                                  </p>
+                                ) : null}
+                              </div>
+                              {isMine ? <MessageAvatar message={message} /> : null}
+                            </div>
+                          );
+                        })}
                       </div>
                     ))}
                     {lastReadAt ? (

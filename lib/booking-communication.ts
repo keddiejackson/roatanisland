@@ -4,6 +4,8 @@ export type BookingMessageLike = {
   id?: string | null;
   sender_role: BookingSenderRole;
   sender_email?: string | null;
+  sender_display_name?: string | null;
+  sender_profile_image_url?: string | null;
   message: string;
   is_internal?: boolean | null;
   created_at?: string | null;

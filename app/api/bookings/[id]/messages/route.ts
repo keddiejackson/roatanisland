@@ -5,6 +5,7 @@ import {
   type BookingMessageLike,
   type BookingEventLike,
 } from "@/lib/booking-communication";
+import { enrichBookingMessagesWithProfiles } from "@/lib/booking-message-profiles";
 import { markBookingThreadRead } from "@/lib/booking-message-reads";
 import {
   escapeHtml,
@@ -116,14 +117,15 @@ async function getConversation(booking: BookingSnapshot, includeInternal = false
 
   const messages = ((messagesResult.data as BookingMessageLike[] | null) || [])
     .filter((message) => includeInternal || !message.is_internal);
+  const enrichedMessages = await enrichBookingMessagesWithProfiles(messages);
   const events = (eventsResult.data as BookingEventLike[] | null) || [];
 
   return {
-    messages,
+    messages: enrichedMessages,
     events,
     timeline: bookingTimeline({
       booking,
-      messages,
+      messages: enrichedMessages,
       events,
     }),
   };
@@ -252,5 +254,12 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ message: createdMessage, emailed: notifyByEmail });
+  const [profiledMessage] = await enrichBookingMessagesWithProfiles([
+    createdMessage as BookingMessageLike,
+  ]);
+
+  return NextResponse.json({
+    message: profiledMessage || createdMessage,
+    emailed: notifyByEmail,
+  });
 }

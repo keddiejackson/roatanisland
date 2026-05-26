@@ -22,6 +22,7 @@ import {
   type GuestAuthMode,
 } from "@/lib/guest-account-actions";
 import { supabase } from "@/lib/supabase";
+import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
 
 type Booking = {
   id: string;
@@ -42,6 +43,12 @@ type BookingMessageRow = BookingMessageLike & {
 type BookingReadReceiptRow = {
   booking_id: string;
   last_read_at: string | null;
+};
+
+type GuestProfile = {
+  email: string | null;
+  display_name: string | null;
+  profile_image_url: string | null;
 };
 
 function statusBadgeClass(status: string | null) {
@@ -109,6 +116,13 @@ export default function AccountPage() {
   const [authMessageTone, setAuthMessageTone] = useState<"error" | "success">(
     "success",
   );
+  const [profileForm, setProfileForm] = useState({
+    displayName: "",
+    profileImageUrl: "",
+  });
+  const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -138,6 +152,26 @@ export default function AccountPage() {
       }
       setEmail(data.user.email);
       setSignedInEmail(data.user.email);
+      const { data: sessionData } = await supabase.auth.getSession();
+
+      if (sessionData.session?.access_token) {
+        const profileResponse = await fetch("/api/account/profile", {
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+        });
+
+        if (profileResponse.ok) {
+          const result = (await profileResponse.json()) as {
+            profile?: GuestProfile;
+          };
+          setProfileForm({
+            displayName: result.profile?.display_name || "",
+            profileImageUrl: result.profile?.profile_image_url || "",
+          });
+        }
+      }
+
       const { data: bookingRows } = await supabase
         .from("bookings")
         .select("id, full_name, email, tour_date, tour_time, guests, status, deposit_status, listing_id")
@@ -336,9 +370,76 @@ export default function AccountPage() {
     setPassword("");
     setConfirmPassword("");
     setBookings([]);
+    setProfileForm({ displayName: "", profileImageUrl: "" });
+    setProfileImageFile(null);
     setAuthMode("signin");
     router.refresh();
     window.location.reload();
+  }
+
+  async function saveProfile(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setProfileSaving(true);
+    setProfileMessage("");
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setProfileSaving(false);
+      setProfileMessage("Please sign in again to update your profile.");
+      return;
+    }
+
+    let imageUrl = profileForm.profileImageUrl;
+
+    if (profileImageFile) {
+      const formData = new FormData();
+      formData.append("image", profileImageFile);
+
+      const uploadResponse = await fetch("/api/uploads/guest-profile-image", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+      const uploadResult = await uploadResponse.json();
+
+      if (!uploadResponse.ok) {
+        setProfileSaving(false);
+        setProfileMessage(uploadResult.error || "Unable to upload image.");
+        return;
+      }
+
+      imageUrl = uploadResult.imageUrl || "";
+    }
+
+    const response = await fetch("/api/account/profile", {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        displayName: profileForm.displayName,
+        profileImageUrl: imageUrl,
+      }),
+    });
+    const result = await response.json();
+    setProfileSaving(false);
+
+    if (!response.ok) {
+      setProfileMessage(result.error || "Unable to save profile.");
+      return;
+    }
+
+    setProfileImageFile(null);
+    setProfileForm({
+      displayName: result.profile?.display_name || "",
+      profileImageUrl: result.profile?.profile_image_url || "",
+    });
+    setProfileMessage("Profile saved.");
   }
 
   if (loading) {
@@ -348,6 +449,14 @@ export default function AccountPage() {
   const hasSignedIn = Boolean(signedInEmail);
   const isUpdatingPassword = authMode === "updatePassword";
   const latestBooking = bookings[0];
+  const profileDisplayName = displayNameFromProfile({
+    display_name: profileForm.displayName,
+    email: signedInEmail,
+  });
+  const profileAvatarInitials = profileInitials(
+    profileForm.displayName,
+    signedInEmail,
+  );
   const confirmedCount = bookings.filter(
     (booking) => booking.status === "confirmed",
   ).length;
@@ -414,6 +523,88 @@ export default function AccountPage() {
             </div>
           ) : null}
         </section>
+
+        {hasSignedIn ? (
+          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+            <form
+              onSubmit={saveProfile}
+              className="grid gap-5 md:grid-cols-[auto_1fr_auto] md:items-end"
+            >
+              <div className="flex items-center gap-4 md:block">
+                <div className="grid size-20 place-items-center overflow-hidden rounded-2xl bg-[#EEF7F6] text-xl font-black text-[#007B7B] shadow-inner">
+                  {profileForm.profileImageUrl ? (
+                    <img
+                      src={profileForm.profileImageUrl}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    profileAvatarInitials
+                  )}
+                </div>
+                <div className="md:hidden">
+                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+                    Profile
+                  </p>
+                  <h2 className="text-xl font-black text-[#0B3C5D]">
+                    {profileDisplayName}
+                  </h2>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="sm:col-span-2 hidden md:block">
+                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+                    Profile
+                  </p>
+                  <h2 className="mt-1 text-2xl font-black text-[#0B3C5D]">
+                    Chat identity
+                  </h2>
+                </div>
+                <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
+                  Display name
+                  <input
+                    value={profileForm.displayName}
+                    onChange={(e) =>
+                      setProfileForm((current) => ({
+                        ...current,
+                        displayName: e.target.value,
+                      }))
+                    }
+                    placeholder="Your name"
+                    className="rounded-xl border border-gray-300 px-4 py-3 font-normal"
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
+                  Profile picture
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) =>
+                      setProfileImageFile(e.target.files?.[0] || null)
+                    }
+                    className="rounded-xl border border-gray-300 px-4 py-3 text-sm font-normal"
+                  />
+                </label>
+                <p className="sm:col-span-2 text-sm leading-6 text-gray-600">
+                  This name and picture can appear beside your booking chat
+                  messages.
+                </p>
+                {profileMessage ? (
+                  <p className="sm:col-span-2 rounded-xl bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+                    {profileMessage}
+                  </p>
+                ) : null}
+              </div>
+              <button
+                type="submit"
+                disabled={profileSaving}
+                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+              >
+                {profileSaving ? "Saving..." : "Save profile"}
+              </button>
+            </form>
+          </section>
+        ) : null}
 
         {hasSignedIn ? (
           <GuestTravelCommandCenter

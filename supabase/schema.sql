@@ -234,6 +234,19 @@ on public.booking_message_reads(booking_id);
 create index if not exists booking_message_reads_reader_idx
 on public.booking_message_reads(reader_role, reader_email);
 
+create table if not exists public.guest_profiles (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null unique,
+  email text not null,
+  display_name text,
+  profile_image_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists guest_profiles_email_idx
+on public.guest_profiles(lower(email));
+
 create table if not exists public.booking_events (
   id uuid primary key default gen_random_uuid(),
   booking_id uuid not null references public.bookings(id) on delete cascade,
@@ -635,6 +648,7 @@ alter table public.listings enable row level security;
 alter table public.bookings enable row level security;
 alter table public.booking_messages enable row level security;
 alter table public.booking_message_reads enable row level security;
+alter table public.guest_profiles enable row level security;
 alter table public.booking_events enable row level security;
 alter table public.analytics_events enable row level security;
 alter table public.app_errors enable row level security;
@@ -657,6 +671,7 @@ grant select, insert on public.listings to anon, authenticated;
 grant select, insert on public.bookings to anon, authenticated;
 grant select, insert on public.booking_messages to authenticated;
 grant select, insert, update on public.booking_message_reads to authenticated;
+grant select, insert, update on public.guest_profiles to authenticated;
 grant select, insert on public.booking_events to authenticated;
 grant insert on public.analytics_events to anon, authenticated;
 grant select on public.analytics_events to authenticated;
@@ -688,6 +703,33 @@ on public.admin_users
 for select
 to authenticated
 using (lower(email) = lower(auth.jwt() ->> 'email'));
+
+drop policy if exists "Guests can manage own profile" on public.guest_profiles;
+create policy "Guests can manage own profile"
+on public.guest_profiles
+for all
+to authenticated
+using (
+  user_id = auth.uid()
+  and lower(email) = lower(auth.jwt() ->> 'email')
+)
+with check (
+  user_id = auth.uid()
+  and lower(email) = lower(auth.jwt() ->> 'email')
+);
+
+drop policy if exists "Admins can view guest profiles" on public.guest_profiles;
+create policy "Admins can view guest profiles"
+on public.guest_profiles
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
 
 drop policy if exists "Vendors can view own account link" on public.vendor_users;
 create policy "Vendors can view own account link"
