@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AnalyticsTracker from "./AnalyticsTracker";
+import GlobalBookingChat from "./GlobalBookingChat";
 import GlobalAccountButton from "./GlobalAccountButton";
 import SessionIdleTimeout from "./SessionIdleTimeout";
 import SiteBrandingProvider from "./SiteBrandingProvider";
@@ -39,6 +40,7 @@ export default function RootLayout({
           <AnalyticsTracker />
           <SessionIdleTimeout />
           {children}
+          <GlobalBookingChat />
           <GlobalAccountButton />
         </SiteBrandingProvider>
       </body>

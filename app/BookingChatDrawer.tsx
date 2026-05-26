@@ -30,6 +30,7 @@ type BookingChatDrawerProps = {
   threads: BookingChatThread[];
   viewerRole: BookingThreadViewerRole;
   allowInternalNotes?: boolean;
+  showWhenEmpty?: boolean;
   emptyText?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -122,6 +123,7 @@ export default function BookingChatDrawer({
   threads,
   viewerRole,
   allowInternalNotes = false,
+  showWhenEmpty = false,
   emptyText = "No booking conversations yet.",
   open,
   onOpenChange,
@@ -382,7 +384,7 @@ export default function BookingChatDrawer({
     setLastSyncedAt(new Date().toISOString());
   }
 
-  if (threads.length === 0) {
+  if (threads.length === 0 && !showWhenEmpty) {
     return null;
   }
 
