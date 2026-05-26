@@ -7,6 +7,10 @@ import {
   estimateBookingTotalCents,
   formatBookingCents,
 } from "@/lib/booking-flow";
+import {
+  buildGuestProfileBookingPrefill,
+  type GuestTravelProfile,
+} from "@/lib/guest-command-center";
 import { supabase } from "@/lib/supabase";
 
 type BookingFormProps = {
@@ -71,6 +75,17 @@ function availabilityToneClass(tone: AvailabilityStatus["tone"]) {
   return "border-[#00A8A8]/25 bg-[#EEF7F6] text-[#0B3C5D]";
 }
 
+function readGuestProfile(): GuestTravelProfile | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const profile = JSON.parse(localStorage.getItem("roatan-guest-profile") || "");
+    return profile || null;
+  } catch {
+    return null;
+  }
+}
+
 export default function BookingForm({
   listingId,
   initialDate = "",
@@ -100,6 +115,24 @@ export default function BookingForm({
   const [availabilityStatus, setAvailabilityStatus] =
     useState<AvailabilityStatus | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+
+  useEffect(() => {
+    const profile = readGuestProfile();
+
+    if (profile) {
+      const prefill = buildGuestProfileBookingPrefill(profile);
+      setFullName((current) => current || prefill.fullName);
+      setGuests((current) => current || prefill.guests);
+      setPickupPreference((current) => current || prefill.pickupPreference);
+      setGuestMessage((current) => current || prefill.guestMessage);
+    }
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) {
+        setEmail((current) => current || data.user?.email || "");
+      }
+    });
+  }, []);
 
   useEffect(() => {
     async function fetchListing() {

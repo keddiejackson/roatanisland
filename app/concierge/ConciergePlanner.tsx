@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   buildConciergePlan,
   buildPlanShareUrl,
@@ -10,6 +10,11 @@ import {
   type ConciergeListing,
   type ConciergePlan,
 } from "@/lib/guest-concierge";
+import {
+  buildGuestProfileConciergePrefill,
+  type GuestTravelProfile,
+} from "@/lib/guest-command-center";
+import { supabase } from "@/lib/supabase";
 
 const interestOptions = [
   "beach",
@@ -43,25 +48,77 @@ function savePlan(plan: ConciergePlan) {
   );
 }
 
+function readGuestProfile(): GuestTravelProfile | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const profile = JSON.parse(localStorage.getItem("roatan-guest-profile") || "");
+    return profile || null;
+  } catch {
+    return null;
+  }
+}
+
+function getInitialGuestValues() {
+  const profile = readGuestProfile();
+
+  if (!profile) {
+    return {
+      guests: "2",
+      arrivalType: "Cruise",
+      pickupArea: "Coxen Hole",
+      tripStyle: "Family",
+      budget: "Moderate",
+      guestName: "",
+      guestPhone: "",
+      notes: "",
+    };
+  }
+
+  const prefill = buildGuestProfileConciergePrefill(profile);
+
+  return {
+    guests: prefill.guests || "2",
+    arrivalType: prefill.arrivalType || "Cruise",
+    pickupArea: prefill.pickupArea || "Coxen Hole",
+    tripStyle: prefill.tripStyle || "Family",
+    budget: prefill.budget || "Moderate",
+    guestName: prefill.guestName,
+    guestPhone: prefill.guestPhone,
+    notes: prefill.notes,
+  };
+}
+
 export default function ConciergePlanner({
   listings,
 }: {
   listings: ConciergeListing[];
 }) {
+  const [initialGuestValues] = useState(getInitialGuestValues);
   const [name, setName] = useState("My Roatan Day");
   const [date, setDate] = useState("");
-  const [guests, setGuests] = useState("2");
-  const [arrivalType, setArrivalType] = useState("Cruise");
-  const [pickupArea, setPickupArea] = useState("Coxen Hole");
-  const [tripStyle, setTripStyle] = useState("Family");
-  const [budget, setBudget] = useState("Moderate");
+  const [guests, setGuests] = useState(initialGuestValues.guests);
+  const [arrivalType, setArrivalType] = useState(
+    initialGuestValues.arrivalType,
+  );
+  const [pickupArea, setPickupArea] = useState(initialGuestValues.pickupArea);
+  const [tripStyle, setTripStyle] = useState(initialGuestValues.tripStyle);
+  const [budget, setBudget] = useState(initialGuestValues.budget);
   const [interests, setInterests] = useState(["beach", "cruise"]);
-  const [guestName, setGuestName] = useState("");
+  const [guestName, setGuestName] = useState(initialGuestValues.guestName);
   const [guestEmail, setGuestEmail] = useState("");
-  const [guestPhone, setGuestPhone] = useState("");
-  const [notes, setNotes] = useState("");
+  const [guestPhone, setGuestPhone] = useState(initialGuestValues.guestPhone);
+  const [notes, setNotes] = useState(initialGuestValues.notes);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) {
+        setGuestEmail((current) => current || data.user?.email || "");
+      }
+    });
+  }, []);
 
   const matches = useMemo(
     () =>
