@@ -56,17 +56,24 @@ const logoShapePresets: Record<
 };
 
 const logoNumberControls = [
-  { field: "logoWidthPx", label: "Width", min: 72, max: 520, step: 1 },
-  { field: "logoHeightPx", label: "Height", min: 32, max: 220, step: 1 },
-  { field: "logoPaddingPx", label: "Padding", min: 0, max: 40, step: 1 },
-  { field: "logoRadiusPx", label: "Corner Radius", min: 0, max: 999, step: 1 },
-  { field: "logoBorderWidthPx", label: "Border", min: 0, max: 12, step: 1 },
+  { field: "logoWidthPx", label: "Width", min: 24, max: 2400, step: 1 },
+  { field: "logoHeightPx", label: "Height", min: 24, max: 1200, step: 1 },
+  { field: "logoPaddingPx", label: "Padding", min: 0, max: 240, step: 1 },
+  { field: "logoRadiusPx", label: "Corner Radius", min: 0, max: 2000, step: 1 },
+  { field: "logoBorderWidthPx", label: "Border", min: 0, max: 80, step: 1 },
   { field: "logoOpacity", label: "Opacity", min: 0.25, max: 1, step: 0.05 },
-  { field: "logoRotateDeg", label: "Rotation", min: -15, max: 15, step: 1 },
-  { field: "logoScale", label: "Scale", min: 0.5, max: 1.5, step: 0.05 },
+  { field: "logoRotateDeg", label: "Rotation", min: -180, max: 180, step: 1 },
+  { field: "logoScale", label: "Scale", min: 0.1, max: 4, step: 0.05 },
 ] as const;
 
 type NumericLogoField = (typeof logoNumberControls)[number]["field"];
+
+const logoPlacementFields = [
+  { field: "showCustomLogoOnSite", label: "Website pages" },
+  { field: "showCustomLogoInChat", label: "Booking chat" },
+  { field: "showCustomLogoInEmail", label: "Emails" },
+  { field: "showCustomLogoAsFavicon", label: "Browser tab" },
+] as const;
 
 const businessSettingFields = [
   { field: "siteName", label: "Site Name", rows: 1 },
@@ -331,6 +338,30 @@ export default function AdminSettingsPage() {
                           {logoUploadError}
                         </p>
                       )}
+                    </div>
+
+                    <div className="grid gap-3 rounded-2xl border border-[#D6B56D]/20 bg-[#FFF9EC] p-4">
+                      <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                        Use Logo In
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {logoPlacementFields.map(({ field, label }) => (
+                          <label
+                            key={field}
+                            className="flex items-center gap-3 rounded-xl border border-[#D6B56D]/30 bg-white px-4 py-3 text-sm font-bold text-[#0B3C5D]"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={Boolean(settings[field])}
+                              onChange={(e) =>
+                                updateSetting(field, e.target.checked)
+                              }
+                              className="h-4 w-4 accent-[#00A8A8]"
+                            />
+                            {label}
+                          </label>
+                        ))}
+                      </div>
                     </div>
                   </div>
 

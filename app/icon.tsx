@@ -5,9 +5,9 @@ import { resolveBrandingIconSource } from "@/lib/site-icon-source";
 import {
   logoIconFrameStyle,
   logoIconImageStyle,
-  normalizeSiteBranding,
+  shouldUseCustomLogo,
 } from "@/lib/site-branding";
-import { supabaseServer } from "@/lib/supabase-server";
+import { getSiteBranding } from "@/lib/site-branding-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,14 +24,9 @@ async function getFallbackLogoSource() {
 
 async function getLogoIconData() {
   const fallbackLogoSource = await getFallbackLogoSource();
-  const { data } = await supabaseServer
-    .from("site_settings")
-    .select("value")
-    .eq("key", "site")
-    .maybeSingle();
-  const branding = normalizeSiteBranding(data?.value);
+  const branding = await getSiteBranding();
   const logoSource = await resolveBrandingIconSource(
-    branding.logoUrl,
+    shouldUseCustomLogo(branding, "favicon") ? branding.logoUrl : "",
     fallbackLogoSource,
     (url) => fetch(url, { cache: "no-store" }),
   );

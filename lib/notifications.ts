@@ -1,4 +1,10 @@
 import { logAppError } from "@/lib/error-log";
+import {
+  logoImageStyle,
+  shouldUseCustomLogo,
+  type SiteBranding,
+} from "@/lib/site-branding";
+import { getSiteBranding } from "@/lib/site-branding-server";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type AdminNotification = {
@@ -12,22 +18,43 @@ type EmailNotification = AdminNotification & {
   to: string | string[];
 };
 
-function emailShell(title: string, body: string) {
+function defaultEmailLogo(siteUrl: string) {
+  const logoUrl = `${siteUrl}/images/roatan-island-life-mark.svg`;
+
+  return `
+    <div style="display:inline-flex;align-items:center;gap:12px;background:#ffffff;border-radius:16px;padding:10px 14px">
+      <img src="${escapeHtml(logoUrl)}" alt="Roatan Island Life" width="48" height="48" style="display:block;width:48px;height:48px" />
+      <div>
+        <div style="font-size:20px;font-weight:900;line-height:1;color:#082a44">Roatan</div>
+        <div style="margin-top:6px;font-size:11px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:#c29414">Island Life</div>
+      </div>
+    </div>
+  `;
+}
+
+function customEmailLogo(branding: SiteBranding) {
+  const imageStyle = logoImageStyle(branding);
+
+  return `
+    <div style="display:inline-block;max-width:100%;background:${branding.logoBackgroundColor};border:${branding.logoBorderWidthPx}px solid ${branding.logoBorderColor};border-radius:${branding.logoRadiusPx}px;padding:${branding.logoPaddingPx}px;overflow:hidden;box-shadow:0 18px 45px rgba(8,42,68,.16);transform:rotate(${branding.logoRotateDeg}deg) scale(${branding.logoScale})">
+      <img src="${escapeHtml(branding.logoUrl)}" alt="Roatan Island Life" width="${branding.logoWidthPx}" height="${branding.logoHeightPx}" style="display:block;width:${branding.logoWidthPx}px;height:${branding.logoHeightPx}px;max-width:100%;object-fit:${String(imageStyle.objectFit)};object-position:${String(imageStyle.objectPosition)};opacity:${branding.logoOpacity}" />
+    </div>
+  `;
+}
+
+async function emailShell(title: string, body: string) {
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || "https://www.roatanisland.life";
-  const logoUrl = `${siteUrl}/images/roatan-island-life-mark.svg`;
+  const branding = await getSiteBranding();
+  const logoMarkup = shouldUseCustomLogo(branding, "email")
+    ? customEmailLogo(branding)
+    : defaultEmailLogo(siteUrl);
 
   return `
     <div style="margin:0;background:#f7f3ea;padding:32px;font-family:Arial,sans-serif;color:#17324d">
       <div style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:18px;overflow:hidden">
         <div style="background:#0b3c5d;color:#ffffff;padding:24px">
-          <div style="display:inline-flex;align-items:center;gap:12px;background:#ffffff;border-radius:16px;padding:10px 14px">
-            <img src="${logoUrl}" alt="Roatan Island Life" width="48" height="48" style="display:block;width:48px;height:48px" />
-            <div>
-              <div style="font-size:20px;font-weight:900;line-height:1;color:#082a44">Roatan</div>
-              <div style="margin-top:6px;font-size:11px;font-weight:900;letter-spacing:.24em;text-transform:uppercase;color:#c29414">Island Life</div>
-            </div>
-          </div>
+          ${logoMarkup}
           <div style="margin-top:12px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9ee8e3">RoatanIsland.life</div>
           <h1 style="margin:10px 0 0;font-size:28px;line-height:1.2">${escapeHtml(title)}</h1>
         </div>
@@ -51,13 +78,10 @@ export function brandedEmail(title: string, rows: [string, string | number | nul
     )
     .join("");
 
-  return emailShell(
-    title,
-    `
-      ${intro ? `<p style="margin-top:0">${escapeHtml(intro)}</p>` : ""}
-      <table style="width:100%;border-collapse:collapse">${rowHtml}</table>
-    `,
-  );
+  return `
+    ${intro ? `<p style="margin-top:0">${escapeHtml(intro)}</p>` : ""}
+    <table style="width:100%;border-collapse:collapse">${rowHtml}</table>
+  `;
 }
 
 async function getAdminRecipients() {
@@ -141,9 +165,7 @@ export async function sendEmailNotification(message: EmailNotification) {
         "RoatanIsland.life <onboarding@resend.dev>",
       to: recipients,
       subject: message.subject,
-      html: message.html.includes("RoatanIsland.life")
-        ? message.html
-        : emailShell(message.subject, message.html),
+      html: await emailShell(message.subject, message.html),
       text: message.text,
       reply_to: message.replyTo,
     }),

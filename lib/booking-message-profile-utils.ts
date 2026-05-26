@@ -39,11 +39,21 @@ export function applyBookingMessageProfiles<T extends BookingMessageProfileInput
   messages,
   guestProfiles,
   vendorProfiles,
+  adminProfile: customAdminProfile,
 }: {
   messages: T[];
   guestProfiles: MessageProfile[];
   vendorProfiles: MessageProfile[];
+  adminProfile?: {
+    displayName?: string | null;
+    imageUrl?: string | null;
+  };
 }) {
+  const resolvedAdminProfile = {
+    displayName: customAdminProfile?.displayName || adminProfile.displayName,
+    imageUrl: customAdminProfile?.imageUrl ?? adminProfile.imageUrl,
+  };
+
   const guestByEmail = new Map(
     guestProfiles.map((profile) => [
       normalizeProfileEmail(profile.email),
@@ -61,8 +71,8 @@ export function applyBookingMessageProfiles<T extends BookingMessageProfileInput
     if (message.sender_role === "admin" || message.is_internal) {
       return {
         ...message,
-        sender_display_name: adminProfile.displayName,
-        sender_profile_image_url: adminProfile.imageUrl,
+        sender_display_name: resolvedAdminProfile.displayName,
+        sender_profile_image_url: resolvedAdminProfile.imageUrl,
       };
     }
 

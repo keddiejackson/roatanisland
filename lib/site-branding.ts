@@ -9,6 +9,7 @@ export type LogoShape = (typeof logoShapes)[number];
 export type LogoFit = (typeof logoFits)[number];
 export type LogoPosition = (typeof logoPositions)[number];
 export type LogoShadow = (typeof logoShadows)[number];
+export type LogoPlacement = "site" | "chat" | "email" | "favicon";
 
 export type SiteBranding = {
   logoUrl: string;
@@ -27,6 +28,10 @@ export type SiteBranding = {
   logoOpacity: number;
   logoRotateDeg: number;
   logoScale: number;
+  showCustomLogoOnSite: boolean;
+  showCustomLogoInChat: boolean;
+  showCustomLogoInEmail: boolean;
+  showCustomLogoAsFavicon: boolean;
 };
 
 export const defaultSiteBranding: SiteBranding = {
@@ -46,6 +51,10 @@ export const defaultSiteBranding: SiteBranding = {
   logoOpacity: 1,
   logoRotateDeg: 0,
   logoScale: 1,
+  showCustomLogoOnSite: true,
+  showCustomLogoInChat: true,
+  showCustomLogoInEmail: true,
+  showCustomLogoAsFavicon: true,
 };
 
 const logoSizeDefaults: Record<
@@ -141,6 +150,10 @@ function normalizeHexColor(value: unknown, fallback: string) {
   return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
 }
 
+function normalizeBoolean(value: unknown, fallback: boolean) {
+  return typeof value === "boolean" ? value : fallback;
+}
+
 export function normalizeSiteBranding(value: unknown): SiteBranding {
   if (!value || typeof value !== "object") {
     return defaultSiteBranding;
@@ -163,14 +176,14 @@ export function normalizeSiteBranding(value: unknown): SiteBranding {
     logoWidthPx: normalizeWholeNumber(
       settings.logoWidthPx,
       sizeDefaults.logoWidthPx,
-      72,
-      520,
+      24,
+      2400,
     ),
     logoHeightPx: normalizeWholeNumber(
       settings.logoHeightPx,
       sizeDefaults.logoHeightPx,
-      32,
-      220,
+      24,
+      1200,
     ),
     logoFit: isLogoFit(settings.logoFit)
       ? settings.logoFit
@@ -182,13 +195,13 @@ export function normalizeSiteBranding(value: unknown): SiteBranding {
       settings.logoPaddingPx,
       defaultSiteBranding.logoPaddingPx,
       0,
-      40,
+      240,
     ),
     logoRadiusPx: normalizeWholeNumber(
       settings.logoRadiusPx,
       shapeDefaults.logoRadiusPx,
       0,
-      999,
+      2000,
     ),
     logoBackgroundColor: normalizeHexColor(
       settings.logoBackgroundColor,
@@ -202,7 +215,7 @@ export function normalizeSiteBranding(value: unknown): SiteBranding {
       settings.logoBorderWidthPx,
       defaultSiteBranding.logoBorderWidthPx,
       0,
-      12,
+      80,
     ),
     logoShadow: isLogoShadow(settings.logoShadow)
       ? settings.logoShadow
@@ -216,14 +229,30 @@ export function normalizeSiteBranding(value: unknown): SiteBranding {
     logoRotateDeg: normalizeWholeNumber(
       settings.logoRotateDeg,
       defaultSiteBranding.logoRotateDeg,
-      -15,
-      15,
+      -180,
+      180,
     ),
     logoScale: normalizeNumber(
       settings.logoScale,
       defaultSiteBranding.logoScale,
-      0.5,
-      1.5,
+      0.1,
+      4,
+    ),
+    showCustomLogoOnSite: normalizeBoolean(
+      settings.showCustomLogoOnSite,
+      defaultSiteBranding.showCustomLogoOnSite,
+    ),
+    showCustomLogoInChat: normalizeBoolean(
+      settings.showCustomLogoInChat,
+      defaultSiteBranding.showCustomLogoInChat,
+    ),
+    showCustomLogoInEmail: normalizeBoolean(
+      settings.showCustomLogoInEmail,
+      defaultSiteBranding.showCustomLogoInEmail,
+    ),
+    showCustomLogoAsFavicon: normalizeBoolean(
+      settings.showCustomLogoAsFavicon,
+      defaultSiteBranding.showCustomLogoAsFavicon,
     ),
   };
 }
@@ -268,6 +297,20 @@ export function logoImageStyle(branding: SiteBranding) {
     opacity: branding.logoOpacity,
     width: "100%",
   };
+}
+
+export function shouldUseCustomLogo(
+  branding: SiteBranding,
+  placement: LogoPlacement,
+) {
+  if (!branding.logoUrl) {
+    return false;
+  }
+
+  if (placement === "site") return branding.showCustomLogoOnSite;
+  if (placement === "chat") return branding.showCustomLogoInChat;
+  if (placement === "email") return branding.showCustomLogoInEmail;
+  return branding.showCustomLogoAsFavicon;
 }
 
 export function logoIconFrameStyle(branding: SiteBranding) {

@@ -4,7 +4,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useSiteBranding } from "@/app/SiteBrandingProvider";
-import { logoFrameStyle, logoImageStyle } from "@/lib/site-branding";
+import {
+  logoFrameStyle,
+  logoImageStyle,
+  shouldUseCustomLogo,
+} from "@/lib/site-branding";
 
 type SiteLogoProps = {
   href?: string;
@@ -31,7 +35,8 @@ export default function SiteLogo({
     variant === "light" ? "text-[#082A44]" : "text-[#082A44]";
   const markClass = compact ? "h-11 w-11" : "h-12 w-12";
   const showCustomLogo =
-    Boolean(branding.logoUrl) && failedLogoUrl !== branding.logoUrl;
+    shouldUseCustomLogo(branding, "site") &&
+    failedLogoUrl !== branding.logoUrl;
 
   return (
     <Link

@@ -7,6 +7,8 @@ import {
   normalizeProfileEmail,
   type MessageProfile,
 } from "@/lib/booking-message-profile-utils";
+import { getSiteBranding } from "@/lib/site-branding-server";
+import { shouldUseCustomLogo } from "@/lib/site-branding";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type VendorProfileRow = {
@@ -51,7 +53,7 @@ export async function enrichBookingMessagesWithProfiles(
   const guestEmails = uniqueSenderEmails(messages, "guest");
   const vendorEmails = uniqueSenderEmails(messages, "vendor");
 
-  const [guestResult, vendorResult] = await Promise.all([
+  const [guestResult, vendorResult, branding] = await Promise.all([
     guestEmails.length
       ? supabaseServer
           .from("guest_profiles")
@@ -64,6 +66,7 @@ export async function enrichBookingMessagesWithProfiles(
           .select("email, vendors(business_name, profile_image_url)")
           .in("email", vendorEmails)
       : Promise.resolve({ data: [] }),
+    getSiteBranding(),
   ]);
 
   const guestProfiles =
@@ -91,5 +94,11 @@ export async function enrichBookingMessagesWithProfiles(
     messages,
     guestProfiles,
     vendorProfiles,
+    adminProfile: {
+      displayName: "RoatanIsland.life",
+      imageUrl: shouldUseCustomLogo(branding, "chat")
+        ? branding.logoUrl
+        : "/images/roatan-island-life-mark.svg",
+    },
   });
 }
