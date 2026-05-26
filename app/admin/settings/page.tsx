@@ -10,6 +10,7 @@ import {
   type HomepageTrustPoint,
 } from "@/lib/homepage-settings";
 import {
+  brandingForPlacement,
   defaultSiteBranding,
   logoFits,
   logoFrameStyle,
@@ -20,6 +21,7 @@ import {
   logoSizes,
   normalizeSiteBranding,
   type LogoFit,
+  type LogoPlacement,
   type LogoPosition,
   type LogoShape,
   type LogoShadow,
@@ -68,12 +70,60 @@ const logoNumberControls = [
 
 type NumericLogoField = (typeof logoNumberControls)[number]["field"];
 
-const logoPlacementFields = [
-  { field: "showCustomLogoOnSite", label: "Website pages" },
-  { field: "showCustomLogoInChat", label: "Booking chat" },
-  { field: "showCustomLogoInEmail", label: "Emails" },
-  { field: "showCustomLogoAsFavicon", label: "Browser tab" },
-] as const;
+type LogoToggleField =
+  | "showCustomLogoOnSite"
+  | "showCustomLogoInChat"
+  | "showCustomLogoInEmail"
+  | "showCustomLogoAsFavicon";
+
+const logoLocationFields = [
+  {
+    placement: "site",
+    toggleField: "showCustomLogoOnSite",
+    urlField: "siteLogoUrl",
+    label: "Website pages",
+    helper: "Header, footer, homepage, map, listings, and public pages.",
+  },
+  {
+    placement: "chat",
+    toggleField: "showCustomLogoInChat",
+    urlField: "chatLogoUrl",
+    label: "Booking chat",
+    helper: "The admin profile image travelers see in chat.",
+  },
+  {
+    placement: "email",
+    toggleField: "showCustomLogoInEmail",
+    urlField: "emailLogoUrl",
+    label: "Emails",
+    helper: "Confirmation, booking, concierge, and message emails.",
+  },
+  {
+    placement: "favicon",
+    toggleField: "showCustomLogoAsFavicon",
+    urlField: "faviconLogoUrl",
+    label: "Browser tab",
+    helper: "The small icon shown in browser tabs and bookmarks.",
+  },
+] as const satisfies readonly {
+  placement: LogoPlacement;
+  toggleField: LogoToggleField;
+  urlField: "siteLogoUrl" | "chatLogoUrl" | "emailLogoUrl" | "faviconLogoUrl";
+  label: string;
+  helper: string;
+}[];
+
+type LogoUploadTarget =
+  | "logoUrl"
+  | (typeof logoLocationFields)[number]["urlField"];
+
+const logoUploadTargets: { field: LogoUploadTarget; label: string }[] = [
+  { field: "logoUrl", label: "Main fallback logo" },
+  ...logoLocationFields.map(({ urlField, label }) => ({
+    field: urlField,
+    label,
+  })),
+];
 
 const businessSettingFields = [
   { field: "siteName", label: "Site Name", rows: 1 },
@@ -121,6 +171,8 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [logoUploadError, setLogoUploadError] = useState("");
+  const [logoUploadTarget, setLogoUploadTarget] =
+    useState<LogoUploadTarget>("logoUrl");
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -265,7 +317,7 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    updateSetting("logoUrl", result.logoUrl);
+    updateSetting(logoUploadTarget, result.logoUrl);
   }
 
   const displayedTrustPoints = [
@@ -273,6 +325,11 @@ export default function AdminSettingsPage() {
     ...defaultHomepageControls.trustPoints.slice(settings.trustPoints.length),
   ].slice(0, 3);
   const previewBranding = normalizeSiteBranding(settings);
+  const sitePreviewBranding = brandingForPlacement(previewBranding, "site");
+  const faviconPreviewBranding = brandingForPlacement(
+    previewBranding,
+    "favicon",
+  );
 
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
@@ -297,6 +354,24 @@ export default function AdminSettingsPage() {
                 <div className="grid gap-5">
                   <div className="grid gap-4 rounded-2xl border border-[#D6B56D]/20 bg-white p-5">
                     <label className="grid gap-2 font-medium text-[#0B3C5D]">
+                      Upload Destination
+                      <select
+                        value={logoUploadTarget}
+                        onChange={(e) =>
+                          setLogoUploadTarget(e.target.value as LogoUploadTarget)
+                        }
+                        disabled={logoUploading}
+                        className="rounded-xl border border-gray-300 bg-white px-4 py-3 disabled:opacity-60"
+                      >
+                        {logoUploadTargets.map(({ field, label }) => (
+                          <option key={field} value={field}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="grid gap-2 font-medium text-[#0B3C5D]">
                       Upload Logo
                       <input
                         type="file"
@@ -311,7 +386,7 @@ export default function AdminSettingsPage() {
                     </label>
 
                     <label className="grid gap-2 font-medium text-[#0B3C5D]">
-                      Logo URL
+                      Main Logo URL
                       <input
                         value={settings.logoUrl}
                         onChange={(e) => updateSetting("logoUrl", e.target.value)}
@@ -326,7 +401,7 @@ export default function AdminSettingsPage() {
                         onClick={() => updateSetting("logoUrl", "")}
                         className="rounded-xl border border-[#0B3C5D]/15 bg-white px-4 py-2 text-sm font-bold text-[#0B3C5D]"
                       >
-                        Use default logo
+                        Clear main logo
                       </button>
                       {logoUploading && (
                         <p className="self-center text-sm text-[#0B3C5D]">
@@ -342,25 +417,53 @@ export default function AdminSettingsPage() {
 
                     <div className="grid gap-3 rounded-2xl border border-[#D6B56D]/20 bg-[#FFF9EC] p-4">
                       <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-                        Use Logo In
+                        Different Logos By Location
                       </p>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        {logoPlacementFields.map(({ field, label }) => (
-                          <label
-                            key={field}
-                            className="flex items-center gap-3 rounded-xl border border-[#D6B56D]/30 bg-white px-4 py-3 text-sm font-bold text-[#0B3C5D]"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={Boolean(settings[field])}
-                              onChange={(e) =>
-                                updateSetting(field, e.target.checked)
-                              }
-                              className="h-4 w-4 accent-[#00A8A8]"
-                            />
-                            {label}
-                          </label>
-                        ))}
+                      <p className="text-sm text-gray-600">
+                        Leave a location blank to use the main logo there.
+                      </p>
+                      <div className="grid gap-4">
+                        {logoLocationFields.map(
+                          ({ toggleField, urlField, label, helper }) => (
+                            <div
+                              key={urlField}
+                              className="grid gap-3 rounded-xl border border-[#D6B56D]/30 bg-white p-4"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <label className="flex items-center gap-3 text-sm font-bold text-[#0B3C5D]">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(settings[toggleField])}
+                                    onChange={(e) =>
+                                      updateSetting(
+                                        toggleField,
+                                        e.target.checked,
+                                      )
+                                    }
+                                    className="h-4 w-4 accent-[#00A8A8]"
+                                  />
+                                  {label}
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => updateSetting(urlField, "")}
+                                  className="rounded-lg border border-[#0B3C5D]/15 bg-[#F4EBD0] px-3 py-1.5 text-xs font-black text-[#0B3C5D]"
+                                >
+                                  Use main
+                                </button>
+                              </div>
+                              <p className="text-xs text-gray-500">{helper}</p>
+                              <input
+                                value={settings[urlField]}
+                                onChange={(e) =>
+                                  updateSetting(urlField, e.target.value)
+                                }
+                                placeholder="Optional logo URL for this location"
+                                className="rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm outline-none focus:border-[#00A8A8] focus:ring-2 focus:ring-[#00A8A8]/20"
+                              />
+                            </div>
+                          ),
+                        )}
                       </div>
                     </div>
                   </div>
@@ -572,14 +675,14 @@ export default function AdminSettingsPage() {
                   </p>
                   <div className="mt-4 overflow-x-auto rounded-2xl bg-[#071F2F] p-6">
                     <div className="flex min-h-52 min-w-max items-center justify-center">
-                      {settings.logoUrl ? (
-                        <span style={logoFrameStyle(previewBranding)}>
+                      {sitePreviewBranding.logoUrl ? (
+                        <span style={logoFrameStyle(sitePreviewBranding)}>
                           {/* Admin uploads can come from any public Supabase asset URL. */}
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
-                            src={previewBranding.logoUrl}
-                            alt="Uploaded Roatan logo preview"
-                            style={logoImageStyle(previewBranding)}
+                            src={sitePreviewBranding.logoUrl}
+                            alt="Website logo preview"
+                            style={logoImageStyle(sitePreviewBranding)}
                           />
                         </span>
                       ) : (
@@ -597,30 +700,34 @@ export default function AdminSettingsPage() {
                       <span
                         className="flex h-10 w-10 items-center justify-center overflow-hidden"
                         style={{
-                          backgroundColor: previewBranding.logoBackgroundColor,
+                          backgroundColor:
+                            faviconPreviewBranding.logoBackgroundColor,
                           border: `${Math.min(
-                            previewBranding.logoBorderWidthPx,
+                            faviconPreviewBranding.logoBorderWidthPx,
                             3,
-                          )}px solid ${previewBranding.logoBorderColor}`,
+                          )}px solid ${faviconPreviewBranding.logoBorderColor}`,
                           borderRadius: `${
-                            previewBranding.logoRadiusPx >= 999
-                              ? previewBranding.logoRadiusPx
-                              : Math.min(previewBranding.logoRadiusPx, 14)
+                            faviconPreviewBranding.logoRadiusPx >= 999
+                              ? faviconPreviewBranding.logoRadiusPx
+                              : Math.min(
+                                  faviconPreviewBranding.logoRadiusPx,
+                                  14,
+                                )
                           }px`,
                           padding: `${Math.min(
-                            previewBranding.logoPaddingPx,
+                            faviconPreviewBranding.logoPaddingPx,
                             6,
                           )}px`,
                         }}
                       >
-                        {settings.logoUrl ? (
+                        {faviconPreviewBranding.logoUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={previewBranding.logoUrl}
+                            src={faviconPreviewBranding.logoUrl}
                             alt=""
                             style={{
-                              ...logoImageStyle(previewBranding),
-                              transform: `rotate(${previewBranding.logoRotateDeg}deg) scale(${previewBranding.logoScale})`,
+                              ...logoImageStyle(faviconPreviewBranding),
+                              transform: `rotate(${faviconPreviewBranding.logoRotateDeg}deg) scale(${faviconPreviewBranding.logoScale})`,
                             }}
                           />
                         ) : (

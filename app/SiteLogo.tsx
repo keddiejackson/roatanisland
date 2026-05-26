@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useSiteBranding } from "@/app/SiteBrandingProvider";
 import {
+  brandingForPlacement,
   logoFrameStyle,
   logoImageStyle,
   shouldUseCustomLogo,
@@ -26,10 +27,11 @@ export default function SiteLogo({
   className = "",
 }: SiteLogoProps) {
   const branding = useSiteBranding();
+  const siteBranding = brandingForPlacement(branding, "site");
   const [failedLogoUrl, setFailedLogoUrl] = useState("");
   const showCustomLogo =
     shouldUseCustomLogo(branding, "site") &&
-    failedLogoUrl !== branding.logoUrl;
+    failedLogoUrl !== siteBranding.logoUrl;
   const variantClass =
     showCustomLogo
       ? "rounded-xl"
@@ -46,14 +48,14 @@ export default function SiteLogo({
       className={`inline-flex shrink-0 items-center gap-3 ${variantClass} ${className}`}
     >
       {showCustomLogo ? (
-        <span style={logoFrameStyle(branding)}>
+        <span style={logoFrameStyle(siteBranding)}>
           {/* Uploaded logos can come from any public Supabase asset URL. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={branding.logoUrl}
+            src={siteBranding.logoUrl}
             alt="Roatan Island Life"
-            style={logoImageStyle(branding)}
-            onError={() => setFailedLogoUrl(branding.logoUrl)}
+            style={logoImageStyle(siteBranding)}
+            onError={() => setFailedLogoUrl(siteBranding.logoUrl)}
           />
         </span>
       ) : (

@@ -8,7 +8,7 @@ import {
   type MessageProfile,
 } from "@/lib/booking-message-profile-utils";
 import { getSiteBranding } from "@/lib/site-branding-server";
-import { shouldUseCustomLogo } from "@/lib/site-branding";
+import { logoUrlForPlacement, shouldUseCustomLogo } from "@/lib/site-branding";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type VendorProfileRow = {
@@ -97,7 +97,7 @@ export async function enrichBookingMessagesWithProfiles(
     adminProfile: {
       displayName: "RoatanIsland.life",
       imageUrl: shouldUseCustomLogo(branding, "chat")
-        ? branding.logoUrl
+        ? logoUrlForPlacement(branding, "chat")
         : "/images/roatan-island-life-mark.svg",
     },
   });

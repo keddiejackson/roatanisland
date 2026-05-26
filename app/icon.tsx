@@ -3,8 +3,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { resolveBrandingIconSource } from "@/lib/site-icon-source";
 import {
+  brandingForPlacement,
   logoIconFrameStyle,
   logoIconImageStyle,
+  logoUrlForPlacement,
   shouldUseCustomLogo,
 } from "@/lib/site-branding";
 import { getSiteBranding } from "@/lib/site-branding-server";
@@ -25,13 +27,16 @@ async function getFallbackLogoSource() {
 async function getLogoIconData() {
   const fallbackLogoSource = await getFallbackLogoSource();
   const branding = await getSiteBranding();
+  const faviconBranding = brandingForPlacement(branding, "favicon");
   const logoSource = await resolveBrandingIconSource(
-    shouldUseCustomLogo(branding, "favicon") ? branding.logoUrl : "",
+    shouldUseCustomLogo(branding, "favicon")
+      ? logoUrlForPlacement(branding, "favicon")
+      : "",
     fallbackLogoSource,
     (url) => fetch(url, { cache: "no-store" }),
   );
 
-  return { branding, logoSource };
+  return { branding: faviconBranding, logoSource };
 }
 
 export default async function Icon() {

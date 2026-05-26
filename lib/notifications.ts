@@ -1,5 +1,6 @@
 import { logAppError } from "@/lib/error-log";
 import {
+  brandingForPlacement,
   logoImageStyle,
   shouldUseCustomLogo,
   type SiteBranding,
@@ -46,8 +47,9 @@ async function emailShell(title: string, body: string) {
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || "https://www.roatanisland.life";
   const branding = await getSiteBranding();
+  const emailBranding = brandingForPlacement(branding, "email");
   const logoMarkup = shouldUseCustomLogo(branding, "email")
-    ? customEmailLogo(branding)
+    ? customEmailLogo(emailBranding)
     : defaultEmailLogo(siteUrl);
 
   return `

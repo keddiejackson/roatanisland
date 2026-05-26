@@ -13,6 +13,10 @@ export type LogoPlacement = "site" | "chat" | "email" | "favicon";
 
 export type SiteBranding = {
   logoUrl: string;
+  siteLogoUrl: string;
+  chatLogoUrl: string;
+  emailLogoUrl: string;
+  faviconLogoUrl: string;
   logoSize: LogoSize;
   logoShape: LogoShape;
   logoWidthPx: number;
@@ -36,6 +40,10 @@ export type SiteBranding = {
 
 export const defaultSiteBranding: SiteBranding = {
   logoUrl: "",
+  siteLogoUrl: "",
+  chatLogoUrl: "",
+  emailLogoUrl: "",
+  faviconLogoUrl: "",
   logoSize: "medium",
   logoShape: "original",
   logoWidthPx: 240,
@@ -154,6 +162,10 @@ function normalizeHexColor(value: unknown, fallback: string) {
   return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
 }
 
+function normalizeLogoUrl(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function normalizeBoolean(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
@@ -174,7 +186,11 @@ export function normalizeSiteBranding(value: unknown): SiteBranding {
   const shapeDefaults = logoShapeDefaults[logoShape];
 
   return {
-    logoUrl: typeof settings.logoUrl === "string" ? settings.logoUrl.trim() : "",
+    logoUrl: normalizeLogoUrl(settings.logoUrl),
+    siteLogoUrl: normalizeLogoUrl(settings.siteLogoUrl),
+    chatLogoUrl: normalizeLogoUrl(settings.chatLogoUrl),
+    emailLogoUrl: normalizeLogoUrl(settings.emailLogoUrl),
+    faviconLogoUrl: normalizeLogoUrl(settings.faviconLogoUrl),
     logoSize,
     logoShape,
     logoWidthPx: normalizeWholeNumber(
@@ -307,7 +323,7 @@ export function shouldUseCustomLogo(
   branding: SiteBranding,
   placement: LogoPlacement,
 ) {
-  if (!branding.logoUrl) {
+  if (!logoUrlForPlacement(branding, placement)) {
     return false;
   }
 
@@ -315,6 +331,26 @@ export function shouldUseCustomLogo(
   if (placement === "chat") return branding.showCustomLogoInChat;
   if (placement === "email") return branding.showCustomLogoInEmail;
   return branding.showCustomLogoAsFavicon;
+}
+
+export function logoUrlForPlacement(
+  branding: SiteBranding,
+  placement: LogoPlacement,
+) {
+  if (placement === "site") return branding.siteLogoUrl || branding.logoUrl;
+  if (placement === "chat") return branding.chatLogoUrl || branding.logoUrl;
+  if (placement === "email") return branding.emailLogoUrl || branding.logoUrl;
+  return branding.faviconLogoUrl || branding.logoUrl;
+}
+
+export function brandingForPlacement(
+  branding: SiteBranding,
+  placement: LogoPlacement,
+): SiteBranding {
+  return {
+    ...branding,
+    logoUrl: logoUrlForPlacement(branding, placement),
+  };
 }
 
 export function logoIconFrameStyle(branding: SiteBranding) {
