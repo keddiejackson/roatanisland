@@ -238,6 +238,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  await supabaseServer.from("booking_events").insert([
+    {
+      booking_id: booking.id,
+      event_type: "created",
+      actor_role: "guest",
+      actor_email: booking.email,
+      to_status: "new",
+      note: "Booking request submitted.",
+    },
+  ]);
+
   let listingTitle = "General booking request";
   let vendorEmail: string | null = null;
   let vendorName: string | null = null;

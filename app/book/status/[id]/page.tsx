@@ -8,6 +8,7 @@ import {
   formatBookingStatus,
   formatDepositStatus,
 } from "@/lib/booking-flow";
+import { bookingTimeline, type BookingEventLike } from "@/lib/booking-communication";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Booking = {
@@ -56,6 +57,14 @@ export default async function BookingStatusPage({
     listing = listingData as Listing | null;
   }
 
+  const { data: eventRows } = booking
+    ? await supabaseServer
+        .from("booking_events")
+        .select("event_type, actor_role, actor_email, from_status, to_status, note, created_at")
+        .eq("booking_id", booking.id)
+        .order("created_at", { ascending: true })
+    : { data: [] };
+
   if (!booking) {
     return (
       <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
@@ -96,6 +105,11 @@ export default async function BookingStatusPage({
   const selectedAddons = Array.isArray(booking.selected_addons)
     ? booking.selected_addons
     : [];
+  const realTimeline = bookingTimeline({
+    booking,
+    events: (eventRows as BookingEventLike[] | null) || [],
+    messages: [],
+  });
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
@@ -161,6 +175,35 @@ export default async function BookingStatusPage({
                 </p>
               </div>
             ))}
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-[#D6B56D]/20 bg-[#FFF8E8] p-5">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Booking timeline
+            </p>
+            <div className="mt-4 grid gap-3">
+              {realTimeline.map((item, index) => (
+                <div
+                  key={`${item.kind}-${item.createdAt || index}`}
+                  className="rounded-xl bg-white p-4"
+                >
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <p className="font-bold text-[#0B3C5D]">{item.title}</p>
+                    <p className="text-xs font-bold uppercase text-gray-500">
+                      {item.actorLabel}
+                    </p>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-gray-700">
+                    {item.text}
+                  </p>
+                  {item.createdAt ? (
+                    <p className="mt-2 text-xs text-gray-500">
+                      {new Date(item.createdAt).toLocaleString()}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

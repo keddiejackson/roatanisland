@@ -81,6 +81,12 @@ export async function PATCH(
   const body = (await request.json()) as BookingUpdateRequest;
   const nextStatus = body.status || "new";
 
+  const { data: currentBooking } = await supabaseServer
+    .from("bookings")
+    .select("status")
+    .eq("id", id)
+    .maybeSingle();
+
   const { data: booking, error } = await supabaseServer
     .from("bookings")
     .update({
@@ -98,6 +104,20 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if ((currentBooking?.status || "new") !== nextStatus) {
+    await supabaseServer.from("booking_events").insert([
+      {
+        booking_id: booking.id,
+        event_type: "status_change",
+        actor_role: "admin",
+        actor_email: adminEmail,
+        from_status: currentBooking?.status || "new",
+        to_status: nextStatus,
+        note: body.adminNotes || null,
+      },
+    ]);
   }
 
   let listingTitle = "Roatan booking";

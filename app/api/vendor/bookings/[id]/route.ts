@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity-log";
-import { escapeHtml, sendEmailNotification } from "@/lib/notifications";
+import {
+  escapeHtml,
+  sendAdminNotification,
+  sendEmailNotification,
+} from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
 
-type VendorBookingStatus = "confirmed" | "cancelled";
+type VendorBookingStatus = "confirmed" | "cancelled" | "suggest_time";
 
 type VendorBookingUpdateRequest = {
   status?: VendorBookingStatus;
@@ -24,12 +28,20 @@ async function getUser(request: Request) {
 }
 
 function statusSubject(status: VendorBookingStatus, listingTitle: string) {
+  if (status === "suggest_time") {
+    return `New suggested time for ${listingTitle}`;
+  }
+
   return `Your ${listingTitle} booking request was ${status}`;
 }
 
 function statusMessage(status: VendorBookingStatus) {
   if (status === "confirmed") {
     return "Your booking request has been confirmed.";
+  }
+
+  if (status === "suggest_time") {
+    return "The operator suggested another time for your booking request.";
   }
 
   return "Your booking request has been cancelled.";
@@ -50,9 +62,13 @@ export async function PATCH(
   const nextStatus = body.status;
   const vendorNote = body.vendorNote?.trim().slice(0, 1000) || null;
 
-  if (nextStatus !== "confirmed" && nextStatus !== "cancelled") {
+  if (
+    nextStatus !== "confirmed" &&
+    nextStatus !== "cancelled" &&
+    nextStatus !== "suggest_time"
+  ) {
     return NextResponse.json(
-      { error: "Vendors can confirm or cancel booking requests." },
+      { error: "Vendors can confirm, decline, or suggest another time." },
       { status: 400 },
     );
   }
@@ -69,7 +85,7 @@ export async function PATCH(
 
   const { data: booking } = await supabaseServer
     .from("bookings")
-    .select("id, listing_id")
+    .select("id, listing_id, status")
     .eq("id", id)
     .maybeSingle();
 
@@ -88,9 +104,12 @@ export async function PATCH(
     return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   }
 
+  const updateStatus =
+    nextStatus === "suggest_time" ? booking.status || "new" : nextStatus;
+
   const { data: updatedBooking, error } = await supabaseServer
     .from("bookings")
-    .update({ status: nextStatus, vendor_note: vendorNote })
+    .update({ status: updateStatus, vendor_note: vendorNote })
     .eq("id", id)
     .select(
       "id, full_name, email, tour_date, tour_time, guests, status, vendor_note, listing_id",
@@ -99,6 +118,33 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  await supabaseServer.from("booking_events").insert([
+    {
+      booking_id: updatedBooking.id,
+      event_type:
+        nextStatus === "suggest_time" ? "time_suggestion" : "status_change",
+      actor_role: "vendor",
+      actor_email: user.email,
+      from_status: booking.status || "new",
+      to_status: updateStatus,
+      note: vendorNote,
+    },
+  ]);
+
+  if (vendorNote) {
+    await supabaseServer.from("booking_messages").insert([
+      {
+        booking_id: updatedBooking.id,
+        sender_role: "vendor",
+        sender_email: user.email,
+        message:
+          nextStatus === "suggest_time"
+            ? `Suggested another time: ${vendorNote}`
+            : vendorNote,
+      },
+    ]);
   }
 
   await sendEmailNotification({
@@ -131,6 +177,37 @@ export async function PATCH(
       .filter(Boolean)
       .join("\n"),
   });
+
+  if (nextStatus === "suggest_time") {
+    await sendAdminNotification({
+      subject: `Vendor suggested another time: ${listing.title}`,
+      replyTo: user.email || undefined,
+      html: `
+        <h2>Vendor suggested another time</h2>
+        <p><strong>Listing:</strong> ${escapeHtml(listing.title)}</p>
+        <p><strong>Guest:</strong> ${escapeHtml(updatedBooking.full_name)}</p>
+        <p><strong>Date:</strong> ${escapeHtml(updatedBooking.tour_date)}</p>
+        <p><strong>Current time:</strong> ${escapeHtml(updatedBooking.tour_time)}</p>
+        ${
+          updatedBooking.vendor_note
+            ? `<p><strong>Vendor note:</strong> ${escapeHtml(updatedBooking.vendor_note)}</p>`
+            : ""
+        }
+      `,
+      text: [
+        "Vendor suggested another time",
+        `Listing: ${listing.title}`,
+        `Guest: ${updatedBooking.full_name}`,
+        `Date: ${updatedBooking.tour_date}`,
+        `Current time: ${updatedBooking.tour_time}`,
+        updatedBooking.vendor_note
+          ? `Vendor note: ${updatedBooking.vendor_note}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    });
+  }
 
   await supabaseServer.from("analytics_events").insert([
     {

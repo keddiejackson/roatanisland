@@ -200,6 +200,42 @@ create table if not exists public.bookings (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.booking_messages (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references public.bookings(id) on delete cascade,
+  sender_role text not null default 'guest'
+    check (sender_role in ('guest', 'vendor', 'admin', 'system')),
+  sender_email text,
+  message text not null,
+  is_internal boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists booking_messages_booking_id_idx
+on public.booking_messages(booking_id);
+
+create index if not exists booking_messages_created_at_idx
+on public.booking_messages(created_at);
+
+create table if not exists public.booking_events (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references public.bookings(id) on delete cascade,
+  event_type text not null default 'status_change',
+  actor_role text not null default 'system'
+    check (actor_role in ('guest', 'vendor', 'admin', 'system')),
+  actor_email text,
+  from_status text,
+  to_status text,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists booking_events_booking_id_idx
+on public.booking_events(booking_id);
+
+create index if not exists booking_events_created_at_idx
+on public.booking_events(created_at);
+
 create table if not exists public.analytics_events (
   id uuid primary key default gen_random_uuid(),
   event_type text not null default 'page_view',
@@ -440,6 +476,12 @@ add column if not exists discount_amount_cents integer;
 alter table public.bookings
 add column if not exists selected_addons jsonb not null default '[]'::jsonb;
 
+alter table public.booking_messages
+add column if not exists is_internal boolean not null default false;
+
+alter table public.booking_events
+add column if not exists note text;
+
 alter table public.analytics_events
 add column if not exists metadata jsonb not null default '{}'::jsonb;
 
@@ -574,6 +616,8 @@ alter table public.vendors enable row level security;
 alter table public.vendor_users enable row level security;
 alter table public.listings enable row level security;
 alter table public.bookings enable row level security;
+alter table public.booking_messages enable row level security;
+alter table public.booking_events enable row level security;
 alter table public.analytics_events enable row level security;
 alter table public.app_errors enable row level security;
 alter table public.admin_activity_logs enable row level security;
@@ -593,6 +637,8 @@ grant select, insert on public.vendors to anon, authenticated;
 grant select, insert on public.vendor_users to anon, authenticated;
 grant select, insert on public.listings to anon, authenticated;
 grant select, insert on public.bookings to anon, authenticated;
+grant select, insert on public.booking_messages to authenticated;
+grant select, insert on public.booking_events to authenticated;
 grant insert on public.analytics_events to anon, authenticated;
 grant select on public.analytics_events to authenticated;
 grant select, update on public.app_errors to authenticated;
@@ -1158,6 +1204,142 @@ with check (
     select 1
     from public.admin_users
     where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can manage booking messages" on public.booking_messages;
+create policy "Admins can manage booking messages"
+on public.booking_messages
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Guests can view own booking messages" on public.booking_messages;
+create policy "Guests can view own booking messages"
+on public.booking_messages
+for select
+to authenticated
+using (
+  is_internal = false
+  and exists (
+    select 1
+    from public.bookings
+    where bookings.id = booking_messages.booking_id
+      and lower(bookings.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Guests can create own booking messages" on public.booking_messages;
+create policy "Guests can create own booking messages"
+on public.booking_messages
+for insert
+to authenticated
+with check (
+  sender_role = 'guest'
+  and is_internal = false
+  and exists (
+    select 1
+    from public.bookings
+    where bookings.id = booking_messages.booking_id
+      and lower(bookings.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Vendors can view booking messages for own listings" on public.booking_messages;
+create policy "Vendors can view booking messages for own listings"
+on public.booking_messages
+for select
+to authenticated
+using (
+  is_internal = false
+  and exists (
+    select 1
+    from public.bookings
+    join public.listings on listings.id = bookings.listing_id
+    join public.vendor_users on vendor_users.vendor_id = listings.vendor_id
+    where bookings.id = booking_messages.booking_id
+      and vendor_users.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Vendors can create booking messages for own listings" on public.booking_messages;
+create policy "Vendors can create booking messages for own listings"
+on public.booking_messages
+for insert
+to authenticated
+with check (
+  sender_role = 'vendor'
+  and is_internal = false
+  and exists (
+    select 1
+    from public.bookings
+    join public.listings on listings.id = bookings.listing_id
+    join public.vendor_users on vendor_users.vendor_id = listings.vendor_id
+    where bookings.id = booking_messages.booking_id
+      and vendor_users.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Admins can manage booking events" on public.booking_events;
+create policy "Admins can manage booking events"
+on public.booking_events
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Guests can view own booking events" on public.booking_events;
+create policy "Guests can view own booking events"
+on public.booking_events
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.bookings
+    where bookings.id = booking_events.booking_id
+      and lower(bookings.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Vendors can view booking events for own listings" on public.booking_events;
+create policy "Vendors can view booking events for own listings"
+on public.booking_events
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.bookings
+    join public.listings on listings.id = bookings.listing_id
+    join public.vendor_users on vendor_users.vendor_id = listings.vendor_id
+    where bookings.id = booking_events.booking_id
+      and vendor_users.user_id = auth.uid()
   )
 );
 

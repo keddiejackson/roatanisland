@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import BookingConversationPanel from "@/app/BookingConversationPanel";
 import GuestTravelCommandCenter from "@/app/account/GuestTravelCommandCenter";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
@@ -55,6 +56,7 @@ export default function AccountPage() {
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [selectedBookingId, setSelectedBookingId] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -252,6 +254,8 @@ export default function AccountPage() {
   const hasSignedIn = Boolean(signedInEmail);
   const isUpdatingPassword = authMode === "updatePassword";
   const latestBooking = bookings[0];
+  const selectedBooking =
+    bookings.find((booking) => booking.id === selectedBookingId) || bookings[0];
   const confirmedCount = bookings.filter(
     (booking) => booking.status === "confirmed",
   ).length;
@@ -473,9 +477,8 @@ export default function AccountPage() {
           ) : (
             <div className="mt-8 grid gap-4">
               {bookings.map((booking) => (
-                <Link
+                <article
                   key={booking.id}
-                  href={`/book/status/${booking.id}`}
                   className="rounded-xl border border-gray-200 p-5 transition hover:-translate-y-0.5 hover:border-[#00A8A8] hover:shadow-lg"
                 >
                   <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -496,11 +499,31 @@ export default function AccountPage() {
                       {booking.status || "new"}
                     </span>
                   </div>
-                  <p className="mt-4 text-sm font-bold text-[#007B7B]">
-                    View booking details
-                  </p>
-                </Link>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBookingId(booking.id)}
+                      className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-bold text-white"
+                    >
+                      Open inbox
+                    </button>
+                    <Link
+                      href={`/book/status/${booking.id}`}
+                      className="rounded-lg border border-[#00A8A8] px-4 py-2 text-sm font-bold text-[#007B7B]"
+                    >
+                      View details
+                    </Link>
+                  </div>
+                </article>
               ))}
+              {selectedBooking ? (
+                <BookingConversationPanel
+                  bookingId={selectedBooking.id}
+                  apiPath={`/api/bookings/${selectedBooking.id}/messages`}
+                  title={`${selectedBooking.tour_date} at ${selectedBooking.tour_time}`}
+                  subtitle="Message the operator or RoatanIsland.life about this booking."
+                />
+              ) : null}
             </div>
           )}
         </section>

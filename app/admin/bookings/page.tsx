@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import BookingConversationPanel from "@/app/BookingConversationPanel";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
@@ -73,6 +74,7 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedBookingId, setSelectedBookingId] = useState("");
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
   const [viewMode, setViewMode] = useState<"calendar" | "table">("calendar");
 
@@ -166,6 +168,9 @@ export default function AdminBookingsPage() {
     () => groupBookingsByDate(filteredBookings),
     [filteredBookings],
   );
+  const selectedBooking =
+    filteredBookings.find((booking) => booking.id === selectedBookingId) ||
+    filteredBookings[0];
 
   const bookingSummary = useMemo(
     () => ({
@@ -333,7 +338,20 @@ export default function AdminBookingsPage() {
               <p className="mt-8 rounded-xl border border-dashed border-gray-300 p-6 text-center text-gray-600">
                 No bookings match those filters.
               </p>
-            ) : viewMode === "calendar" ? (
+            ) : (
+              <>
+                {selectedBooking ? (
+                  <div className="mt-6">
+                    <BookingConversationPanel
+                      bookingId={selectedBooking.id}
+                      apiPath={`/api/admin/bookings/${selectedBooking.id}/messages`}
+                      title={`${selectedBooking.full_name} - ${selectedBooking.listing_name}`}
+                      subtitle={`${selectedBooking.tour_date} at ${selectedBooking.tour_time}`}
+                      allowInternalNotes
+                    />
+                  </div>
+                ) : null}
+                {viewMode === "calendar" ? (
             <div className="mt-6 grid gap-5">
               {groupedBookings.map((group) => (
                 <section
@@ -381,6 +399,13 @@ export default function AdminBookingsPage() {
                               ""}
                           </p>
                         ) : null}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedBookingId(booking.id)}
+                          className="mt-3 rounded-lg bg-[#0B3C5D] px-4 py-2 text-sm font-bold text-white"
+                        >
+                          Open thread
+                        </button>
                       </article>
                     ))}
                   </div>
@@ -405,6 +430,7 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Commission</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Notes</th>
+                  <th className="px-4 py-3">Thread</th>
                 </tr>
               </thead>
               <tbody>
@@ -497,11 +523,22 @@ export default function AdminBookingsPage() {
                         disabled={savingBookingId === booking.id}
                       />
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBookingId(booking.id)}
+                        className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-sm font-bold text-white"
+                      >
+                        Open
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
               </table>
             </div>
+            )}
+              </>
             )}
             </>
           )}

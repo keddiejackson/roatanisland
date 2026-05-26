@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import BookingConversationPanel from "@/app/BookingConversationPanel";
 import PinPicker from "@/app/map/PinPicker";
 import SiteLogo from "@/app/SiteLogo";
 import {
@@ -148,6 +149,7 @@ export default function VendorDashboardPage() {
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
   const [expandedListingIds, setExpandedListingIds] = useState<Record<string, boolean>>({});
+  const [selectedBookingId, setSelectedBookingId] = useState("");
   const [savingListingId, setSavingListingId] = useState<string | null>(null);
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -709,7 +711,7 @@ export default function VendorDashboardPage() {
 
   async function updateBookingStatus(
     bookingId: string,
-    status: "confirmed" | "cancelled",
+    status: "confirmed" | "cancelled" | "suggest_time",
   ) {
     const { data: sessionData } = await supabase.auth.getSession();
     setSavingBookingId(bookingId);
@@ -741,7 +743,7 @@ export default function VendorDashboardPage() {
         booking.id === bookingId
           ? {
               ...booking,
-              status,
+              status: result.booking?.status || booking.status || status,
               vendor_note: result.booking?.vendor_note || null,
             }
           : booking,
@@ -812,6 +814,9 @@ export default function VendorDashboardPage() {
   }
 
   const sortedBookings = useMemo(() => sortVendorBookings(bookings), [bookings]);
+  const selectedBooking =
+    sortedBookings.find((booking) => booking.id === selectedBookingId) ||
+    sortedBookings[0];
 
   const pendingBookings = useMemo(
     () =>
@@ -1294,6 +1299,13 @@ export default function VendorDashboardPage() {
                     />
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button
+                        onClick={() => setSelectedBookingId(booking.id)}
+                        disabled={savingBookingId === booking.id}
+                        className="rounded-lg bg-[#0B3C5D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        Open thread
+                      </button>
+                      <button
                         onClick={() => updateBookingStatus(booking.id, "confirmed")}
                         disabled={savingBookingId === booking.id}
                         className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
@@ -1307,9 +1319,31 @@ export default function VendorDashboardPage() {
                       >
                         Cancel
                       </button>
+                      <button
+                        onClick={() =>
+                          updateBookingStatus(booking.id, "suggest_time")
+                        }
+                        disabled={
+                          savingBookingId === booking.id ||
+                          !(vendorNotes[booking.id] || "").trim()
+                        }
+                        className="rounded-lg bg-[#D6B56D] px-4 py-2 text-sm font-semibold text-[#0B3C5D] disabled:opacity-50"
+                      >
+                        Suggest time
+                      </button>
                     </div>
                   </article>
                 ))}
+              </div>
+            ) : null}
+            {selectedBooking ? (
+              <div className="mt-8">
+                <BookingConversationPanel
+                  bookingId={selectedBooking.id}
+                  apiPath={`/api/vendor/bookings/${selectedBooking.id}/messages`}
+                  title={`${selectedBooking.full_name} - ${selectedBooking.listing_name}`}
+                  subtitle={`${selectedBooking.tour_date} at ${selectedBooking.tour_time}`}
+                />
               </div>
             ) : null}
             <div className="mt-8 grid gap-4">
@@ -1425,6 +1459,13 @@ export default function VendorDashboardPage() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
                           <button
+                            onClick={() => setSelectedBookingId(booking.id)}
+                            disabled={savingBookingId === booking.id}
+                            className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                          >
+                            Thread
+                          </button>
+                          <button
                             onClick={() =>
                               updateBookingStatus(booking.id, "confirmed")
                             }
@@ -1447,6 +1488,18 @@ export default function VendorDashboardPage() {
                             className="rounded-lg bg-red-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                           >
                             Cancel
+                          </button>
+                          <button
+                            onClick={() =>
+                              updateBookingStatus(booking.id, "suggest_time")
+                            }
+                            disabled={
+                              savingBookingId === booking.id ||
+                              !(vendorNotes[booking.id] || "").trim()
+                            }
+                            className="rounded-lg bg-[#D6B56D] px-3 py-2 text-sm font-semibold text-[#0B3C5D] disabled:opacity-50"
+                          >
+                            Suggest
                           </button>
                         </div>
                       </td>
