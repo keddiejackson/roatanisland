@@ -7,7 +7,12 @@ import GuestConciergePanel from "@/app/account/GuestConciergePanel";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
-import { getGuestSignOutLabel } from "@/lib/guest-account-actions";
+import {
+  buildGuestPasswordResetRedirect,
+  getGuestAuthSubmitLabel,
+  getGuestSignOutLabel,
+  type GuestAuthMode,
+} from "@/lib/guest-account-actions";
 import { supabase } from "@/lib/supabase";
 
 type Booking = {
@@ -21,8 +26,6 @@ type Booking = {
   deposit_status: string | null;
   listing_id: string | null;
 };
-
-type AuthMode = "signin" | "signup";
 
 function statusBadgeClass(status: string | null) {
   switch ((status || "new").toLowerCase()) {
@@ -42,7 +45,8 @@ export default function AccountPage() {
   const [email, setEmail] = useState("");
   const [signedInEmail, setSignedInEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [authMode, setAuthMode] = useState<AuthMode>("signin");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [authMode, setAuthMode] = useState<GuestAuthMode>("signin");
   const [authLoading, setAuthLoading] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
   const [authMessageTone, setAuthMessageTone] = useState<"error" | "success">(
@@ -55,8 +59,14 @@ export default function AccountPage() {
 
   useEffect(() => {
     async function loadAccount() {
-      if (new URLSearchParams(window.location.search).get("mode") === "signup") {
+      const requestedMode = new URLSearchParams(window.location.search).get(
+        "mode",
+      );
+
+      if (requestedMode === "signup") {
         setAuthMode("signup");
+      } else if (requestedMode === "reset") {
+        setAuthMode("updatePassword");
       }
 
       const { data } = await supabase.auth.getUser();
@@ -74,7 +84,19 @@ export default function AccountPage() {
       setBookings((bookingRows as Booking[]) || []);
       setLoading(false);
     }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthMode("updatePassword");
+        setAuthMessage("");
+      }
+    });
+
     loadAccount();
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   async function signIn(e: React.FormEvent<HTMLFormElement>) {
@@ -127,15 +149,77 @@ export default function AccountPage() {
     }
 
     setPassword("");
+    setConfirmPassword("");
     setAuthMessageTone("success");
     setAuthMessage(
       "Check your email to confirm your guest account. After confirmation, this page will open so you can sign in.",
     );
   }
 
-  function chooseAuthMode(mode: AuthMode) {
+  async function sendPasswordReset(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthMessage("");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: buildGuestPasswordResetRedirect(window.location.origin),
+    });
+
+    setAuthLoading(false);
+
+    if (error) {
+      setAuthMessageTone("error");
+      setAuthMessage(error.message);
+      return;
+    }
+
+    setPassword("");
+    setConfirmPassword("");
+    setAuthMessageTone("success");
+    setAuthMessage(
+      "Check your email for a password reset link. It will bring you back here to set a new password.",
+    );
+  }
+
+  async function updatePassword(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setAuthMessage("");
+
+    if (password !== confirmPassword) {
+      setAuthMessageTone("error");
+      setAuthMessage("Passwords do not match.");
+      return;
+    }
+
+    setAuthLoading(true);
+
+    const { error } = await supabase.auth.updateUser({ password });
+
+    setAuthLoading(false);
+
+    if (error) {
+      setAuthMessageTone("error");
+      setAuthMessage(error.message);
+      return;
+    }
+
+    await supabase.auth.signOut();
+
+    setPassword("");
+    setConfirmPassword("");
+    setEmail("");
+    setSignedInEmail("");
+    setBookings([]);
+    setAuthMode("signin");
+    setAuthMessageTone("success");
+    setAuthMessage("Password updated. You can now sign in with your new password.");
+  }
+
+  function chooseAuthMode(mode: GuestAuthMode) {
     setAuthMode(mode);
     setAuthMessage("");
+    setPassword("");
+    setConfirmPassword("");
   }
 
   async function signOut() {
@@ -154,6 +238,7 @@ export default function AccountPage() {
     setEmail("");
     setSignedInEmail("");
     setPassword("");
+    setConfirmPassword("");
     setBookings([]);
     setAuthMode("signin");
     router.refresh();
@@ -165,6 +250,7 @@ export default function AccountPage() {
   }
 
   const hasSignedIn = Boolean(signedInEmail);
+  const isUpdatingPassword = authMode === "updatePassword";
   const latestBooking = bookings[0];
   const confirmedCount = bookings.filter(
     (booking) => booking.status === "confirmed",
@@ -259,12 +345,20 @@ export default function AccountPage() {
             </p>
           ) : null}
 
-          {bookings.length === 0 && !hasSignedIn ? (
+          {isUpdatingPassword || (bookings.length === 0 && !hasSignedIn) ? (
             <form
-              onSubmit={authMode === "signup" ? signUp : signIn}
+              onSubmit={
+                authMode === "signup"
+                  ? signUp
+                  : authMode === "reset"
+                    ? sendPasswordReset
+                    : authMode === "updatePassword"
+                      ? updatePassword
+                      : signIn
+              }
               className="mt-8 grid gap-4"
             >
-              <div className="grid gap-2 rounded-xl bg-[#EEF7F6] p-2 sm:grid-cols-2">
+              <div className="grid gap-2 rounded-xl bg-[#EEF7F6] p-2 sm:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => chooseAuthMode("signin")}
@@ -287,29 +381,61 @@ export default function AccountPage() {
                 >
                   Create account
                 </button>
+                <button
+                  type="button"
+                  onClick={() => chooseAuthMode("reset")}
+                  className={`rounded-lg px-4 py-3 text-sm font-black transition ${
+                    authMode === "reset" || authMode === "updatePassword"
+                      ? "bg-white text-[#0B3C5D] shadow-sm"
+                      : "text-[#466176] hover:bg-white/60"
+                  }`}
+                >
+                  Forgot password?
+                </button>
               </div>
               <p className="text-sm leading-6 text-gray-600">
                 {authMode === "signup"
                   ? "Create a free guest account with the same email you use for bookings."
-                  : "Sign in with the email you used for your booking requests."}
+                  : authMode === "reset"
+                    ? "Enter your guest account email and we will send a password reset link."
+                    : authMode === "updatePassword"
+                      ? "Enter and confirm your new guest account password."
+                      : "Sign in with the email you used for your booking requests."}
               </p>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="rounded-xl border border-gray-300 px-4 py-3"
-                required
-              />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="rounded-xl border border-gray-300 px-4 py-3"
-                minLength={6}
-                required
-              />
+              {authMode !== "updatePassword" ? (
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  className="rounded-xl border border-gray-300 px-4 py-3"
+                  required
+                />
+              ) : null}
+              {authMode !== "reset" ? (
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={
+                    authMode === "updatePassword" ? "New password" : "Password"
+                  }
+                  className="rounded-xl border border-gray-300 px-4 py-3"
+                  minLength={6}
+                  required
+                />
+              ) : null}
+              {authMode === "updatePassword" ? (
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  className="rounded-xl border border-gray-300 px-4 py-3"
+                  minLength={6}
+                  required
+                />
+              ) : null}
               {authMessage ? (
                 <p
                   className={`rounded-xl px-4 py-3 text-sm font-semibold ${
@@ -325,13 +451,7 @@ export default function AccountPage() {
                 disabled={authLoading}
                 className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white disabled:opacity-50"
               >
-                {authLoading
-                  ? authMode === "signup"
-                    ? "Creating..."
-                    : "Signing in..."
-                  : authMode === "signup"
-                    ? "Create guest account"
-                    : "Sign in"}
+                {getGuestAuthSubmitLabel(authMode, authLoading)}
               </button>
             </form>
           ) : bookings.length === 0 ? (
