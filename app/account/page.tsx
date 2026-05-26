@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import BookingConversationPanel from "@/app/BookingConversationPanel";
+import BookingChatDrawer, {
+  type BookingChatThread,
+} from "@/app/BookingChatDrawer";
 import GuestTravelCommandCenter from "@/app/account/GuestTravelCommandCenter";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
@@ -99,6 +101,7 @@ export default function AccountPage() {
     Record<string, BookingThreadSummary>
   >({});
   const [selectedBookingId, setSelectedBookingId] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -317,11 +320,18 @@ export default function AccountPage() {
   const hasSignedIn = Boolean(signedInEmail);
   const isUpdatingPassword = authMode === "updatePassword";
   const latestBooking = bookings[0];
-  const selectedBooking =
-    bookings.find((booking) => booking.id === selectedBookingId) || bookings[0];
   const confirmedCount = bookings.filter(
     (booking) => booking.status === "confirmed",
   ).length;
+  const chatThreads: BookingChatThread[] = bookings.map((booking) => ({
+    id: booking.id,
+    title: `${booking.tour_date} at ${booking.tour_time}`,
+    subtitle: `${booking.guests} guest${booking.guests === 1 ? "" : "s"} - ${
+      booking.status || "new"
+    }`,
+    apiPath: `/api/bookings/${booking.id}/messages`,
+    summary: threadSummaries[booking.id],
+  }));
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
@@ -578,7 +588,10 @@ export default function AccountPage() {
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
-                      onClick={() => setSelectedBookingId(booking.id)}
+                      onClick={() => {
+                        setSelectedBookingId(booking.id);
+                        setChatOpen(true);
+                      }}
                       className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-bold text-white"
                     >
                       Open inbox
@@ -592,17 +605,20 @@ export default function AccountPage() {
                   </div>
                 </article>
               ))}
-              {selectedBooking ? (
-                <BookingConversationPanel
-                  bookingId={selectedBooking.id}
-                  apiPath={`/api/bookings/${selectedBooking.id}/messages`}
-                  title={`${selectedBooking.tour_date} at ${selectedBooking.tour_time}`}
-                  subtitle="Message the operator or RoatanIsland.life about this booking."
-                />
-              ) : null}
             </div>
           )}
         </section>
+        {hasSignedIn ? (
+          <BookingChatDrawer
+            threads={chatThreads}
+            viewerRole="guest"
+            open={chatOpen}
+            onOpenChange={setChatOpen}
+            selectedThreadId={selectedBookingId}
+            onSelectedThreadIdChange={setSelectedBookingId}
+            emptyText="No guest booking conversations yet."
+          />
+        ) : null}
       </div>
       <SiteFooter />
     </main>

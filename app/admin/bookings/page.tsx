@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import BookingConversationPanel from "@/app/BookingConversationPanel";
+import BookingChatDrawer, {
+  type BookingChatThread,
+} from "@/app/BookingChatDrawer";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
@@ -117,6 +119,7 @@ export default function AdminBookingsPage() {
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedBookingId, setSelectedBookingId] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<BookingStatus | "all">("all");
   const [responseFilter, setResponseFilter] = useState<"all" | "needs_response">(
     "all",
@@ -235,9 +238,17 @@ export default function AdminBookingsPage() {
     () => groupBookingsByDate(filteredBookings),
     [filteredBookings],
   );
-  const selectedBooking =
-    filteredBookings.find((booking) => booking.id === selectedBookingId) ||
-    filteredBookings[0];
+  const chatThreads: BookingChatThread[] = useMemo(
+    () =>
+      bookings.map((booking) => ({
+        id: booking.id,
+        title: booking.full_name,
+        subtitle: `${booking.listing_name} - ${booking.tour_date} at ${booking.tour_time}`,
+        apiPath: `/api/admin/bookings/${booking.id}/messages`,
+        summary: threadSummaries[booking.id],
+      })),
+    [bookings, threadSummaries],
+  );
 
   const bookingSummary = useMemo(
     () => ({
@@ -420,17 +431,6 @@ export default function AdminBookingsPage() {
               </p>
             ) : (
               <>
-                {selectedBooking ? (
-                  <div className="mt-6">
-                    <BookingConversationPanel
-                      bookingId={selectedBooking.id}
-                      apiPath={`/api/admin/bookings/${selectedBooking.id}/messages`}
-                      title={`${selectedBooking.full_name} - ${selectedBooking.listing_name}`}
-                      subtitle={`${selectedBooking.tour_date} at ${selectedBooking.tour_time}`}
-                      allowInternalNotes
-                    />
-                  </div>
-                ) : null}
                 {viewMode === "calendar" ? (
             <div className="mt-6 grid gap-5">
               {groupedBookings.map((group) => (
@@ -493,7 +493,10 @@ export default function AdminBookingsPage() {
                         </p>
                         <button
                           type="button"
-                          onClick={() => setSelectedBookingId(booking.id)}
+                          onClick={() => {
+                            setSelectedBookingId(booking.id);
+                            setChatOpen(true);
+                          }}
                           className="mt-3 rounded-lg bg-[#0B3C5D] px-4 py-2 text-sm font-bold text-white"
                         >
                           Open thread
@@ -633,7 +636,10 @@ export default function AdminBookingsPage() {
                     <td className="px-4 py-3">
                       <button
                         type="button"
-                        onClick={() => setSelectedBookingId(booking.id)}
+                        onClick={() => {
+                          setSelectedBookingId(booking.id);
+                          setChatOpen(true);
+                        }}
                         className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-sm font-bold text-white"
                       >
                         Open
@@ -650,6 +656,16 @@ export default function AdminBookingsPage() {
             </>
           )}
         </div>
+        <BookingChatDrawer
+          threads={chatThreads}
+          viewerRole="admin"
+          allowInternalNotes
+          open={chatOpen}
+          onOpenChange={setChatOpen}
+          selectedThreadId={selectedBookingId}
+          onSelectedThreadIdChange={setSelectedBookingId}
+          emptyText="No booking conversations yet."
+        />
       </div>
     </main>
   );

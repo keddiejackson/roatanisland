@@ -167,6 +167,48 @@ export function bookingThreadSummary(
   };
 }
 
+export function bookingChatQuickReplies(viewerRole: BookingThreadViewerRole) {
+  if (viewerRole === "guest") {
+    return [
+      "Yes, that works",
+      "Can you suggest another time?",
+      "Where should we meet?",
+      "What should I bring?",
+      "Please confirm pickup",
+    ];
+  }
+
+  if (viewerRole === "vendor") {
+    return [
+      "Confirmed with pickup details",
+      "Please send your pickup location",
+      "Can you do a different time?",
+      "This date is unavailable",
+      "Deposit reminder sent",
+    ];
+  }
+
+  return [
+    "I will follow up now",
+    "Waiting on vendor",
+    "Waiting on guest",
+    "Please confirm the details",
+    "Marked for follow-up",
+  ];
+}
+
+export function bookingDrawerStats(summaries: BookingThreadSummary[]) {
+  return {
+    threadCount: summaries.length,
+    needsResponseCount: summaries.filter((summary) => summary.needsResponse)
+      .length,
+    messageCount: summaries.reduce(
+      (total, summary) => total + summary.messageCount,
+      0,
+    ),
+  };
+}
+
 function paymentTimelineItem(
   depositStatus: string | null | undefined,
 ): BookingTimelineItem | null {

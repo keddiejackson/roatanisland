@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import BookingConversationPanel from "@/app/BookingConversationPanel";
+import BookingChatDrawer, {
+  type BookingChatThread,
+} from "@/app/BookingChatDrawer";
 import PinPicker from "@/app/map/PinPicker";
 import SiteLogo from "@/app/SiteLogo";
 import {
@@ -192,6 +194,7 @@ export default function VendorDashboardPage() {
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
   const [expandedListingIds, setExpandedListingIds] = useState<Record<string, boolean>>({});
   const [selectedBookingId, setSelectedBookingId] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
   const [bookingResponseFilter, setBookingResponseFilter] = useState<
     "all" | "needs_response"
   >("all");
@@ -886,9 +889,17 @@ export default function VendorDashboardPage() {
       ),
     [bookingResponseFilter, sortedBookings, threadSummaries],
   );
-  const selectedBooking =
-    filteredVendorBookings.find((booking) => booking.id === selectedBookingId) ||
-    filteredVendorBookings[0];
+  const chatThreads: BookingChatThread[] = useMemo(
+    () =>
+      sortedBookings.map((booking) => ({
+        id: booking.id,
+        title: booking.full_name,
+        subtitle: `${booking.listing_name} - ${booking.tour_date} at ${booking.tour_time}`,
+        apiPath: `/api/vendor/bookings/${booking.id}/messages`,
+        summary: threadSummaries[booking.id],
+      })),
+    [sortedBookings, threadSummaries],
+  );
 
   const pendingBookings = useMemo(
     () =>
@@ -1400,7 +1411,10 @@ export default function VendorDashboardPage() {
                     />
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button
-                        onClick={() => setSelectedBookingId(booking.id)}
+                        onClick={() => {
+                          setSelectedBookingId(booking.id);
+                          setChatOpen(true);
+                        }}
                         disabled={savingBookingId === booking.id}
                         className="rounded-lg bg-[#0B3C5D] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                       >
@@ -1435,16 +1449,6 @@ export default function VendorDashboardPage() {
                     </div>
                   </article>
                 ))}
-              </div>
-            ) : null}
-            {selectedBooking ? (
-              <div className="mt-8">
-                <BookingConversationPanel
-                  bookingId={selectedBooking.id}
-                  apiPath={`/api/vendor/bookings/${selectedBooking.id}/messages`}
-                  title={`${selectedBooking.full_name} - ${selectedBooking.listing_name}`}
-                  subtitle={`${selectedBooking.tour_date} at ${selectedBooking.tour_time}`}
-                />
               </div>
             ) : null}
             <div className="mt-8 grid gap-4">
@@ -1587,7 +1591,10 @@ export default function VendorDashboardPage() {
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
                           <button
-                            onClick={() => setSelectedBookingId(booking.id)}
+                            onClick={() => {
+                              setSelectedBookingId(booking.id);
+                              setChatOpen(true);
+                            }}
                             disabled={savingBookingId === booking.id}
                             className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
                           >
@@ -2231,6 +2238,15 @@ export default function VendorDashboardPage() {
           )}
         </section>
       </div>
+      <BookingChatDrawer
+        threads={chatThreads}
+        viewerRole="vendor"
+        open={chatOpen}
+        onOpenChange={setChatOpen}
+        selectedThreadId={selectedBookingId}
+        onSelectedThreadIdChange={setSelectedBookingId}
+        emptyText="No vendor booking conversations yet."
+      />
     </main>
   );
 }
