@@ -1,6 +1,7 @@
 export type BookingSenderRole = "guest" | "vendor" | "admin" | "system";
 
 export type BookingMessageLike = {
+  id?: string | null;
   sender_role: BookingSenderRole;
   sender_email?: string | null;
   message: string;
@@ -41,6 +42,7 @@ export type BookingThreadViewerRole = "guest" | "vendor" | "admin";
 export type BookingThreadSummary = {
   messageCount: number;
   internalCount: number;
+  unreadCount: number;
   lastMessagePreview: string;
   lastSenderRole: BookingSenderRole | null;
   badgeLabel: string;
@@ -113,13 +115,18 @@ function threadBadgeLabel({
   viewerRole,
   needsResponse,
   messageCount,
+  unreadCount,
 }: {
   lastSenderRole: BookingSenderRole | null;
   viewerRole: BookingThreadViewerRole;
   needsResponse: boolean;
   messageCount: number;
+  unreadCount: number;
 }) {
   if (messageCount === 0) return "No messages";
+  if (unreadCount > 0) {
+    return `${unreadCount} unread`;
+  }
   if (needsResponse) {
     return viewerRole === "guest" ? "New reply" : "Needs response";
   }
@@ -127,9 +134,26 @@ function threadBadgeLabel({
   return "Updated";
 }
 
+export function countUnreadBookingMessages(
+  messages: BookingMessageLike[],
+  viewerRole: BookingThreadViewerRole,
+  lastReadAt?: string | null,
+) {
+  const lastReadTime = lastReadAt ? new Date(lastReadAt).getTime() : 0;
+
+  return messages.filter((message) => {
+    if (message.is_internal) return false;
+    if (message.sender_role === viewerRole) return false;
+    if (!message.created_at) return !lastReadAt;
+
+    return new Date(message.created_at).getTime() > lastReadTime;
+  }).length;
+}
+
 export function bookingThreadSummary(
   messages: BookingMessageLike[],
   viewerRole: BookingThreadViewerRole,
+  lastReadAt?: string | null,
 ): BookingThreadSummary {
   const visibleMessages =
     viewerRole === "admin"
@@ -151,10 +175,16 @@ export function bookingThreadSummary(
   }).at(-1);
   const lastSenderRole = lastMessage?.sender_role || null;
   const needsResponse = shouldThreadNeedResponse(lastSenderRole, viewerRole);
+  const unreadCount = countUnreadBookingMessages(
+    publicMessages,
+    viewerRole,
+    lastReadAt,
+  );
 
   return {
     messageCount: publicMessages.length,
     internalCount,
+    unreadCount,
     lastMessagePreview: lastMessage ? bookingMessagePreview(lastMessage) : "",
     lastSenderRole,
     badgeLabel: threadBadgeLabel({
@@ -162,9 +192,47 @@ export function bookingThreadSummary(
       viewerRole,
       needsResponse,
       messageCount: publicMessages.length,
+      unreadCount,
     }),
     needsResponse,
   };
+}
+
+export function groupBookingMessagesByDay(
+  messages: BookingMessageLike[],
+  now = new Date(),
+) {
+  const groups = new Map<
+    string,
+    { dateKey: string; label: string; messages: BookingMessageLike[] }
+  >();
+  const todayKey = now.toISOString().slice(0, 10);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const yesterdayKey = yesterday.toISOString().slice(0, 10);
+
+  for (const message of messages) {
+    const createdAt = message.created_at ? new Date(message.created_at) : now;
+    const dateKey = createdAt.toISOString().slice(0, 10);
+    const label =
+      dateKey === todayKey
+        ? "Today"
+        : dateKey === yesterdayKey
+          ? "Yesterday"
+          : createdAt.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            });
+
+    if (!groups.has(dateKey)) {
+      groups.set(dateKey, { dateKey, label, messages: [] });
+    }
+
+    groups.get(dateKey)?.messages.push(message);
+  }
+
+  return [...groups.values()];
 }
 
 export function bookingChatQuickReplies(viewerRole: BookingThreadViewerRole) {
@@ -205,6 +273,10 @@ export function bookingDrawerStats(
     threadCount,
     needsResponseCount: summaries.filter((summary) => summary.needsResponse)
       .length,
+    unreadCount: summaries.reduce(
+      (total, summary) => total + summary.unreadCount,
+      0,
+    ),
     messageCount: summaries.reduce(
       (total, summary) => total + summary.messageCount,
       0,

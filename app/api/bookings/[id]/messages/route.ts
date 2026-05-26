@@ -5,6 +5,7 @@ import {
   type BookingMessageLike,
   type BookingEventLike,
 } from "@/lib/booking-communication";
+import { markBookingThreadRead } from "@/lib/booking-message-reads";
 import {
   escapeHtml,
   sendAdminNotification,
@@ -15,6 +16,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingMessageRequest = {
   message?: string;
+  notifyByEmail?: boolean;
 };
 
 type BookingSnapshot = {
@@ -138,7 +140,16 @@ export async function GET(
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  return NextResponse.json(await getConversation(access.booking));
+  const [conversation, readReceipt] = await Promise.all([
+    getConversation(access.booking),
+    markBookingThreadRead({
+      bookingId: access.booking.id,
+      readerRole: "guest",
+      readerEmail: access.user.email,
+    }),
+  ]);
+
+  return NextResponse.json({ ...conversation, readReceipt });
 }
 
 export async function POST(
@@ -154,6 +165,7 @@ export async function POST(
 
   const body = (await request.json()) as BookingMessageRequest;
   const message = normalizeBookingMessage(body.message);
+  const notifyByEmail = body.notifyByEmail !== false;
 
   if (!message) {
     return NextResponse.json(
@@ -183,45 +195,47 @@ export async function POST(
     access.booking.listing_id,
   );
 
-  await sendAdminNotification({
-    subject: `Guest message: ${listingTitle}`,
-    replyTo: access.user.email || undefined,
-    html: `
+  if (notifyByEmail) {
+    await sendAdminNotification({
+      subject: `Guest message: ${listingTitle}`,
+      replyTo: access.user.email || undefined,
+      html: `
       <h2>Guest sent a booking message</h2>
       <p><strong>Listing:</strong> ${escapeHtml(listingTitle)}</p>
       <p><strong>Guest:</strong> ${escapeHtml(access.booking.full_name)}</p>
       <p><strong>Email:</strong> ${escapeHtml(access.booking.email)}</p>
       <p><strong>Message:</strong> ${escapeHtml(message)}</p>
-    `,
-    text: [
-      "Guest sent a booking message",
-      `Listing: ${listingTitle}`,
-      `Guest: ${access.booking.full_name}`,
-      `Email: ${access.booking.email}`,
-      `Message: ${message}`,
-    ].join("\n"),
-  });
-
-  if (vendorEmail) {
-    await sendEmailNotification({
-      to: vendorEmail,
-      subject: `Guest message: ${listingTitle}`,
-      replyTo: access.user.email || undefined,
-      html: `
-        <h2>Guest sent a booking message</h2>
-        <p><strong>Business:</strong> ${escapeHtml(vendorName)}</p>
-        <p><strong>Listing:</strong> ${escapeHtml(listingTitle)}</p>
-        <p><strong>Guest:</strong> ${escapeHtml(access.booking.full_name)}</p>
-        <p><strong>Message:</strong> ${escapeHtml(message)}</p>
       `,
       text: [
         "Guest sent a booking message",
-        `Business: ${vendorName || ""}`,
         `Listing: ${listingTitle}`,
         `Guest: ${access.booking.full_name}`,
+        `Email: ${access.booking.email}`,
         `Message: ${message}`,
       ].join("\n"),
     });
+
+    if (vendorEmail) {
+      await sendEmailNotification({
+        to: vendorEmail,
+        subject: `Guest message: ${listingTitle}`,
+        replyTo: access.user.email || undefined,
+        html: `
+          <h2>Guest sent a booking message</h2>
+          <p><strong>Business:</strong> ${escapeHtml(vendorName)}</p>
+          <p><strong>Listing:</strong> ${escapeHtml(listingTitle)}</p>
+          <p><strong>Guest:</strong> ${escapeHtml(access.booking.full_name)}</p>
+          <p><strong>Message:</strong> ${escapeHtml(message)}</p>
+        `,
+        text: [
+          "Guest sent a booking message",
+          `Business: ${vendorName || ""}`,
+          `Listing: ${listingTitle}`,
+          `Guest: ${access.booking.full_name}`,
+          `Message: ${message}`,
+        ].join("\n"),
+      });
+    }
   }
 
   await logActivity({
@@ -233,9 +247,10 @@ export async function POST(
     targetLabel: `${access.booking.full_name} - ${listingTitle}`,
     metadata: {
       listing_id: access.booking.listing_id,
-      vendor_notified: Boolean(vendorEmail),
+      vendor_notified: Boolean(vendorEmail && notifyByEmail),
+      emailed: notifyByEmail,
     },
   });
 
-  return NextResponse.json({ message: createdMessage });
+  return NextResponse.json({ message: createdMessage, emailed: notifyByEmail });
 }

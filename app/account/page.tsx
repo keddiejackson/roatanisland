@@ -39,6 +39,11 @@ type BookingMessageRow = BookingMessageLike & {
   booking_id: string;
 };
 
+type BookingReadReceiptRow = {
+  booking_id: string;
+  last_read_at: string | null;
+};
+
 function statusBadgeClass(status: string | null) {
   switch ((status || "new").toLowerCase()) {
     case "confirmed":
@@ -64,8 +69,14 @@ function threadBadgeClass(summary?: BookingThreadSummary) {
   return "bg-[#EEF7F6] text-[#0B3C5D]";
 }
 
-function summarizeThreads(messages: BookingMessageRow[]) {
+function summarizeThreads(
+  messages: BookingMessageRow[],
+  readReceipts: BookingReadReceiptRow[] = [],
+) {
   const grouped = new Map<string, BookingMessageLike[]>();
+  const lastReadByBooking = new Map(
+    readReceipts.map((receipt) => [receipt.booking_id, receipt.last_read_at]),
+  );
 
   for (const message of messages) {
     grouped.set(message.booking_id, [
@@ -77,7 +88,11 @@ function summarizeThreads(messages: BookingMessageRow[]) {
   return Object.fromEntries(
     [...grouped.entries()].map(([bookingId, bookingMessages]) => [
       bookingId,
-      bookingThreadSummary(bookingMessages, "guest"),
+      bookingThreadSummary(
+        bookingMessages,
+        "guest",
+        lastReadByBooking.get(bookingId),
+      ),
     ]),
   );
 }
@@ -142,8 +157,21 @@ export default function AccountPage() {
           .order("created_at", { ascending: true });
 
         if (!messageError) {
+          const { data: readRows } = await supabase
+            .from("booking_message_reads")
+            .select("booking_id, last_read_at")
+            .in(
+              "booking_id",
+              accountBookings.map((booking) => booking.id),
+            )
+            .eq("reader_role", "guest")
+            .eq("reader_email", data.user.email.toLowerCase());
+
           setThreadSummaries(
-            summarizeThreads((messageRows as BookingMessageRow[]) || []),
+            summarizeThreads(
+              (messageRows as BookingMessageRow[]) || [],
+              (readRows as BookingReadReceiptRow[]) || [],
+            ),
           );
         }
       } else {

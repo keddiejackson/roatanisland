@@ -51,6 +51,11 @@ type BookingMessageRow = BookingMessageLike & {
   booking_id: string;
 };
 
+type BookingReadReceiptRow = {
+  booking_id: string;
+  last_read_at: string | null;
+};
+
 function formatDeposit(booking: BookingWithListingName) {
   if (!booking.deposit_status || booking.deposit_status === "not_requested") {
     return "Not requested";
@@ -77,8 +82,14 @@ function formatMoney(cents: number | null) {
   }).format(cents / 100);
 }
 
-function summarizeThreads(messages: BookingMessageRow[]) {
+function summarizeThreads(
+  messages: BookingMessageRow[],
+  readReceipts: BookingReadReceiptRow[] = [],
+) {
   const grouped = new Map<string, BookingMessageLike[]>();
+  const lastReadByBooking = new Map(
+    readReceipts.map((receipt) => [receipt.booking_id, receipt.last_read_at]),
+  );
 
   for (const message of messages) {
     grouped.set(message.booking_id, [
@@ -90,7 +101,11 @@ function summarizeThreads(messages: BookingMessageRow[]) {
   return Object.fromEntries(
     [...grouped.entries()].map(([bookingId, bookingMessages]) => [
       bookingId,
-      bookingThreadSummary(bookingMessages, "admin"),
+      bookingThreadSummary(
+        bookingMessages,
+        "admin",
+        lastReadByBooking.get(bookingId),
+      ),
     ]),
   );
 }
@@ -111,6 +126,7 @@ export default function AdminBookingsPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [adminEmail, setAdminEmail] = useState("");
   const [bookings, setBookings] = useState<BookingWithListingName[]>([]);
   const [threadSummaries, setThreadSummaries] = useState<
     Record<string, BookingThreadSummary>
@@ -136,6 +152,7 @@ export default function AdminBookingsPage() {
         return;
       }
 
+      setAdminEmail(data.user.email || "");
       setAuthorized(true);
       setCheckingAuth(false);
     }
@@ -190,8 +207,21 @@ export default function AdminBookingsPage() {
           .order("created_at", { ascending: true });
 
         if (!messageError) {
+          const { data: readRows } = await supabase
+            .from("booking_message_reads")
+            .select("booking_id, last_read_at")
+            .in(
+              "booking_id",
+              enrichedBookings.map((booking) => booking.id),
+            )
+            .eq("reader_role", "admin")
+            .eq("reader_email", adminEmail.toLowerCase());
+
           setThreadSummaries(
-            summarizeThreads((messageRows as BookingMessageRow[]) || []),
+            summarizeThreads(
+              (messageRows as BookingMessageRow[]) || [],
+              (readRows as BookingReadReceiptRow[]) || [],
+            ),
           );
         }
       } else {
@@ -203,7 +233,7 @@ export default function AdminBookingsPage() {
     if (authorized) {
       fetchBookingsAndListings();
     }
-  }, [authorized]);
+  }, [adminEmail, authorized]);
 
   const filteredBookings = useMemo(
     () =>

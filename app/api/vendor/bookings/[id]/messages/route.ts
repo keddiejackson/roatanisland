@@ -5,6 +5,7 @@ import {
   type BookingEventLike,
   type BookingMessageLike,
 } from "@/lib/booking-communication";
+import { markBookingThreadRead } from "@/lib/booking-message-reads";
 import { logActivity } from "@/lib/activity-log";
 import {
   escapeHtml,
@@ -15,6 +16,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 type VendorMessageRequest = {
   message?: string;
+  notifyByEmail?: boolean;
 };
 
 type BookingSnapshot = {
@@ -141,7 +143,16 @@ export async function GET(
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  return NextResponse.json(await getConversation(access.booking));
+  const [conversation, readReceipt] = await Promise.all([
+    getConversation(access.booking),
+    markBookingThreadRead({
+      bookingId: access.booking.id,
+      readerRole: "vendor",
+      readerEmail: access.user.email,
+    }),
+  ]);
+
+  return NextResponse.json({ ...conversation, readReceipt });
 }
 
 export async function POST(
@@ -157,6 +168,7 @@ export async function POST(
 
   const body = (await request.json()) as VendorMessageRequest;
   const message = normalizeBookingMessage(body.message);
+  const notifyByEmail = body.notifyByEmail !== false;
 
   if (!message) {
     return NextResponse.json(
@@ -182,46 +194,48 @@ export async function POST(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await sendEmailNotification({
-    to: access.booking.email,
-    subject: `Operator message: ${access.listingTitle}`,
-    replyTo: access.user.email || undefined,
-    html: `
-      <h2>Your Roatan operator sent a message</h2>
-      <p><strong>Business:</strong> ${escapeHtml(access.vendorName)}</p>
-      <p><strong>Listing:</strong> ${escapeHtml(access.listingTitle)}</p>
-      <p><strong>Date:</strong> ${escapeHtml(access.booking.tour_date)}</p>
-      <p><strong>Time:</strong> ${escapeHtml(access.booking.tour_time)}</p>
-      <p><strong>Message:</strong> ${escapeHtml(message)}</p>
-    `,
-    text: [
-      "Your Roatan operator sent a message",
-      `Business: ${access.vendorName || ""}`,
-      `Listing: ${access.listingTitle}`,
-      `Date: ${access.booking.tour_date}`,
-      `Time: ${access.booking.tour_time}`,
-      `Message: ${message}`,
-    ].join("\n"),
-  });
+  if (notifyByEmail) {
+    await sendEmailNotification({
+      to: access.booking.email,
+      subject: `Operator message: ${access.listingTitle}`,
+      replyTo: access.user.email || undefined,
+      html: `
+        <h2>Your Roatan operator sent a message</h2>
+        <p><strong>Business:</strong> ${escapeHtml(access.vendorName)}</p>
+        <p><strong>Listing:</strong> ${escapeHtml(access.listingTitle)}</p>
+        <p><strong>Date:</strong> ${escapeHtml(access.booking.tour_date)}</p>
+        <p><strong>Time:</strong> ${escapeHtml(access.booking.tour_time)}</p>
+        <p><strong>Message:</strong> ${escapeHtml(message)}</p>
+      `,
+      text: [
+        "Your Roatan operator sent a message",
+        `Business: ${access.vendorName || ""}`,
+        `Listing: ${access.listingTitle}`,
+        `Date: ${access.booking.tour_date}`,
+        `Time: ${access.booking.tour_time}`,
+        `Message: ${message}`,
+      ].join("\n"),
+    });
 
-  await sendAdminNotification({
-    subject: `Vendor message: ${access.listingTitle}`,
-    replyTo: access.user.email || undefined,
-    html: `
-      <h2>Vendor sent a booking message</h2>
-      <p><strong>Business:</strong> ${escapeHtml(access.vendorName)}</p>
-      <p><strong>Listing:</strong> ${escapeHtml(access.listingTitle)}</p>
-      <p><strong>Guest:</strong> ${escapeHtml(access.booking.full_name)}</p>
-      <p><strong>Message:</strong> ${escapeHtml(message)}</p>
-    `,
-    text: [
-      "Vendor sent a booking message",
-      `Business: ${access.vendorName || ""}`,
-      `Listing: ${access.listingTitle}`,
-      `Guest: ${access.booking.full_name}`,
-      `Message: ${message}`,
-    ].join("\n"),
-  });
+    await sendAdminNotification({
+      subject: `Vendor message: ${access.listingTitle}`,
+      replyTo: access.user.email || undefined,
+      html: `
+        <h2>Vendor sent a booking message</h2>
+        <p><strong>Business:</strong> ${escapeHtml(access.vendorName)}</p>
+        <p><strong>Listing:</strong> ${escapeHtml(access.listingTitle)}</p>
+        <p><strong>Guest:</strong> ${escapeHtml(access.booking.full_name)}</p>
+        <p><strong>Message:</strong> ${escapeHtml(message)}</p>
+      `,
+      text: [
+        "Vendor sent a booking message",
+        `Business: ${access.vendorName || ""}`,
+        `Listing: ${access.listingTitle}`,
+        `Guest: ${access.booking.full_name}`,
+        `Message: ${message}`,
+      ].join("\n"),
+    });
+  }
 
   await logActivity({
     actorEmail: access.user.email,
@@ -233,9 +247,9 @@ export async function POST(
     metadata: {
       vendor_id: access.vendorId,
       listing_id: access.booking.listing_id,
-      emailed: true,
+      emailed: notifyByEmail,
     },
   });
 
-  return NextResponse.json({ message: createdMessage });
+  return NextResponse.json({ message: createdMessage, emailed: notifyByEmail });
 }

@@ -104,6 +104,11 @@ type BookingMessageRow = BookingMessageLike & {
   booking_id: string;
 };
 
+type BookingReadReceiptRow = {
+  booking_id: string;
+  last_read_at: string | null;
+};
+
 type AddonRow = {
   id: string;
   listing_id: string;
@@ -124,8 +129,14 @@ function currentMonthValue() {
   return new Date().toISOString().slice(0, 7);
 }
 
-function summarizeThreads(messages: BookingMessageRow[]) {
+function summarizeThreads(
+  messages: BookingMessageRow[],
+  readReceipts: BookingReadReceiptRow[] = [],
+) {
   const grouped = new Map<string, BookingMessageLike[]>();
+  const lastReadByBooking = new Map(
+    readReceipts.map((receipt) => [receipt.booking_id, receipt.last_read_at]),
+  );
 
   for (const message of messages) {
     grouped.set(message.booking_id, [
@@ -137,7 +148,11 @@ function summarizeThreads(messages: BookingMessageRow[]) {
   return Object.fromEntries(
     [...grouped.entries()].map(([bookingId, bookingMessages]) => [
       bookingId,
-      bookingThreadSummary(bookingMessages, "vendor"),
+      bookingThreadSummary(
+        bookingMessages,
+        "vendor",
+        lastReadByBooking.get(bookingId),
+      ),
     ]),
   );
 }
@@ -387,8 +402,21 @@ export default function VendorDashboardPage() {
             .order("created_at", { ascending: true });
 
           if (!messageError) {
+            const { data: readRows } = await supabase
+              .from("booking_message_reads")
+              .select("booking_id, last_read_at")
+              .in(
+                "booking_id",
+                bookingRows.map((booking) => booking.id),
+              )
+              .eq("reader_role", "vendor")
+              .eq("reader_email", (userData.user.email || "").toLowerCase());
+
             setThreadSummaries(
-              summarizeThreads((messageRows as BookingMessageRow[]) || []),
+              summarizeThreads(
+                (messageRows as BookingMessageRow[]) || [],
+                (readRows as BookingReadReceiptRow[]) || [],
+              ),
             );
           }
         } else {

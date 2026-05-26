@@ -5,6 +5,7 @@ import {
   type BookingEventLike,
   type BookingMessageLike,
 } from "@/lib/booking-communication";
+import { markBookingThreadRead } from "@/lib/booking-message-reads";
 import { logActivity } from "@/lib/activity-log";
 import { escapeHtml, sendEmailNotification } from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -12,6 +13,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 type AdminMessageRequest = {
   message?: string;
   isInternal?: boolean;
+  notifyByEmail?: boolean;
 };
 
 type BookingSnapshot = {
@@ -113,7 +115,16 @@ export async function GET(
     return NextResponse.json({ error: "Booking not found." }, { status: 404 });
   }
 
-  return NextResponse.json(await getConversation(booking));
+  const [conversation, readReceipt] = await Promise.all([
+    getConversation(booking),
+    markBookingThreadRead({
+      bookingId: booking.id,
+      readerRole: "admin",
+      readerEmail: adminEmail,
+    }),
+  ]);
+
+  return NextResponse.json({ ...conversation, readReceipt });
 }
 
 export async function POST(
@@ -136,6 +147,7 @@ export async function POST(
   const body = (await request.json()) as AdminMessageRequest;
   const message = normalizeBookingMessage(body.message);
   const isInternal = Boolean(body.isInternal);
+  const notifyByEmail = !isInternal && body.notifyByEmail !== false;
 
   if (!message) {
     return NextResponse.json(
@@ -164,7 +176,7 @@ export async function POST(
 
   const listingTitle = await getListingTitle(booking.listing_id);
 
-  if (!isInternal) {
+  if (notifyByEmail) {
     await sendEmailNotification({
       to: booking.email,
       subject: `Booking update: ${listingTitle}`,
@@ -195,9 +207,9 @@ export async function POST(
     targetLabel: `${booking.full_name} - ${listingTitle}`,
     metadata: {
       listing_id: booking.listing_id,
-      emailed: !isInternal,
+      emailed: notifyByEmail,
     },
   });
 
-  return NextResponse.json({ message: createdMessage });
+  return NextResponse.json({ message: createdMessage, emailed: notifyByEmail });
 }

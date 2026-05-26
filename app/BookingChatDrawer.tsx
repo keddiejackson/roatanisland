@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   bookingChatQuickReplies,
   bookingDrawerStats,
+  groupBookingMessagesByDay,
   type BookingMessageLike,
   type BookingThreadSummary,
   type BookingThreadViewerRole,
@@ -31,6 +32,9 @@ type BookingChatDrawerProps = {
 
 type ConversationResponse = {
   messages?: BookingMessageLike[];
+  readReceipt?: {
+    last_read_at?: string | null;
+  } | null;
   error?: string;
 };
 
@@ -83,8 +87,12 @@ export default function BookingChatDrawer({
   const [draft, setDraft] = useState("");
   const [isInternal, setIsInternal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const [lastReadAt, setLastReadAt] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [notifyByEmail, setNotifyByEmail] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const drawerOpen = open ?? internalOpen;
   const activeThreadId = selectedThreadId ?? internalSelectedThreadId;
@@ -101,6 +109,10 @@ export default function BookingChatDrawer({
     [activeThreadId, threads],
   );
   const selectedApiPath = selectedThread?.apiPath;
+  const messageGroups = useMemo(
+    () => groupBookingMessagesByDay(messages),
+    [messages],
+  );
 
   function changeOpen(nextOpen: boolean) {
     onOpenChange?.(nextOpen);
@@ -114,6 +126,8 @@ export default function BookingChatDrawer({
       setDraft("");
       setError("");
       setIsInternal(false);
+      setLastReadAt(null);
+      setLastSyncedAt(null);
     }
 
     onSelectedThreadIdChange?.(threadId);
@@ -122,18 +136,22 @@ export default function BookingChatDrawer({
     }
   }
 
-  useEffect(() => {
-    if (!drawerOpen || !selectedApiPath) return;
-
+  const loadConversation = useCallback(async (silent = false) => {
+    if (!selectedApiPath) return;
     const controller = new AbortController();
 
-    async function loadConversation() {
-      setLoading(true);
+    async function load() {
+      if (!silent) {
+        setLoading(true);
+      }
+      setRefreshing(silent);
       setError("");
 
       try {
         const { data } = await supabase.auth.getSession();
-        const response = await fetch(selectedApiPath, {
+        const url = new URL(selectedApiPath, window.location.origin);
+        url.searchParams.set("markRead", "1");
+        const response = await fetch(url.toString(), {
           signal: controller.signal,
           headers: {
             ...(data.session?.access_token
@@ -150,6 +168,8 @@ export default function BookingChatDrawer({
         }
 
         setMessages(result.messages || []);
+        setLastReadAt(result.readReceipt?.last_read_at || null);
+        setLastSyncedAt(new Date().toISOString());
       } catch {
         if (!controller.signal.aborted) {
           setError("Unable to load messages.");
@@ -157,14 +177,34 @@ export default function BookingChatDrawer({
         }
       } finally {
         if (!controller.signal.aborted) {
-          setLoading(false);
+          if (!silent) {
+            setLoading(false);
+          }
+          setRefreshing(false);
         }
       }
     }
 
-    loadConversation();
+    await load();
     return () => controller.abort();
-  }, [drawerOpen, selectedApiPath]);
+  }, [selectedApiPath]);
+
+  useEffect(() => {
+    if (!drawerOpen || !selectedApiPath) return;
+
+    let cleanup: (() => void) | undefined;
+    loadConversation(false).then((nextCleanup) => {
+      cleanup = nextCleanup;
+    });
+    const interval = window.setInterval(() => {
+      loadConversation(true);
+    }, 8000);
+
+    return () => {
+      cleanup?.();
+      window.clearInterval(interval);
+    };
+  }, [drawerOpen, loadConversation, selectedApiPath]);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -208,6 +248,7 @@ export default function BookingChatDrawer({
       body: JSON.stringify({
         message: draft,
         isInternal,
+        notifyByEmail: isInternal ? false : notifyByEmail,
       }),
     });
     const result = (await response.json()) as ConversationResponse & {
@@ -225,6 +266,7 @@ export default function BookingChatDrawer({
     setMessages((current) =>
       result.message ? [...current, result.message] : current,
     );
+    setLastSyncedAt(new Date().toISOString());
   }
 
   if (threads.length === 0) {
@@ -266,10 +308,15 @@ export default function BookingChatDrawer({
                     Messages
                   </h2>
                   <p className="mt-1 text-sm leading-5 text-white/70">
-                    {stats.messageCount} message
-                    {stats.messageCount === 1 ? "" : "s"} across{" "}
-                    {stats.threadCount} thread
-                    {stats.threadCount === 1 ? "" : "s"}
+                    {stats.unreadCount > 0
+                      ? `${stats.unreadCount} unread across ${stats.threadCount} thread${
+                          stats.threadCount === 1 ? "" : "s"
+                        }`
+                      : `${stats.messageCount} message${
+                          stats.messageCount === 1 ? "" : "s"
+                        } across ${stats.threadCount} thread${
+                          stats.threadCount === 1 ? "" : "s"
+                        }`}
                   </p>
                 </div>
                 <button
@@ -326,6 +373,21 @@ export default function BookingChatDrawer({
                       {selectedThread.summary?.badgeLabel || "No messages"}
                     </span>
                   </div>
+                  <p className="mt-2 text-[11px] font-semibold text-gray-500">
+                    {refreshing
+                      ? "Refreshing..."
+                      : lastReadAt
+                        ? `Marked read ${new Date(lastReadAt).toLocaleTimeString([], {
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}`
+                        : lastSyncedAt
+                          ? `Synced ${new Date(lastSyncedAt).toLocaleTimeString([], {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}`
+                          : "Live refresh is on"}
+                  </p>
                 </div>
               ) : null}
 
@@ -343,30 +405,55 @@ export default function BookingChatDrawer({
                     No messages yet. Send the first update below.
                   </p>
                 ) : (
-                  <div className="grid gap-3">
-                    {messages.map((message, index) => (
-                      <div
-                        key={`${message.created_at || index}-${message.sender_role}`}
-                        className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${bubbleClass(
-                          message,
-                          viewerRole,
-                        )}`}
-                      >
-                        <p className="text-[11px] font-black uppercase tracking-[0.06em] opacity-70">
-                          {message.is_internal
-                            ? "Internal admin note"
-                            : senderLabel(message.sender_role)}
-                        </p>
-                        <p className="mt-1 whitespace-pre-line break-words">
-                          {message.message}
-                        </p>
-                        {message.created_at ? (
-                          <p className="mt-2 text-[11px] opacity-70">
-                            {new Date(message.created_at).toLocaleString()}
-                          </p>
-                        ) : null}
+                  <div className="grid gap-4">
+                    {messageGroups.map((group) => (
+                      <div key={group.dateKey} className="grid gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className="h-px flex-1 bg-[#D6B56D]/20" />
+                          <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-[0.08em] text-gray-500 shadow-sm">
+                            {group.label}
+                          </span>
+                          <span className="h-px flex-1 bg-[#D6B56D]/20" />
+                        </div>
+                        {group.messages.map((message, index) => (
+                          <div
+                            key={`${message.id || message.created_at || index}-${message.sender_role}`}
+                            className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-6 shadow-sm ${bubbleClass(
+                              message,
+                              viewerRole,
+                            )}`}
+                          >
+                            <p className="text-[11px] font-black uppercase tracking-[0.06em] opacity-70">
+                              {message.is_internal
+                                ? "Internal admin note"
+                                : senderLabel(message.sender_role)}
+                            </p>
+                            <p className="mt-1 whitespace-pre-line break-words">
+                              {message.message}
+                            </p>
+                            {message.created_at ? (
+                              <p className="mt-2 text-[11px] opacity-70">
+                                {new Date(message.created_at).toLocaleTimeString([], {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            ) : null}
+                          </div>
+                        ))}
                       </div>
                     ))}
+                    {lastReadAt ? (
+                      <p className="text-center text-[11px] font-semibold text-gray-500">
+                        Last seen{" "}
+                        {new Date(lastReadAt).toLocaleString([], {
+                          month: "short",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    ) : null}
                     <div ref={messagesEndRef} />
                   </div>
                 )}
@@ -396,16 +483,29 @@ export default function BookingChatDrawer({
                   placeholder="Write a message..."
                   className="max-h-24 min-h-20 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#00A8A8]"
                 />
-                {allowInternalNotes ? (
-                  <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-gray-600">
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {allowInternalNotes ? (
+                    <label className="flex items-center gap-2 text-xs font-semibold text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={isInternal}
+                        onChange={(e) => setIsInternal(e.target.checked)}
+                      />
+                      Internal admin note
+                    </label>
+                  ) : (
+                    <span />
+                  )}
+                  <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 sm:justify-end">
                     <input
                       type="checkbox"
-                      checked={isInternal}
-                      onChange={(e) => setIsInternal(e.target.checked)}
+                      checked={!isInternal && notifyByEmail}
+                      disabled={isInternal}
+                      onChange={(e) => setNotifyByEmail(e.target.checked)}
                     />
-                    Internal admin note
+                    Email notification
                   </label>
-                ) : null}
+                </div>
                 {error ? (
                   <p className="mt-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold leading-5 text-red-700">
                     {error}
