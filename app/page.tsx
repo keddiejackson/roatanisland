@@ -25,10 +25,19 @@ import {
   listingMatchesAvailability,
 } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
+import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
 
 type Listing = HomeListing & {
   image_url: string | null;
   reviews_count: number | null;
+};
+
+type HomeAccountProfile = {
+  email: string;
+  displayName: string;
+  profileImageUrl: string | null;
+  href: string;
+  label: string;
 };
 
 const categories = [
@@ -144,6 +153,10 @@ export default function Home() {
   const [leadMessage, setLeadMessage] = useState("");
   const [leadLoading, setLeadLoading] = useState(false);
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [homeAccount, setHomeAccount] = useState<HomeAccountProfile | null>(
+    null,
+  );
+  const [homeAccountLoading, setHomeAccountLoading] = useState(true);
 
   useEffect(() => {
     async function fetchListings() {
@@ -166,6 +179,87 @@ export default function Home() {
     }
 
     fetchListings();
+  }, []);
+
+  useEffect(() => {
+    async function loadHomeAccount() {
+      setHomeAccountLoading(true);
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      const email = session?.user.email || "";
+
+      if (!session?.access_token || !email) {
+        setHomeAccount(null);
+        setHomeAccountLoading(false);
+        return;
+      }
+
+      let displayName = displayNameFromProfile({ email });
+      let profileImageUrl: string | null = null;
+
+      try {
+        const profileResponse = await fetch("/api/account/profile", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (profileResponse.ok) {
+          const result = (await profileResponse.json()) as {
+            profile?: {
+              email?: string | null;
+              display_name?: string | null;
+              profile_image_url?: string | null;
+            };
+          };
+          displayName = displayNameFromProfile({
+            email,
+            display_name: result.profile?.display_name,
+          });
+          profileImageUrl = result.profile?.profile_image_url || null;
+        }
+      } catch {
+        profileImageUrl = null;
+      }
+
+      const [{ data: adminRecord }, { data: vendorRecord }] = await Promise.all([
+        supabase
+          .from("admin_users")
+          .select("email")
+          .eq("email", email.toLowerCase())
+          .maybeSingle(),
+        supabase
+          .from("vendor_users")
+          .select("vendor_id")
+          .eq("user_id", session.user.id)
+          .maybeSingle(),
+      ]);
+
+      setHomeAccount({
+        email,
+        displayName,
+        profileImageUrl,
+        href: adminRecord
+          ? "/admin"
+          : vendorRecord
+            ? "/vendor/dashboard"
+            : "/account",
+        label: adminRecord
+          ? "Admin signed in"
+          : vendorRecord
+            ? "Vendor signed in"
+            : "Signed in",
+      });
+      setHomeAccountLoading(false);
+    }
+
+    loadHomeAccount();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      loadHomeAccount();
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   const filteredListings = useMemo(
@@ -304,9 +398,36 @@ export default function Home() {
               <Link href="/vendors" className="rounded-lg px-3 py-2 hover:bg-white/10">
                 Vendors
               </Link>
-              <Link href="/signin" className="rounded-lg px-3 py-2 hover:bg-white/10">
-                Sign in
-              </Link>
+              {homeAccountLoading ? null : homeAccount ? (
+                <Link
+                  href={homeAccount.href}
+                  className="flex max-w-[220px] items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white shadow-lg shadow-black/10 backdrop-blur hover:bg-white/15"
+                >
+                  <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
+                    {homeAccount.profileImageUrl ? (
+                      <img
+                        src={homeAccount.profileImageUrl}
+                        alt=""
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      profileInitials(homeAccount.displayName, homeAccount.email)
+                    )}
+                  </span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="block truncate text-xs font-black">
+                      {homeAccount.displayName}
+                    </span>
+                    <span className="block truncate text-[10px] font-bold uppercase tracking-[0.08em] text-white/70">
+                      {homeAccount.label}
+                    </span>
+                  </span>
+                </Link>
+              ) : (
+                <Link href="/signin" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                  Sign in
+                </Link>
+              )}
               <Link
                 href="/vendor/signup"
                 className="rounded-lg bg-white px-4 py-2 text-[#071F2F] shadow-lg shadow-black/10"

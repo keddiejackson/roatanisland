@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import AnalyticsTracker from "./AnalyticsTracker";
 import GlobalAccountButton from "./GlobalAccountButton";
+import SessionIdleTimeout from "./SessionIdleTimeout";
 import SiteBrandingProvider from "./SiteBrandingProvider";
 import "./globals.css";
 
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <SiteBrandingProvider>
           <AnalyticsTracker />
+          <SessionIdleTimeout />
           {children}
           <GlobalAccountButton />
         </SiteBrandingProvider>
