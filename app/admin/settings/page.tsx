@@ -467,7 +467,12 @@ export default function AdminSettingsPage() {
                         <div className="flex gap-3">
                           <input
                             type="color"
-                            value={previewBranding.logoBackgroundColor}
+                            value={
+                              previewBranding.logoBackgroundColor ===
+                              "transparent"
+                                ? "#ffffff"
+                                : previewBranding.logoBackgroundColor
+                            }
                             onChange={(e) =>
                               updateSetting("logoBackgroundColor", e.target.value)
                             }
@@ -480,6 +485,15 @@ export default function AdminSettingsPage() {
                             }
                             className="min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3"
                           />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateSetting("logoBackgroundColor", "transparent")
+                            }
+                            className="rounded-xl border border-[#0B3C5D]/15 bg-white px-3 py-2 text-xs font-black text-[#0B3C5D]"
+                          >
+                            Transparent
+                          </button>
                         </div>
                       </label>
                       <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">

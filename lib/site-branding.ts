@@ -147,6 +147,10 @@ function normalizeHexColor(value: unknown, fallback: string) {
   }
 
   const color = value.trim().toLowerCase();
+  if (color === "transparent") {
+    return color;
+  }
+
   return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
 }
 

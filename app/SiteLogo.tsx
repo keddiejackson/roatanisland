@@ -27,17 +27,18 @@ export default function SiteLogo({
 }: SiteLogoProps) {
   const branding = useSiteBranding();
   const [failedLogoUrl, setFailedLogoUrl] = useState("");
+  const showCustomLogo =
+    shouldUseCustomLogo(branding, "site") &&
+    failedLogoUrl !== branding.logoUrl;
   const variantClass =
-    variant === "light"
+    showCustomLogo
+      ? "rounded-xl"
+      : variant === "light"
       ? "rounded-xl bg-white/95 px-3 py-2 shadow-lg shadow-black/10"
       : "rounded-xl";
   const textClass =
     variant === "light" ? "text-[#082A44]" : "text-[#082A44]";
   const markClass = compact ? "h-11 w-11" : "h-12 w-12";
-  const showCustomLogo =
-    shouldUseCustomLogo(branding, "site") &&
-    failedLogoUrl !== branding.logoUrl;
-
   return (
     <Link
       href={href}
