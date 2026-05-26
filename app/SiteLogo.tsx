@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { useSiteBranding } from "@/app/SiteBrandingProvider";
-import { logoShapeClasses, logoSizeClasses } from "@/lib/site-branding";
+import { logoFrameStyle, logoImageStyle } from "@/lib/site-branding";
 
 type SiteLogoProps = {
   href?: string;
@@ -40,14 +40,16 @@ export default function SiteLogo({
       className={`inline-flex shrink-0 items-center gap-3 ${variantClass} ${className}`}
     >
       {showCustomLogo ? (
-        // Uploaded logos can come from any public Supabase asset URL.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={branding.logoUrl}
-          alt="Roatan Island Life"
-          className={`${logoSizeClasses[branding.logoSize]} ${logoShapeClasses[branding.logoShape]}`}
-          onError={() => setFailedLogoUrl(branding.logoUrl)}
-        />
+        <span style={logoFrameStyle(branding)}>
+          {/* Uploaded logos can come from any public Supabase asset URL. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={branding.logoUrl}
+            alt="Roatan Island Life"
+            style={logoImageStyle(branding)}
+            onError={() => setFailedLogoUrl(branding.logoUrl)}
+          />
+        </span>
       ) : (
         <>
           <Image

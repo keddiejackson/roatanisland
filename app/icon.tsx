@@ -2,7 +2,11 @@ import { ImageResponse } from "next/og";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { resolveBrandingIconSource } from "@/lib/site-icon-source";
-import { normalizeSiteBranding } from "@/lib/site-branding";
+import {
+  logoIconFrameStyle,
+  logoIconImageStyle,
+  normalizeSiteBranding,
+} from "@/lib/site-branding";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const runtime = "nodejs";
@@ -18,7 +22,7 @@ async function getFallbackLogoSource() {
   return `data:image/svg+xml;base64,${fallbackLogo.toString("base64")}`;
 }
 
-async function getLogoSource() {
+async function getLogoIconData() {
   const fallbackLogoSource = await getFallbackLogoSource();
   const { data } = await supabaseServer
     .from("site_settings")
@@ -26,41 +30,23 @@ async function getLogoSource() {
     .eq("key", "site")
     .maybeSingle();
   const branding = normalizeSiteBranding(data?.value);
-
-  return resolveBrandingIconSource(
+  const logoSource = await resolveBrandingIconSource(
     branding.logoUrl,
     fallbackLogoSource,
     (url) => fetch(url, { cache: "no-store" }),
   );
+
+  return { branding, logoSource };
 }
 
 export default async function Icon() {
-  const logoSource = await getLogoSource();
+  const { branding, logoSource } = await getLogoIconData();
 
   return new ImageResponse(
     (
-      <div
-        style={{
-          alignItems: "center",
-          background: "#ffffff",
-          borderRadius: 16,
-          display: "flex",
-          height: "100%",
-          justifyContent: "center",
-          overflow: "hidden",
-          width: "100%",
-        }}
-      >
+      <div style={logoIconFrameStyle(branding)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={logoSource}
-          alt=""
-          style={{
-            height: "100%",
-            objectFit: "contain",
-            width: "100%",
-          }}
-        />
+        <img src={logoSource} alt="" style={logoIconImageStyle(branding)} />
       </div>
     ),
     size,

@@ -10,12 +10,19 @@ import {
   type HomepageTrustPoint,
 } from "@/lib/homepage-settings";
 import {
-  logoShapeClasses,
+  defaultSiteBranding,
+  logoFits,
+  logoFrameStyle,
+  logoImageStyle,
+  logoPositions,
+  logoShadows,
   logoShapes,
-  logoSizeClasses,
   logoSizes,
   normalizeSiteBranding,
+  type LogoFit,
+  type LogoPosition,
   type LogoShape,
+  type LogoShadow,
   type LogoSize,
 } from "@/lib/site-branding";
 import { supabase } from "@/lib/supabase";
@@ -25,11 +32,41 @@ const defaultSettings = {
   adminEmails: "",
   depositAmountCents: "5000",
   commissionRate: "0.10",
-  logoUrl: "",
-  logoSize: "medium" as LogoSize,
-  logoShape: "original" as LogoShape,
+  ...defaultSiteBranding,
   ...defaultHomepageControls,
 };
+
+const logoSizePresets: Record<
+  LogoSize,
+  { label: string; width: number; height: number }
+> = {
+  small: { label: "Small", width: 160, height: 52 },
+  medium: { label: "Medium", width: 240, height: 72 },
+  large: { label: "Large", width: 340, height: 96 },
+};
+
+const logoShapePresets: Record<
+  LogoShape,
+  { label: string; fit: LogoFit; radius: number }
+> = {
+  original: { label: "Original", fit: "contain", radius: 0 },
+  rounded: { label: "Rounded", fit: "contain", radius: 18 },
+  circle: { label: "Circle", fit: "cover", radius: 999 },
+  square: { label: "Square", fit: "contain", radius: 14 },
+};
+
+const logoNumberControls = [
+  { field: "logoWidthPx", label: "Width", min: 72, max: 520, step: 1 },
+  { field: "logoHeightPx", label: "Height", min: 32, max: 220, step: 1 },
+  { field: "logoPaddingPx", label: "Padding", min: 0, max: 40, step: 1 },
+  { field: "logoRadiusPx", label: "Corner Radius", min: 0, max: 999, step: 1 },
+  { field: "logoBorderWidthPx", label: "Border", min: 0, max: 12, step: 1 },
+  { field: "logoOpacity", label: "Opacity", min: 0.25, max: 1, step: 0.05 },
+  { field: "logoRotateDeg", label: "Rotation", min: -15, max: 15, step: 1 },
+  { field: "logoScale", label: "Scale", min: 0.5, max: 1.5, step: 0.05 },
+] as const;
+
+type NumericLogoField = (typeof logoNumberControls)[number]["field"];
 
 const businessSettingFields = [
   { field: "siteName", label: "Site Name", rows: 1 },
@@ -124,6 +161,31 @@ export default function AdminSettingsPage() {
     setSettings((current) => ({ ...current, [field]: value }));
   }
 
+  function updateNumericLogoSetting(field: NumericLogoField, value: string) {
+    const numericValue = Number.parseFloat(value);
+    updateSetting(field, Number.isFinite(numericValue) ? numericValue : 0);
+  }
+
+  function applyLogoSize(size: LogoSize) {
+    const preset = logoSizePresets[size];
+    setSettings((current) => ({
+      ...current,
+      logoSize: size,
+      logoWidthPx: preset.width,
+      logoHeightPx: preset.height,
+    }));
+  }
+
+  function applyLogoShape(shape: LogoShape) {
+    const preset = logoShapePresets[shape];
+    setSettings((current) => ({
+      ...current,
+      logoShape: shape,
+      logoFit: preset.fit,
+      logoRadiusPx: preset.radius,
+    }));
+  }
+
   function textListToLines(value: string[]) {
     return value.join("\n");
   }
@@ -203,6 +265,7 @@ export default function AdminSettingsPage() {
     ...settings.trustPoints,
     ...defaultHomepageControls.trustPoints.slice(settings.trustPoints.length),
   ].slice(0, 3);
+  const previewBranding = normalizeSiteBranding(settings);
 
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
@@ -214,86 +277,317 @@ export default function AdminSettingsPage() {
             Manage public copy and business rules without changing code.
           </p>
           <form onSubmit={saveSettings} className="mt-8 grid gap-5">
-            <section className="grid gap-5 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-5">
+            <section className="grid gap-6 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-5">
               <div>
                 <h2 className="text-xl font-bold text-[#0B3C5D]">Branding</h2>
                 <p className="mt-1 text-sm text-gray-600">
-                  Upload the logo used across the website. A simple square icon
-                  works best in browser tabs.
+                  Upload, crop, style, and tune the logo used across the site
+                  and browser tab.
                 </p>
               </div>
-              <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
-                <div className="grid gap-4">
-                  <label className="grid gap-2 font-medium">
-                    Logo Image
-                    <input
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp,image/gif"
-                      disabled={logoUploading}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) uploadLogo(file);
-                      }}
-                      className="rounded-xl border border-gray-300 bg-white px-4 py-3 disabled:opacity-60"
-                    />
-                  </label>
-                  <label className="grid gap-2 font-medium">
-                    Logo Size
-                    <select
-                      value={settings.logoSize}
-                      onChange={(e) =>
-                        updateSetting("logoSize", e.target.value as LogoSize)
-                      }
-                      className="rounded-xl border border-gray-300 bg-white px-4 py-3"
-                    >
-                      {logoSizes.map((size) => (
-                        <option key={size} value={size}>
-                          {size[0].toUpperCase() + size.slice(1)}
-                        </option>
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
+                <div className="grid gap-5">
+                  <div className="grid gap-4 rounded-2xl border border-[#D6B56D]/20 bg-white p-5">
+                    <label className="grid gap-2 font-medium text-[#0B3C5D]">
+                      Upload Logo
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        disabled={logoUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) uploadLogo(file);
+                        }}
+                        className="rounded-xl border border-gray-300 bg-white px-4 py-3 disabled:opacity-60"
+                      />
+                    </label>
+
+                    <label className="grid gap-2 font-medium text-[#0B3C5D]">
+                      Logo URL
+                      <input
+                        value={settings.logoUrl}
+                        onChange={(e) => updateSetting("logoUrl", e.target.value)}
+                        placeholder="https://..."
+                        className="rounded-xl border border-gray-300 bg-white px-4 py-3 outline-none focus:border-[#00A8A8] focus:ring-2 focus:ring-[#00A8A8]/20"
+                      />
+                    </label>
+
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => updateSetting("logoUrl", "")}
+                        className="rounded-xl border border-[#0B3C5D]/15 bg-white px-4 py-2 text-sm font-bold text-[#0B3C5D]"
+                      >
+                        Use default logo
+                      </button>
+                      {logoUploading && (
+                        <p className="self-center text-sm text-[#0B3C5D]">
+                          Uploading logo...
+                        </p>
+                      )}
+                      {logoUploadError && (
+                        <p className="self-center text-sm text-red-600">
+                          {logoUploadError}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 rounded-2xl border border-[#D6B56D]/20 bg-white p-5">
+                    <div>
+                      <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                        Presets
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                        {logoSizes.map((size) => (
+                          <button
+                            key={size}
+                            type="button"
+                            onClick={() => applyLogoSize(size)}
+                            className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                              settings.logoSize === size
+                                ? "border-[#0B3C5D] bg-[#0B3C5D] text-white"
+                                : "border-[#D6B56D]/35 bg-[#FFF9EC] text-[#0B3C5D]"
+                            }`}
+                          >
+                            {logoSizePresets[size].label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                        {logoShapes.map((shape) => (
+                          <button
+                            key={shape}
+                            type="button"
+                            onClick={() => applyLogoShape(shape)}
+                            className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                              settings.logoShape === shape
+                                ? "border-[#00A8A8] bg-[#00A8A8] text-white"
+                                : "border-[#D6B56D]/35 bg-white text-[#0B3C5D]"
+                            }`}
+                          >
+                            {logoShapePresets[shape].label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
+                        Crop
+                        <select
+                          value={settings.logoFit}
+                          onChange={(e) =>
+                            updateSetting("logoFit", e.target.value as LogoFit)
+                          }
+                          className="rounded-xl border border-gray-300 bg-white px-4 py-3"
+                        >
+                          {logoFits.map((fit) => (
+                            <option key={fit} value={fit}>
+                              {fit[0].toUpperCase() + fit.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
+                        Focus
+                        <select
+                          value={settings.logoPosition}
+                          onChange={(e) =>
+                            updateSetting(
+                              "logoPosition",
+                              e.target.value as LogoPosition,
+                            )
+                          }
+                          className="rounded-xl border border-gray-300 bg-white px-4 py-3"
+                        >
+                          {logoPositions.map((position) => (
+                            <option key={position} value={position}>
+                              {position[0].toUpperCase() + position.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
+                        Shadow
+                        <select
+                          value={settings.logoShadow}
+                          onChange={(e) =>
+                            updateSetting(
+                              "logoShadow",
+                              e.target.value as LogoShadow,
+                            )
+                          }
+                          className="rounded-xl border border-gray-300 bg-white px-4 py-3"
+                        >
+                          {logoShadows.map((shadow) => (
+                            <option key={shadow} value={shadow}>
+                              {shadow[0].toUpperCase() + shadow.slice(1)}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
+                        Background
+                        <div className="flex gap-3">
+                          <input
+                            type="color"
+                            value={previewBranding.logoBackgroundColor}
+                            onChange={(e) =>
+                              updateSetting("logoBackgroundColor", e.target.value)
+                            }
+                            className="h-12 w-14 rounded-xl border border-gray-300 bg-white p-1"
+                          />
+                          <input
+                            value={settings.logoBackgroundColor}
+                            onChange={(e) =>
+                              updateSetting("logoBackgroundColor", e.target.value)
+                            }
+                            className="min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3"
+                          />
+                        </div>
+                      </label>
+                      <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
+                        Border Color
+                        <div className="flex gap-3">
+                          <input
+                            type="color"
+                            value={previewBranding.logoBorderColor}
+                            onChange={(e) =>
+                              updateSetting("logoBorderColor", e.target.value)
+                            }
+                            className="h-12 w-14 rounded-xl border border-gray-300 bg-white p-1"
+                          />
+                          <input
+                            value={settings.logoBorderColor}
+                            onChange={(e) =>
+                              updateSetting("logoBorderColor", e.target.value)
+                            }
+                            className="min-w-0 flex-1 rounded-xl border border-gray-300 px-4 py-3"
+                          />
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 rounded-2xl border border-[#D6B56D]/20 bg-white p-5">
+                    <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                      Fine Tune
+                    </p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {logoNumberControls.map((control) => (
+                        <label
+                          key={control.field}
+                          className="grid gap-2 text-sm font-bold text-[#0B3C5D]"
+                        >
+                          <span className="flex items-center justify-between gap-3">
+                            {control.label}
+                            <input
+                              type="number"
+                              min={control.min}
+                              max={control.max}
+                              step={control.step}
+                              value={Number(settings[control.field])}
+                              onChange={(e) =>
+                                updateNumericLogoSetting(
+                                  control.field,
+                                  e.target.value,
+                                )
+                              }
+                              className="w-24 rounded-lg border border-gray-300 px-3 py-2 text-right"
+                            />
+                          </span>
+                          <input
+                            type="range"
+                            min={control.min}
+                            max={control.max}
+                            step={control.step}
+                            value={Number(settings[control.field])}
+                            onChange={(e) =>
+                              updateNumericLogoSetting(
+                                control.field,
+                                e.target.value,
+                              )
+                            }
+                            className="accent-[#00A8A8]"
+                          />
+                        </label>
                       ))}
-                    </select>
-                  </label>
-                  <label className="grid gap-2 font-medium">
-                    Logo Shape
-                    <select
-                      value={settings.logoShape}
-                      onChange={(e) =>
-                        updateSetting("logoShape", e.target.value as LogoShape)
-                      }
-                      className="rounded-xl border border-gray-300 bg-white px-4 py-3"
-                    >
-                      {logoShapes.map((shape) => (
-                        <option key={shape} value={shape}>
-                          {shape[0].toUpperCase() + shape.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {logoUploading && (
-                    <p className="text-sm text-[#0B3C5D]">Uploading logo...</p>
-                  )}
-                  {logoUploadError && (
-                    <p className="text-sm text-red-600">{logoUploadError}</p>
-                  )}
+                    </div>
+                  </div>
                 </div>
+
                 <div className="rounded-2xl border border-dashed border-[#00A8A8]/35 bg-white p-5">
                   <p className="text-sm font-semibold text-gray-500">
-                    Logo preview
+                    Live Preview
                   </p>
-                  <div className="mt-4 flex min-h-36 items-center justify-center rounded-2xl bg-[#071F2F] p-5">
-                    {settings.logoUrl ? (
-                      // Admin uploads can come from any public Supabase asset URL.
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={settings.logoUrl}
-                        alt="Uploaded Roatan logo preview"
-                        className={`${logoSizeClasses[settings.logoSize]} ${logoShapeClasses[settings.logoShape]}`}
-                      />
-                    ) : (
-                      <p className="text-center text-sm text-white/75">
-                        Upload a logo to preview it here.
-                      </p>
-                    )}
+                  <div className="mt-4 overflow-x-auto rounded-2xl bg-[#071F2F] p-6">
+                    <div className="flex min-h-52 min-w-max items-center justify-center">
+                      {settings.logoUrl ? (
+                        <span style={logoFrameStyle(previewBranding)}>
+                          {/* Admin uploads can come from any public Supabase asset URL. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={previewBranding.logoUrl}
+                            alt="Uploaded Roatan logo preview"
+                            style={logoImageStyle(previewBranding)}
+                          />
+                        </span>
+                      ) : (
+                        <p className="text-center text-sm text-white/75">
+                          The default Roatan mark will show until a logo is set.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                      Browser Tab
+                    </p>
+                    <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#D6B56D]/25 bg-white px-3 py-2">
+                      <span
+                        className="flex h-10 w-10 items-center justify-center overflow-hidden"
+                        style={{
+                          backgroundColor: previewBranding.logoBackgroundColor,
+                          border: `${Math.min(
+                            previewBranding.logoBorderWidthPx,
+                            3,
+                          )}px solid ${previewBranding.logoBorderColor}`,
+                          borderRadius: `${
+                            previewBranding.logoRadiusPx >= 999
+                              ? previewBranding.logoRadiusPx
+                              : Math.min(previewBranding.logoRadiusPx, 14)
+                          }px`,
+                          padding: `${Math.min(
+                            previewBranding.logoPaddingPx,
+                            6,
+                          )}px`,
+                        }}
+                      >
+                        {settings.logoUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={previewBranding.logoUrl}
+                            alt=""
+                            style={{
+                              ...logoImageStyle(previewBranding),
+                              transform: `rotate(${previewBranding.logoRotateDeg}deg) scale(${previewBranding.logoScale})`,
+                            }}
+                          />
+                        ) : (
+                          <span className="text-sm font-black text-[#0B3C5D]">
+                            R
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-sm font-bold text-[#0B3C5D]">
+                        Roatan Island Life
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
