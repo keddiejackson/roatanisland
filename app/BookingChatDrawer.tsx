@@ -1,6 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  bookingChatAccountPath,
+  bookingChatSignInPath,
+  bookingChatStatusLabel,
+} from "@/lib/booking-chat-session";
 import {
   bookingChatQuickReplies,
   bookingDrawerStats,
@@ -9,7 +15,7 @@ import {
   type BookingThreadSummary,
   type BookingThreadViewerRole,
 } from "@/lib/booking-communication";
-import { profileInitials } from "@/lib/user-profile";
+import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
 import { supabase } from "@/lib/supabase";
 
 export type BookingChatThread = {
@@ -37,6 +43,12 @@ type ConversationResponse = {
     last_read_at?: string | null;
   } | null;
   error?: string;
+};
+
+type ChatViewerProfile = {
+  email: string;
+  displayName: string;
+  profileImageUrl: string | null;
 };
 
 function senderLabel(role: string) {
@@ -128,6 +140,9 @@ export default function BookingChatDrawer({
   const [lastReadAt, setLastReadAt] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [notifyByEmail, setNotifyByEmail] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [viewerProfile, setViewerProfile] =
+    useState<ChatViewerProfile | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const drawerOpen = open ?? internalOpen;
   const activeThreadId = selectedThreadId ?? internalSelectedThreadId;
@@ -144,10 +159,69 @@ export default function BookingChatDrawer({
     [activeThreadId, threads],
   );
   const selectedApiPath = selectedThread?.apiPath;
+  const accountPath = bookingChatAccountPath(viewerRole);
+  const signInPath = bookingChatSignInPath(viewerRole);
   const messageGroups = useMemo(
     () => groupBookingMessagesByDay(messages),
     [messages],
   );
+
+  useEffect(() => {
+    async function loadViewerProfile() {
+      const { data } = await supabase.auth.getSession();
+      const session = data.session;
+      const email = session?.user.email || "";
+
+      if (!session?.access_token || !email) {
+        setViewerProfile(null);
+        setAuthChecked(true);
+        return;
+      }
+
+      let displayName = displayNameFromProfile({ email });
+      let profileImageUrl: string | null = null;
+
+      try {
+        const profileResponse = await fetch("/api/account/profile", {
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+        });
+
+        if (profileResponse.ok) {
+          const result = (await profileResponse.json()) as {
+            profile?: {
+              email?: string | null;
+              display_name?: string | null;
+              profile_image_url?: string | null;
+            };
+          };
+          displayName = displayNameFromProfile({
+            email,
+            display_name: result.profile?.display_name,
+          });
+          profileImageUrl = result.profile?.profile_image_url || null;
+        }
+      } catch {
+        profileImageUrl = null;
+      }
+
+      setViewerProfile({
+        email,
+        displayName,
+        profileImageUrl,
+      });
+      setAuthChecked(true);
+    }
+
+    loadViewerProfile();
+
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      loadViewerProfile();
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   function changeOpen(nextOpen: boolean) {
     onOpenChange?.(nextOpen);
@@ -267,6 +341,10 @@ export default function BookingChatDrawer({
     e.preventDefault();
 
     if (!selectedThread || !draft.trim()) return;
+    if (!viewerProfile) {
+      setError("Please sign in again to send a message.");
+      return;
+    }
 
     setSending(true);
     setError("");
@@ -353,6 +431,44 @@ export default function BookingChatDrawer({
                           stats.threadCount === 1 ? "" : "s"
                         }`}
                   </p>
+                  {authChecked ? (
+                    viewerProfile ? (
+                      <Link
+                        href={accountPath}
+                        className="mt-3 inline-flex max-w-full items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-left ring-1 ring-white/10 transition hover:bg-white/15"
+                      >
+                        <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
+                          {viewerProfile.profileImageUrl ? (
+                            <img
+                              src={viewerProfile.profileImageUrl}
+                              alt=""
+                              className="size-full object-cover"
+                            />
+                          ) : (
+                            profileInitials(
+                              viewerProfile.displayName,
+                              viewerProfile.email,
+                            )
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-black leading-tight">
+                            {viewerProfile.displayName}
+                          </span>
+                          <span className="block truncate text-[10px] font-bold uppercase tracking-[0.08em] text-white/60">
+                            {bookingChatStatusLabel(viewerRole)}
+                          </span>
+                        </span>
+                      </Link>
+                    ) : (
+                      <Link
+                        href={signInPath}
+                        className="mt-3 inline-flex rounded-xl bg-white px-3 py-2 text-xs font-black text-[#0B3C5D] transition hover:-translate-y-0.5"
+                      >
+                        Sign in to reply
+                      </Link>
+                    )
+                  ) : null}
                 </div>
                 <button
                   type="button"
@@ -516,6 +632,7 @@ export default function BookingChatDrawer({
                       key={reply}
                       type="button"
                       onClick={() => setDraft(reply)}
+                      disabled={!viewerProfile}
                       className="max-w-full rounded-full border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-1.5 text-left text-[11px] font-bold leading-tight text-[#0B3C5D] transition hover:border-[#00A8A8]"
                     >
                       {reply}
@@ -527,7 +644,10 @@ export default function BookingChatDrawer({
                   onChange={(e) => setDraft(e.target.value)}
                   rows={2}
                   maxLength={1200}
-                  placeholder="Write a message..."
+                  disabled={!viewerProfile}
+                  placeholder={
+                    viewerProfile ? "Write a message..." : "Sign in to reply..."
+                  }
                   className="max-h-24 min-h-20 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#00A8A8]"
                 />
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
@@ -536,6 +656,7 @@ export default function BookingChatDrawer({
                       <input
                         type="checkbox"
                         checked={isInternal}
+                        disabled={!viewerProfile}
                         onChange={(e) => setIsInternal(e.target.checked)}
                       />
                       Internal admin note
@@ -547,7 +668,7 @@ export default function BookingChatDrawer({
                     <input
                       type="checkbox"
                       checked={!isInternal && notifyByEmail}
-                      disabled={isInternal}
+                      disabled={isInternal || !viewerProfile}
                       onChange={(e) => setNotifyByEmail(e.target.checked)}
                     />
                     Email notification
@@ -560,7 +681,9 @@ export default function BookingChatDrawer({
                 ) : null}
                 <button
                   type="submit"
-                  disabled={sending || !draft.trim() || !selectedThread}
+                  disabled={
+                    sending || !draft.trim() || !selectedThread || !viewerProfile
+                  }
                   className="mt-3 w-full rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white transition hover:bg-[#008F8F] disabled:opacity-50"
                 >
                   {sending ? "Sending..." : "Send message"}
