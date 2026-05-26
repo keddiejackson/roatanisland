@@ -253,7 +253,7 @@ export default function BookingChatDrawer({
           onClick={() => changeOpen(false)}
         >
           <aside
-            className="fixed inset-x-0 bottom-0 flex h-[min(100dvh,720px)] max-h-[100dvh] flex-col overflow-hidden rounded-t-2xl bg-[#F7F3EA] shadow-2xl ring-1 ring-[#071F2F]/10 md:inset-y-4 md:left-auto md:right-4 md:h-auto md:w-[min(480px,calc(100vw-2rem))] md:rounded-2xl"
+            className="fixed inset-x-0 bottom-0 flex h-[min(100dvh,720px)] max-h-[100dvh] flex-col overflow-hidden rounded-t-2xl bg-[#F7F3EA] shadow-2xl ring-1 ring-[#071F2F]/10 md:inset-y-4 md:left-auto md:right-4 md:h-auto md:w-[min(540px,calc(100vw-2rem))] md:rounded-2xl xl:w-[560px]"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="shrink-0 bg-[#071F2F] p-4 text-white sm:p-5">
@@ -284,36 +284,26 @@ export default function BookingChatDrawer({
             </div>
 
             <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_1fr_auto]">
-              <div className="shrink-0 border-b border-[#D6B56D]/20 bg-white px-3 py-2">
-                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
-                  {threads.map((thread) => (
-                    <button
-                      key={thread.id}
-                      type="button"
-                      onClick={() => changeSelectedThread(thread.id)}
-                      className={`min-w-56 snap-start rounded-xl border px-3 py-2 text-left text-sm transition ${
-                        selectedThread?.id === thread.id
-                          ? "border-[#00A8A8] bg-[#EEF7F6] shadow-sm"
-                          : "border-gray-200 bg-white hover:border-[#00A8A8]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="min-w-0 truncate font-black text-[#0B3C5D]">
-                          {thread.title}
-                        </p>
-                        <span
-                          className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold leading-4 ${threadBadgeClass(
-                            thread.summary,
-                          )}`}
-                        >
-                          {thread.summary?.badgeLabel || "No messages"}
-                        </span>
-                      </div>
-                      <p className="mt-1 truncate text-xs text-gray-500">
-                        {thread.subtitle}
-                      </p>
-                    </button>
-                  ))}
+              <div className="shrink-0 border-b border-[#D6B56D]/20 bg-white p-3">
+                <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+                  <label
+                    htmlFor="booking-chat-thread"
+                    className="text-[11px] font-black uppercase tracking-[0.14em] text-[#007B7B]"
+                  >
+                    Thread
+                  </label>
+                  <select
+                    id="booking-chat-thread"
+                    value={selectedThread?.id || ""}
+                    onChange={(event) => changeSelectedThread(event.target.value)}
+                    className="min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-[#F7F3EA] px-3 py-2 text-sm font-bold text-[#0B3C5D] outline-none focus:border-[#00A8A8]"
+                  >
+                    {threads.map((thread) => (
+                      <option key={thread.id} value={thread.id}>
+                        {thread.title} - {thread.summary?.badgeLabel || "No messages"}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -386,13 +376,13 @@ export default function BookingChatDrawer({
                 onSubmit={sendMessage}
                 className="shrink-0 border-t border-[#D6B56D]/20 bg-white p-3 sm:p-4"
               >
-                <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                <div className="mb-2 flex flex-wrap gap-1.5">
                   {quickReplies.map((reply) => (
                     <button
                       key={reply}
                       type="button"
                       onClick={() => setDraft(reply)}
-                      className="shrink-0 rounded-full border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-1.5 text-xs font-bold leading-none text-[#0B3C5D] transition hover:border-[#00A8A8]"
+                      className="max-w-full rounded-full border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-1.5 text-left text-[11px] font-bold leading-tight text-[#0B3C5D] transition hover:border-[#00A8A8]"
                     >
                       {reply}
                     </button>
@@ -401,10 +391,10 @@ export default function BookingChatDrawer({
                 <textarea
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
-                  rows={3}
+                  rows={2}
                   maxLength={1200}
                   placeholder="Write a message..."
-                  className="max-h-28 min-h-24 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#00A8A8]"
+                  className="max-h-24 min-h-20 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#00A8A8]"
                 />
                 {allowInternalNotes ? (
                   <label className="mt-2 flex items-center gap-2 text-xs font-semibold text-gray-600">
