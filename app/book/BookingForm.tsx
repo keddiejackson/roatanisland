@@ -12,6 +12,11 @@ import {
   getBookingTrustSteps,
 } from "@/lib/booking-flow";
 import {
+  checkBookingAvailability,
+  getMinimumNoticeDateValue,
+  normalizeTourTimes,
+} from "@/lib/booking-availability";
+import {
   buildGuestProfileBookingPrefill,
   type GuestTravelProfile,
 } from "@/lib/guest-command-center";
@@ -70,15 +75,6 @@ const PICKUP_OPTIONS = [
   "Meet on site",
   "Not sure yet",
 ];
-
-function dateValueFromOffset(hours: number) {
-  const date = new Date();
-  date.setHours(date.getHours() + hours);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 function availabilityToneClass(tone: AvailabilityStatus["tone"]) {
   if (tone === "blocked" || tone === "full") {
@@ -327,14 +323,16 @@ export default function BookingForm({
     return () => controller.abort();
   }, [guests, listingId, tourDate, tourTime]);
 
-  const availableTourTimes =
-    listing?.tour_times && listing.tour_times.length > 0
-      ? listing.tour_times
+  const availableTourTimes = listing
+    ? normalizeTourTimes(listing.tour_times)
+    : listingId
+      ? []
       : DEFAULT_TOUR_TIMES;
+  const hasListedTourTimes = availableTourTimes.length > 0;
   const minimumTourDate =
     listing?.minimum_notice_hours !== null &&
     listing?.minimum_notice_hours !== undefined
-      ? dateValueFromOffset(listing.minimum_notice_hours)
+      ? getMinimumNoticeDateValue(listing.minimum_notice_hours)
       : undefined;
   const guestCount = Number(guests);
   const selectedAddons = useMemo(
@@ -343,6 +341,16 @@ export default function BookingForm({
   );
   const previewGuestCount =
     Number.isFinite(guestCount) && guestCount > 0 ? guestCount : 1;
+  const localAvailabilityCheck = useMemo(
+    () =>
+      checkBookingAvailability({
+        listing,
+        tourDate,
+        tourTime,
+        guests: previewGuestCount,
+      }),
+    [listing, previewGuestCount, tourDate, tourTime],
+  );
   const estimatedTotalCents = estimateBookingTotalCents({
     price: listing?.price,
     guests: previewGuestCount,
@@ -350,17 +358,25 @@ export default function BookingForm({
   });
   const showEstimatedTotal = Boolean(listing?.price || selectedAddons.length > 0);
   const guestWarning =
-    listing?.max_guests &&
-    Number.isFinite(guestCount) &&
-    guestCount > listing.max_guests
-      ? `This listing allows up to ${listing.max_guests} guests per tour.`
-      : "";
+    localAvailabilityCheck.reasons.find((reason) =>
+      reason.includes("guests per tour"),
+    ) || "";
   const dateWarning =
-    tourDate && listing?.blocked_dates?.includes(tourDate)
-      ? "That date is not available for this listing."
-      : "";
+    localAvailabilityCheck.reasons.find((reason) =>
+      reason.includes("date is not available"),
+    ) || "";
+  const timeWarning =
+    localAvailabilityCheck.reasons.find((reason) =>
+      reason.includes("available times"),
+    ) || "";
+  const noticeWarning =
+    localAvailabilityCheck.reasons.find((reason) =>
+      reason.includes("in advance"),
+    ) || "";
   const availabilityBlocksBooking =
-    availabilityStatus?.tone === "blocked" || availabilityStatus?.tone === "full";
+    availabilityStatus?.tone === "blocked" ||
+    availabilityStatus?.tone === "full" ||
+    localAvailabilityCheck.reasons.length > 0;
   const bookingReadiness = getBookingCheckoutReadiness({
     fullName,
     email,
@@ -807,26 +823,54 @@ export default function BookingForm({
                 {dateWarning}
               </p>
             ) : null}
+            {noticeWarning ? (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {noticeWarning}
+              </p>
+            ) : null}
           </div>
 
           <div>
-            <label className="mb-2 block font-medium">Time</label>
-            <select
-              value={tourTime}
-              onChange={(e) => setTourTime(e.target.value)}
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
-              required
-            >
-              <option value="">Select a time</option>
-              {availableTourTimes.map((time) => (
-                <option key={time} value={time}>
-                  {time}
-                </option>
-              ))}
-            </select>
+            <label className="mb-2 block font-medium">
+              {hasListedTourTimes ? "Available times" : "Preferred time"}
+            </label>
+            {hasListedTourTimes ? (
+              <select
+                value={tourTime}
+                onChange={(e) => setTourTime(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                required
+              >
+                <option value="">Select a time</option>
+                {availableTourTimes.map((time) => (
+                  <option key={time} value={time}>
+                    {time}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                value={tourTime}
+                onChange={(e) => setTourTime(e.target.value)}
+                placeholder="Example: 9:00 AM"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                required
+              />
+            )}
             {listing?.availability_note ? (
               <p className="mt-2 text-sm text-gray-500">
                 {listing.availability_note}
+              </p>
+            ) : null}
+            {!hasListedTourTimes && listing ? (
+              <p className="mt-2 text-sm text-gray-500">
+                This operator has not listed fixed times, so request the time
+                you prefer.
+              </p>
+            ) : null}
+            {timeWarning ? (
+              <p className="mt-2 text-sm font-semibold text-red-600">
+                {timeWarning}
               </p>
             ) : null}
           </div>

@@ -5,6 +5,7 @@ import {
   sendEmailNotification,
 } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
+import { checkBookingAvailability } from "@/lib/booking-availability";
 import { formatBookingCents } from "@/lib/booking-flow";
 import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -20,15 +21,6 @@ type BookingRequest = {
   promoCode?: string;
   selectedAddonIds?: string[];
 };
-
-function dateValueFromOffset(hours: number) {
-  const date = new Date();
-  date.setHours(date.getHours() + hours);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 export async function POST(request: Request) {
   const body = (await request.json()) as BookingRequest;
@@ -57,7 +49,9 @@ export async function POST(request: Request) {
   if (body.listingId) {
     const { data: listing, error: listingRulesError } = await supabaseServer
       .from("listings")
-      .select("max_guests, minimum_notice_hours, price, blocked_dates")
+      .select(
+        "tour_times, max_guests, minimum_notice_hours, price, blocked_dates",
+      )
       .eq("id", body.listingId)
       .maybeSingle();
 
@@ -69,11 +63,19 @@ export async function POST(request: Request) {
     }
 
     const listingRules = listing as {
+      tour_times?: string[] | null;
       max_guests?: number | null;
       minimum_notice_hours?: number | null;
       price?: number | null;
       blocked_dates?: string[] | null;
     } | null;
+
+    if (!listingRules) {
+      return NextResponse.json(
+        { error: "Listing not found." },
+        { status: 404 },
+      );
+    }
 
     if (listingRules?.price) {
       estimatedBookingValueCents = Math.round(listingRules.price * guests * 100);
@@ -137,36 +139,9 @@ export async function POST(request: Request) {
       );
     }
 
-    if (listingRules?.max_guests && guests > listingRules.max_guests) {
-      return NextResponse.json(
-        {
-          error: `This listing allows up to ${listingRules.max_guests} guests per tour.`,
-        },
-        { status: 400 },
-      );
-    }
+    let reservedGuests = 0;
 
-    if (listingRules?.minimum_notice_hours) {
-      const minimumDate = dateValueFromOffset(listingRules.minimum_notice_hours);
-
-      if (body.tourDate < minimumDate) {
-        return NextResponse.json(
-          {
-            error: `Please book at least ${listingRules.minimum_notice_hours} hours in advance.`,
-          },
-          { status: 400 },
-        );
-      }
-    }
-
-    if (listingRules?.blocked_dates?.includes(body.tourDate)) {
-      return NextResponse.json(
-        { error: "That date is not available for this listing." },
-        { status: 400 },
-      );
-    }
-
-    if (listingRules?.max_guests) {
+    if (listingRules.max_guests) {
       const { data: existingBookings, error: existingBookingsError } =
         await supabaseServer
           .from("bookings")
@@ -183,21 +158,27 @@ export async function POST(request: Request) {
         );
       }
 
-      const reservedGuests = (
+      reservedGuests = (
         (existingBookings as { guests: number }[] | null) || []
       ).reduce((total, booking) => total + booking.guests, 0);
+    }
 
-      if (reservedGuests + guests > listingRules.max_guests) {
-        return NextResponse.json(
-          {
-            error: `Only ${Math.max(
-              listingRules.max_guests - reservedGuests,
-              0,
-            )} seats remain for that date and time.`,
-          },
-          { status: 400 },
-        );
-      }
+    const availabilityCheck = checkBookingAvailability({
+      listing: listingRules,
+      tourDate: body.tourDate,
+      tourTime: body.tourTime,
+      guests,
+      reservedGuests,
+    });
+
+    if (!availabilityCheck.ok) {
+      return NextResponse.json(
+        {
+          error: availabilityCheck.text,
+          reasons: availabilityCheck.reasons,
+        },
+        { status: 400 },
+      );
     }
   }
 

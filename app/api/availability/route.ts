@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
-import { availabilitySummary } from "@/lib/availability-calendar";
+import { checkBookingAvailability } from "@/lib/booking-availability";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type ListingAvailabilityRules = {
+  tour_times: string[] | null;
   max_guests: number | null;
   blocked_dates: string[] | null;
+  minimum_notice_hours: number | null;
 };
 
 export async function GET(request: Request) {
@@ -24,7 +26,7 @@ export async function GET(request: Request) {
 
   const { data: listing, error: listingError } = await supabaseServer
     .from("listings")
-    .select("max_guests, blocked_dates")
+    .select("tour_times, max_guests, blocked_dates, minimum_notice_hours")
     .eq("id", listingId)
     .maybeSingle();
 
@@ -64,13 +66,12 @@ export async function GET(request: Request) {
   }
 
   const rules = listing as ListingAvailabilityRules;
-  const summary = availabilitySummary({
-    date,
-    time,
-    requestedGuests,
-    maxGuests: rules.max_guests,
+  const summary = checkBookingAvailability({
+    listing: rules,
+    tourDate: date,
+    tourTime: time,
+    guests: requestedGuests,
     reservedGuests,
-    blockedDates: rules.blocked_dates || [],
   });
 
   return NextResponse.json({
