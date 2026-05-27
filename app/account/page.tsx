@@ -1071,6 +1071,20 @@ export default function AccountPage() {
                         </p>
                       </div>
                     ))}
+                    <div className="sm:col-span-4 flex flex-wrap gap-2">
+                      <Link
+                        href={`/book/invoice/${booking.id}`}
+                        className="rounded-lg bg-white px-3 py-2 text-xs font-black text-[#0B3C5D]"
+                      >
+                        Open invoice
+                      </Link>
+                      <Link
+                        href={`/book/receipt/${booking.id}`}
+                        className="rounded-lg bg-white px-3 py-2 text-xs font-black text-[#0B3C5D]"
+                      >
+                        Open receipt
+                      </Link>
+                    </div>
                   </div>
                   <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">
                     {threadSummaries[booking.id]?.lastMessagePreview ||

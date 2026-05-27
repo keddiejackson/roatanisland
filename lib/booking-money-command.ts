@@ -23,6 +23,10 @@ export type BookingMoneyInput = {
   payment_schedule_type?: PaymentScheduleType | string | null;
   payment_due_date?: string | null;
   balance_due_date?: string | null;
+  payment_requested_at?: string | null;
+  payment_last_sent_at?: string | null;
+  payment_link_url?: string | null;
+  paid_at?: string | null;
   payment_method?: string | null;
   manual_payment_note?: string | null;
   refund_status?: RefundStatus | string | null;
@@ -52,6 +56,25 @@ export type BookingMoneyAlert = {
   label: string;
   amountCents: number;
   tone: "danger" | "warning" | "good";
+};
+
+export type BookingMoneyEventLike = {
+  event_type?: string | null;
+  actor_role?: string | null;
+  actor_email?: string | null;
+  amount_cents?: number | null;
+  note?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at?: string | null;
+};
+
+export type MoneyDocumentKind = "invoice" | "receipt";
+
+export type OverduePaymentReminder = {
+  bookingId: string;
+  tone: "overdue" | "due_soon";
+  amountCents: number;
+  label: string;
 };
 
 const PAYMENT_PRESETS: { id: PaymentScheduleType; label: string }[] = [
@@ -380,6 +403,193 @@ export function getGuestBalanceSummary(bookings: BookingMoneyInput[]) {
 
 export function getPaymentPresets() {
   return PAYMENT_PRESETS;
+}
+
+export function buildMoneyDocument(
+  booking: BookingMoneyInput,
+  kind: MoneyDocumentKind,
+  listingTitle = "Roatan booking",
+  now = new Date(),
+) {
+  const snapshot = getBookingMoneySnapshot(booking, now);
+  const isReceipt = kind === "receipt";
+  const documentNumber = isReceipt
+    ? snapshot.receiptNumber
+    : snapshot.invoiceNumber;
+  const balanceLabel = formatMoneyCents(snapshot.balanceDueCents);
+  const paidLabel = formatMoneyCents(snapshot.paidCents);
+
+  return {
+    kind,
+    title: isReceipt ? "Receipt" : "Invoice",
+    documentNumber,
+    listingTitle,
+    guestName: booking.full_name || "Guest",
+    rows: [
+      ["Trip total", formatMoneyCents(snapshot.totalCents)],
+      ["Paid", paidLabel],
+      ["Balance due", balanceLabel],
+      ["Due", snapshot.dueLabel],
+    ],
+    totalLabel: isReceipt
+      ? `${paidLabel} paid`
+      : `${balanceLabel} due`,
+  };
+}
+
+export function buildPaymentRequestEmail({
+  booking,
+  listingTitle = "Roatan booking",
+  paymentLink,
+  now = new Date(),
+}: {
+  booking: BookingMoneyInput;
+  listingTitle?: string;
+  paymentLink: string;
+  now?: Date;
+}) {
+  const snapshot = getBookingMoneySnapshot(booking, now);
+  const subject = `Payment request for ${listingTitle}`;
+  const html = `
+    <p>Hi ${booking.full_name || "there"}, your payment request for <strong>${listingTitle}</strong> is ready.</p>
+    <table style="width:100%;border-collapse:collapse;margin:18px 0">
+      <tr><td style="padding:8px 0;color:#64748b">Invoice</td><td style="padding:8px 0;text-align:right;font-weight:700">${snapshot.invoiceNumber}</td></tr>
+      <tr><td style="padding:8px 0;color:#64748b">Trip total</td><td style="padding:8px 0;text-align:right;font-weight:700">${formatMoneyCents(snapshot.totalCents)}</td></tr>
+      <tr><td style="padding:8px 0;color:#64748b">Paid</td><td style="padding:8px 0;text-align:right;font-weight:700">${formatMoneyCents(snapshot.paidCents)}</td></tr>
+      <tr><td style="padding:8px 0;color:#64748b">Balance due</td><td style="padding:8px 0;text-align:right;font-weight:900;color:#0b3c5d">${formatMoneyCents(snapshot.balanceDueCents)}</td></tr>
+      <tr><td style="padding:8px 0;color:#64748b">Due</td><td style="padding:8px 0;text-align:right;font-weight:700">${snapshot.dueLabel}</td></tr>
+    </table>
+    <p><a href="${paymentLink}" style="display:inline-block;background:#00a8a8;color:#ffffff;text-decoration:none;border-radius:12px;padding:12px 18px;font-weight:800">Pay securely</a></p>
+    <p style="font-size:13px;color:#64748b">You can also copy this link: ${paymentLink}</p>
+  `;
+  const text = [
+    `Payment request for ${listingTitle}`,
+    `Invoice: ${snapshot.invoiceNumber}`,
+    `Trip total: ${formatMoneyCents(snapshot.totalCents)}`,
+    `Paid: ${formatMoneyCents(snapshot.paidCents)}`,
+    `Balance due: ${formatMoneyCents(snapshot.balanceDueCents)}`,
+    `Due: ${snapshot.dueLabel}`,
+    `Pay securely: ${paymentLink}`,
+  ].join("\n");
+
+  return { subject, html, text };
+}
+
+function eventLabel(type?: string | null) {
+  const normalized = normalize(type);
+
+  if (normalized === "payment_request_sent") return "Payment request sent";
+  if (normalized === "payment_paid") return "Payment paid";
+  if (normalized === "refund_started") return "Refund started";
+  if (normalized === "payout_scheduled") return "Payout scheduled";
+  if (normalized === "payout_paid") return "Payout paid";
+  if (normalized === "money_update") return "Money updated";
+
+  return type ? type.replaceAll("_", " ") : "Money event";
+}
+
+export function getPaymentHistoryTimeline({
+  booking,
+  events = [],
+}: {
+  booking: BookingMoneyInput;
+  events?: BookingMoneyEventLike[];
+}) {
+  const snapshot = getBookingMoneySnapshot(booking);
+  const timeline = events.map((event) => ({
+    label: eventLabel(event.event_type),
+    amountLabel: formatMoneyCents(cents(event.amount_cents)),
+    note: event.note || "",
+    actorLabel: event.actor_role || "system",
+    createdAt: event.created_at || "",
+  }));
+
+  if (booking.payment_last_sent_at) {
+    timeline.push({
+      label: "Payment last sent",
+      amountLabel: formatMoneyCents(snapshot.balanceDueCents),
+      note: "Latest guest payment request email",
+      actorLabel: "admin",
+      createdAt: booking.payment_last_sent_at,
+    });
+  }
+
+  if (booking.payment_requested_at) {
+    timeline.push({
+      label: "Payment requested",
+      amountLabel: formatMoneyCents(snapshot.balanceDueCents),
+      note: "Payment request opened",
+      actorLabel: "admin",
+      createdAt: booking.payment_requested_at,
+    });
+  }
+
+  if (booking.paid_at) {
+    timeline.push({
+      label: "Payment paid",
+      amountLabel: formatMoneyCents(snapshot.paidCents),
+      note: "Payment marked paid",
+      actorLabel: "system",
+      createdAt: booking.paid_at,
+    });
+  }
+
+  return timeline.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function getOverduePaymentReminders({
+  bookings,
+  now = new Date(),
+}: {
+  bookings: BookingMoneyInput[];
+  now?: Date;
+}): OverduePaymentReminder[] {
+  const reminders: OverduePaymentReminder[] = [];
+
+  for (const booking of bookings) {
+    const snapshot = getBookingMoneySnapshot(booking, now);
+    const dueInDays = daysUntil(
+      booking.balance_due_date || booking.payment_due_date,
+      now,
+    );
+
+    if (
+      !activeBooking(booking) ||
+      snapshot.balanceDueCents <= 0 ||
+      dueInDays === null
+    ) {
+      continue;
+    }
+
+    if (dueInDays < 0) {
+      reminders.push({
+        bookingId: booking.id,
+        tone: "overdue",
+        amountCents: snapshot.balanceDueCents,
+        label: `Overdue by ${Math.abs(dueInDays)} day${
+          Math.abs(dueInDays) === 1 ? "" : "s"
+        }`,
+      });
+      continue;
+    }
+
+    if (dueInDays <= 3) {
+      reminders.push({
+        bookingId: booking.id,
+        tone: "due_soon",
+        amountCents: snapshot.balanceDueCents,
+        label:
+          dueInDays === 0
+            ? "Due today"
+            : `Due in ${dueInDays} day${dueInDays === 1 ? "" : "s"}`,
+      });
+    }
+  }
+
+  return reminders.sort((a, b) => {
+    if (a.tone !== b.tone) return a.tone === "overdue" ? -1 : 1;
+    return b.amountCents - a.amountCents;
+  });
 }
 
 function parseCentsInput(value: unknown) {

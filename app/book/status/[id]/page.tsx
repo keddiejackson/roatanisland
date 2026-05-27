@@ -258,6 +258,20 @@ export default async function BookingStatusPage({
                 </div>
               ))}
             </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href={`/book/invoice/${booking.id}`}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-black text-[#0B3C5D]"
+              >
+                Printable invoice
+              </Link>
+              <Link
+                href={`/book/receipt/${booking.id}`}
+                className="rounded-xl bg-white px-4 py-2 text-sm font-black text-[#0B3C5D]"
+              >
+                Printable receipt
+              </Link>
+            </div>
           </div>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

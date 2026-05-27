@@ -18,7 +18,10 @@ import {
   getBookingMoneyAlerts,
   getBookingMoneySnapshot,
   getCashflowForecast,
+  getOverduePaymentReminders,
+  getPaymentHistoryTimeline,
   getPaymentPresets,
+  type BookingMoneyEventLike,
   type RefundStatus,
 } from "@/lib/booking-money-command";
 import {
@@ -58,6 +61,7 @@ type BookingRow = {
   payment_requested_at: string | null;
   payment_last_sent_at: string | null;
   payment_link_url: string | null;
+  paid_at: string | null;
   invoice_number: string | null;
   receipt_number: string | null;
   refund_status: string | null;
@@ -92,6 +96,10 @@ type BookingMessageRow = BookingMessageLike & {
 type BookingReadReceiptRow = {
   booking_id: string;
   last_read_at: string | null;
+};
+
+type BookingMoneyEventRow = BookingMoneyEventLike & {
+  booking_id: string;
 };
 
 function formatDeposit(booking: BookingWithListingName) {
@@ -186,6 +194,9 @@ export default function AdminBookingsPage() {
   const [threadSummaries, setThreadSummaries] = useState<
     Record<string, BookingThreadSummary>
   >({});
+  const [moneyEventsByBooking, setMoneyEventsByBooking] = useState<
+    Record<string, BookingMoneyEventRow[]>
+  >({});
   const [loading, setLoading] = useState(true);
   const [savingBookingId, setSavingBookingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -274,8 +285,32 @@ export default function AdminBookingsPage() {
         } else {
           setChangeRequestsByBooking({});
         }
+
+        const { data: moneyRows, error: moneyError } = await supabase
+          .from("booking_money_events")
+          .select("booking_id, event_type, actor_role, actor_email, amount_cents, note, metadata, created_at")
+          .in("booking_id", bookingIds)
+          .order("created_at", { ascending: false });
+
+        if (!moneyError) {
+          const groupedMoneyEvents = new Map<string, BookingMoneyEventRow[]>();
+
+          for (const event of (moneyRows as BookingMoneyEventRow[]) || []) {
+            groupedMoneyEvents.set(event.booking_id, [
+              ...(groupedMoneyEvents.get(event.booking_id) || []),
+              event,
+            ]);
+          }
+
+          setMoneyEventsByBooking(
+            Object.fromEntries(groupedMoneyEvents.entries()),
+          );
+        } else {
+          setMoneyEventsByBooking({});
+        }
       } else {
         setChangeRequestsByBooking({});
+        setMoneyEventsByBooking({});
       }
 
       if (enrichedBookings.length > 0) {
@@ -393,6 +428,10 @@ export default function AdminBookingsPage() {
   );
   const moneyAlerts = useMemo(
     () => getBookingMoneyAlerts({ bookings: filteredBookings }).slice(0, 6),
+    [filteredBookings],
+  );
+  const paymentReminders = useMemo(
+    () => getOverduePaymentReminders({ bookings: filteredBookings }).slice(0, 5),
     [filteredBookings],
   );
   const paymentPresets = useMemo(() => getPaymentPresets(), []);
@@ -667,6 +706,27 @@ export default function AdminBookingsPage() {
                     </p>
                   ))
                 )}
+              </div>
+              <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9EE8E3]">
+                  Overdue balance reminders
+                </p>
+                <div className="mt-3 grid gap-2 md:grid-cols-2">
+                  {paymentReminders.length > 0 ? (
+                    paymentReminders.map((reminder) => (
+                      <p
+                        key={`${reminder.bookingId}-${reminder.tone}`}
+                        className="rounded-lg bg-white/10 px-3 py-2 text-sm font-bold"
+                      >
+                        {reminder.label}: {formatMoneyCents(reminder.amountCents)}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-sm text-white/70">
+                      No payment reminders need attention right now.
+                    </p>
+                  )}
+                </div>
               </div>
             </section>
             <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_190px_190px_190px_auto] lg:items-center">
@@ -1337,6 +1397,83 @@ export default function AdminBookingsPage() {
                                 placeholder="Private payout note visible to vendor"
                                 className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
                               />
+                            </details>
+                            <div className="mt-3 rounded-lg bg-white p-3">
+                              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                                <div>
+                                  <p className="text-sm font-black text-[#0B3C5D]">
+                                    Send payment request
+                                  </p>
+                                  <p className="mt-1 text-xs font-semibold text-gray-600">
+                                    Emails the guest with their balance, invoice,
+                                    due date, and payment link.
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    saveMoneyCommand(booking, {
+                                      sendPaymentRequest: true,
+                                      paymentLinkUrl:
+                                        booking.payment_link_url ||
+                                        `${window.location.origin}/book/status/${booking.id}`,
+                                    })
+                                  }
+                                  disabled={savingBookingId === booking.id}
+                                  className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                                >
+                                  Send payment request
+                                </button>
+                              </div>
+                              {booking.payment_last_sent_at ? (
+                                <p className="mt-2 text-xs font-bold text-[#007B7B]">
+                                  Last sent{" "}
+                                  {new Date(
+                                    booking.payment_last_sent_at,
+                                  ).toLocaleString()}
+                                </p>
+                              ) : null}
+                            </div>
+                            <details className="mt-3 rounded-lg bg-white p-3">
+                              <summary className="cursor-pointer text-sm font-black text-[#0B3C5D]">
+                                Payment history
+                              </summary>
+                              <div className="mt-3 grid gap-2">
+                                {getPaymentHistoryTimeline({
+                                  booking,
+                                  events: moneyEventsByBooking[booking.id] || [],
+                                })
+                                  .slice(0, 5)
+                                  .map((item, index) => (
+                                    <div
+                                      key={`${item.label}-${item.createdAt}-${index}`}
+                                      className="rounded-lg bg-[#F7F3EA] p-3 text-sm"
+                                    >
+                                      <div className="flex justify-between gap-3">
+                                        <p className="font-black text-[#0B3C5D]">
+                                          {item.label}
+                                        </p>
+                                        <p className="font-black text-[#007B7B]">
+                                          {item.amountLabel}
+                                        </p>
+                                      </div>
+                                      <p className="mt-1 text-xs text-gray-600">
+                                        {item.note || item.actorLabel}
+                                        {item.createdAt
+                                          ? ` / ${new Date(item.createdAt).toLocaleString()}`
+                                          : ""}
+                                      </p>
+                                    </div>
+                                  ))}
+                                {getPaymentHistoryTimeline({
+                                  booking,
+                                  events: moneyEventsByBooking[booking.id] || [],
+                                }).length === 0 ? (
+                                  <p className="text-sm text-gray-600">
+                                    No payment history yet.
+                                  </p>
+                                ) : null}
+                              </div>
                             </details>
                           </div>
                         );

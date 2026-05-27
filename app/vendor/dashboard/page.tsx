@@ -1516,7 +1516,7 @@ export default function VendorDashboardPage() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
-                    Payout statements
+                    Vendor payout statements
                   </p>
                   <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
                     Monthly payout summary

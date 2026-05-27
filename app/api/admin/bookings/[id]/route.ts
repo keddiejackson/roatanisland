@@ -8,7 +8,11 @@ import {
   getVendorPayoutReceipts,
 } from "@/lib/admin-revenue";
 import { logActivity } from "@/lib/activity-log";
-import { buildBookingMoneyUpdate } from "@/lib/booking-money-command";
+import {
+  buildBookingMoneyUpdate,
+  buildPaymentRequestEmail,
+  getBookingMoneySnapshot,
+} from "@/lib/booking-money-command";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -21,6 +25,8 @@ type BookingUpdateRequest = {
   payoutNote?: string | null;
   payoutScheduledFor?: string | null;
   paymentLinkUrl?: string | null;
+  sendPaymentRequest?: boolean;
+  paymentRequestNote?: string | null;
 };
 
 async function verifyAdmin(request: Request) {
@@ -75,6 +81,15 @@ function statusMessage(status: BookingStatus) {
   return "Your booking request has been updated.";
 }
 
+function getBaseUrl(request: Request) {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    `${request.headers.get("x-forwarded-proto") || "https"}://${request.headers.get(
+      "host",
+    )}`
+  );
+}
+
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
@@ -88,6 +103,15 @@ export async function PATCH(
   const { id } = await context.params;
   const body = (await request.json()) as BookingUpdateRequest;
   const nextStatus = body.status || "new";
+  const paymentRequestUrl =
+    body.paymentLinkUrl || `${getBaseUrl(request)}/book/status/${id}`;
+  const paymentRequestUpdate = body.sendPaymentRequest
+    ? {
+        payment_requested_at: new Date().toISOString(),
+        payment_last_sent_at: new Date().toISOString(),
+        payment_link_url: paymentRequestUrl,
+      }
+    : {};
   const moneyUpdate = buildBookingMoneyUpdate(
     body as unknown as Record<string, unknown>,
   );
@@ -120,6 +144,7 @@ export async function PATCH(
         ? { payout_scheduled_for: body.payoutScheduledFor || null }
         : {}),
       ...moneyUpdate,
+      ...paymentRequestUpdate,
     })
     .eq("id", id)
     .select(
@@ -234,6 +259,37 @@ export async function PATCH(
     });
   }
 
+  if (body.sendPaymentRequest) {
+    const paymentEmail = buildPaymentRequestEmail({
+      booking,
+      listingTitle,
+      paymentLink: paymentRequestUrl,
+    });
+    const snapshot = getBookingMoneySnapshot(booking);
+
+    await sendEmailNotification({
+      to: booking.email,
+      subject: paymentEmail.subject,
+      html: paymentEmail.html,
+      text: paymentEmail.text,
+    });
+
+    await supabaseServer.from("booking_money_events").insert([
+      {
+        booking_id: booking.id,
+        event_type: "payment_request_sent",
+        actor_role: "admin",
+        actor_email: adminEmail,
+        amount_cents: snapshot.balanceDueCents,
+        note: body.paymentRequestNote || "Payment request email sent.",
+        metadata: {
+          payment_link_url: paymentRequestUrl,
+          invoice_number: snapshot.invoiceNumber,
+        },
+      },
+    ]);
+  }
+
   if (
     body.commissionStatus === "paid" &&
     currentBooking?.commission_status !== "paid" &&
@@ -274,6 +330,7 @@ export async function PATCH(
         emailed: Boolean(body.sendEmail && nextStatus !== "new"),
         payout_updated: Boolean(payoutUpdate),
         payout_status: body.commissionStatus || null,
+        payment_request_sent: Boolean(body.sendPaymentRequest),
       },
     },
   ]);
@@ -291,6 +348,7 @@ export async function PATCH(
       listing_id: booking.listing_id,
       payout_updated: Boolean(payoutUpdate),
       payout_status: body.commissionStatus || null,
+      payment_request_sent: Boolean(body.sendPaymentRequest),
     },
   });
 
