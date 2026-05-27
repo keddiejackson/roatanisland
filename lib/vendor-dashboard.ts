@@ -1,4 +1,5 @@
 type ListingLike = {
+  id?: string | null;
   is_active?: boolean | null;
   approval_status?: string | null;
   tour_times?: string[] | null;
@@ -12,9 +13,19 @@ type ListingLike = {
 
 type BookingLike = {
   id: string;
+  listing_id?: string | null;
   status?: string | null;
   tour_date?: string | null;
   tour_time?: string | null;
+  booking_value_cents?: number | null;
+  selected_addons?: { name?: string; price_cents?: number }[] | null;
+};
+
+type AddonLike = {
+  id?: string;
+  listing_id?: string | null;
+  name?: string | null;
+  price_cents?: number | null;
 };
 
 type ProfileLike = {
@@ -50,6 +61,42 @@ export type VendorFocusItem = {
   href: string;
   tone: "urgent" | "setup" | "growth";
 };
+
+export type VendorRevenueSummary = {
+  grossBookingValueCents: number;
+  confirmedValueCents: number;
+  pendingValueCents: number;
+  averageBookingValueCents: number;
+  addonRevenueCents: number;
+  topAddonLabel: string;
+  upcomingConfirmedCount: number;
+  label: string;
+};
+
+export type ListingRevenueKit = {
+  score: number;
+  label: "Revenue-ready" | "Growth-ready" | "Needs polish";
+  bookingValueCents: number;
+  requestCount: number;
+  addonCount: number;
+  tips: string[];
+};
+
+function formatRevenueLabel(valueCents: number) {
+  return `${new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(valueCents / 100)} total request value`;
+}
+
+function isCancelled(booking: BookingLike) {
+  return (booking.status || "").toLowerCase() === "cancelled";
+}
+
+function isConfirmedRevenue(booking: BookingLike) {
+  return ["confirmed", "completed"].includes((booking.status || "").toLowerCase());
+}
 
 export function getListingStatusSummary(listing: ListingLike): {
   label: string;
@@ -191,6 +238,138 @@ export function getListingReadinessSummary(listing: ListingLike): {
       .filter((check) => !check.complete)
       .map((check) => check.label),
   };
+}
+
+export function getVendorRevenueSummary({
+  bookings,
+}: {
+  bookings: BookingLike[];
+}): VendorRevenueSummary {
+  const activeBookings = bookings.filter((booking) => !isCancelled(booking));
+  const bookingsWithValue = activeBookings.filter(
+    (booking) => typeof booking.booking_value_cents === "number",
+  );
+  const grossBookingValueCents = activeBookings.reduce(
+    (total, booking) => total + (booking.booking_value_cents || 0),
+    0,
+  );
+  const confirmedValueCents = activeBookings
+    .filter(isConfirmedRevenue)
+    .reduce((total, booking) => total + (booking.booking_value_cents || 0), 0);
+  const pendingValueCents = activeBookings
+    .filter((booking) => !isConfirmedRevenue(booking))
+    .reduce((total, booking) => total + (booking.booking_value_cents || 0), 0);
+  const addonCounts = new Map<string, number>();
+  const addonRevenueCents = activeBookings.reduce((total, booking) => {
+    return (
+      total +
+      (booking.selected_addons || []).reduce((addonTotal, addon) => {
+        if (addon.name) {
+          addonCounts.set(addon.name, (addonCounts.get(addon.name) || 0) + 1);
+        }
+
+        return addonTotal + (addon.price_cents || 0);
+      }, 0)
+    );
+  }, 0);
+  const topAddonLabel =
+    [...addonCounts.entries()].sort((first, second) => second[1] - first[1])[0]?.[0] ||
+    "None yet";
+
+  return {
+    grossBookingValueCents,
+    confirmedValueCents,
+    pendingValueCents,
+    averageBookingValueCents:
+      bookingsWithValue.length > 0
+        ? Math.round(grossBookingValueCents / bookingsWithValue.length)
+        : 0,
+    addonRevenueCents,
+    topAddonLabel,
+    upcomingConfirmedCount: activeBookings.filter(
+      (booking) => (booking.status || "").toLowerCase() === "confirmed",
+    ).length,
+    label: formatRevenueLabel(grossBookingValueCents),
+  };
+}
+
+export function getListingRevenueKit({
+  listing,
+  bookings,
+  addons,
+}: {
+  listing: ListingLike;
+  bookings: BookingLike[];
+  addons: AddonLike[];
+}): ListingRevenueKit {
+  const readiness = getListingReadinessSummary(listing);
+  const listingBookings = bookings.filter(
+    (booking) => booking.listing_id && booking.listing_id === listing.id && !isCancelled(booking),
+  );
+  const listingAddons = addons.filter(
+    (addon) => addon.listing_id && addon.listing_id === listing.id,
+  );
+  const bookingValueCents = listingBookings.reduce(
+    (total, booking) => total + (booking.booking_value_cents || 0),
+    0,
+  );
+  const hasBookings = listingBookings.length > 0;
+  const hasAddons = listingAddons.length > 0;
+  const score = Math.min(
+    100,
+    Math.round(readiness.score * 0.7 + (hasAddons ? 15 : 0) + (hasBookings ? 15 : 0)),
+  );
+  const priorityReadinessTips = ["Add photos", "Add tour times", "Set a map pin"];
+  const tips = [
+    ...readiness.missingItems.filter((item) =>
+      priorityReadinessTips.includes(item),
+    ),
+    hasAddons ? "" : "Add at least one paid add-on",
+    ...readiness.missingItems.filter(
+      (item) => !priorityReadinessTips.includes(item),
+    ),
+    hasBookings ? "" : "Share this listing from the map or vendor profile",
+  ].filter(Boolean);
+
+  return {
+    score,
+    label:
+      score >= 90 ? "Revenue-ready" : score >= 60 ? "Growth-ready" : "Needs polish",
+    bookingValueCents,
+    requestCount: listingBookings.length,
+    addonCount: listingAddons.length,
+    tips:
+      tips.length > 0
+        ? tips.slice(0, 5)
+        : ["Keep response time fast to earn repeat requests."],
+  };
+}
+
+export function getPublicVendorTrustBadges({
+  isVerified,
+  publicContactCount,
+  listings,
+}: {
+  isVerified?: boolean | null;
+  publicContactCount: number;
+  listings: ListingLike[];
+}) {
+  const badges: string[] = [];
+
+  if (isVerified) badges.push("Verified vendor");
+  if (listings.some((listing) => getListingReadinessSummary(listing).score >= 90)) {
+    badges.push("Guest-ready listing");
+  }
+  if (publicContactCount >= 2) badges.push("Clear contact");
+  if (listings.some((listing) => listing.latitude != null && listing.longitude != null)) {
+    badges.push("Map-ready");
+  }
+  if (listings.length > 1) badges.push("Multiple experiences");
+  if (listings.some((listing) => (listing.tour_times || []).length > 0)) {
+    badges.push("Times listed");
+  }
+
+  return badges.slice(0, 4);
 }
 
 export function getVendorFocusItems({

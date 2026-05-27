@@ -5,6 +5,7 @@ import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import { supabaseServer } from "@/lib/supabase-server";
+import { getPublicVendorTrustBadges } from "@/lib/vendor-dashboard";
 
 type Vendor = {
   id: string;
@@ -30,8 +31,14 @@ type Listing = {
   price: number | null;
   location: string | null;
   image_url: string | null;
+  gallery_image_urls: string[] | null;
   category: string | null;
   rating: number | null;
+  tour_times: string[] | null;
+  latitude: number | null;
+  longitude: number | null;
+  max_guests: number | null;
+  availability_note: string | null;
 };
 
 function formatPrice(price: number | null) {
@@ -125,7 +132,9 @@ export default async function VendorProfilePage({
 
   const { data: listingsData } = await supabaseServer
     .from("listings")
-    .select("id, title, description, price, location, image_url, category, rating")
+    .select(
+      "id, title, description, price, location, image_url, gallery_image_urls, category, rating, tour_times, latitude, longitude, max_guests, availability_note",
+    )
     .eq("vendor_id", vendor.id)
     .eq("is_active", true)
     .order("is_featured", { ascending: false })
@@ -138,6 +147,11 @@ export default async function VendorProfilePage({
     vendor.show_email !== false && vendor.email,
     vendor.show_website !== false && vendor.website,
   ].filter(Boolean).length;
+  const trustBadges = getPublicVendorTrustBadges({
+    isVerified: vendor.is_verified,
+    publicContactCount,
+    listings,
+  });
   const profileHighlights = [
     {
       label: "Active listings",
@@ -265,6 +279,23 @@ export default async function VendorProfilePage({
               </div>
             ))}
           </div>
+          {trustBadges.length > 0 ? (
+            <div className="mt-5 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
+              <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
+                Marketplace trust
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {trustBadges.map((badge) => (
+                  <span
+                    key={badge}
+                    className="rounded-full bg-white px-3 py-1 text-sm font-bold text-[#0B3C5D]"
+                  >
+                    {badge}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         {vendor.show_contact_name !== false && vendor.contact_name ? (

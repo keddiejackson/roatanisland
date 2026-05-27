@@ -28,10 +28,12 @@ import { supabase } from "@/lib/supabase";
 import {
   countListingPhotos,
   getListingReadinessSummary,
+  getListingRevenueKit,
   getListingStatusSummary,
   getProfileCompletionItems,
   getVendorFocusItems,
   getVendorDashboardStats,
+  getVendorRevenueSummary,
   sortVendorBookings,
 } from "@/lib/vendor-dashboard";
 
@@ -949,6 +951,10 @@ export default function VendorDashboardPage() {
     () => getVendorDashboardStats({ bookings, listings }),
     [bookings, listings],
   );
+  const revenueSummary = useMemo(
+    () => getVendorRevenueSummary({ bookings }),
+    [bookings],
+  );
 
   const profileCompletionItems = useMemo(
     () =>
@@ -1084,6 +1090,64 @@ export default function VendorDashboardPage() {
               <p className="mt-1 text-sm text-gray-600">{item.text}</p>
             </div>
           ))}
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-[#071F2F] p-6 text-white shadow-xl shadow-[#071F2F]/10">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
+                Revenue kit
+              </p>
+              <h2 className="mt-2 text-2xl font-bold">
+                Know what requests are worth.
+              </h2>
+            </div>
+            <p className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold text-white">
+              {revenueSummary.label}
+            </p>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                label: "Total requests",
+                value: formatBookingCents(revenueSummary.grossBookingValueCents),
+                text: "All active booking value",
+              },
+              {
+                label: "Confirmed",
+                value: formatBookingCents(revenueSummary.confirmedValueCents),
+                text: `${revenueSummary.upcomingConfirmedCount} upcoming confirmed`,
+              },
+              {
+                label: "Pending",
+                value: formatBookingCents(revenueSummary.pendingValueCents),
+                text: "New or suggested requests",
+              },
+              {
+                label: "Add-ons",
+                value: formatBookingCents(revenueSummary.addonRevenueCents),
+                text: `Top: ${revenueSummary.topAddonLabel}`,
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl bg-white/10 p-4">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#9EE8E3]">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-2xl font-black text-white">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-sm text-white/65">{item.text}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-sm leading-6 text-white/70">
+            Average request value:{" "}
+            <span className="font-bold text-white">
+              {formatBookingCents(revenueSummary.averageBookingValueCents)}
+            </span>
+            . Add-ons make it easier to lift each booking without changing the
+            main price.
+          </p>
         </section>
 
         <section className="mt-6 rounded-2xl bg-white p-6 shadow">
@@ -1769,6 +1833,11 @@ export default function VendorDashboardPage() {
 
                 const status = getListingStatusSummary(listing);
                 const readiness = getListingReadinessSummary(listing);
+                const revenueKit = getListingRevenueKit({
+                  listing,
+                  bookings,
+                  addons,
+                });
                 const photoCount = countListingPhotos(listing);
                 const timeCount = (listing.tour_times || []).length;
                 const hasMapPin =
@@ -1855,6 +1924,54 @@ export default function VendorDashboardPage() {
                             This listing has the basics travelers need to decide.
                           </p>
                         )}
+                      </div>
+                      <div className="mt-4 rounded-xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-4">
+                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                              Listing revenue score
+                            </p>
+                            <p className="mt-1 text-lg font-black text-[#0B3C5D]">
+                              {revenueKit.label} - {revenueKit.score}%
+                            </p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                            <div className="rounded-lg bg-white px-3 py-2">
+                              <p className="text-xs font-bold text-gray-500">
+                                Requests
+                              </p>
+                              <p className="font-black text-[#0B3C5D]">
+                                {revenueKit.requestCount}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-2">
+                              <p className="text-xs font-bold text-gray-500">
+                                Value
+                              </p>
+                              <p className="font-black text-[#0B3C5D]">
+                                {formatBookingCents(revenueKit.bookingValueCents)}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-white px-3 py-2">
+                              <p className="text-xs font-bold text-gray-500">
+                                Add-ons
+                              </p>
+                              <p className="font-black text-[#0B3C5D]">
+                                {revenueKit.addonCount}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {revenueKit.tips.slice(0, 4).map((tip) => (
+                            <span
+                              key={tip}
+                              className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0B3C5D]"
+                            >
+                              {tip}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button

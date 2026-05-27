@@ -18,6 +18,7 @@ import {
   getTourTimeLabels,
 } from "@/lib/listing-detail";
 import { supabaseServer } from "@/lib/supabase-server";
+import { getListingReadinessSummary } from "@/lib/vendor-dashboard";
 
 type Listing = {
   id: string;
@@ -238,6 +239,7 @@ export default async function ListingPage({
     maxGuests: listing.max_guests,
     minimumNoticeHours: listing.minimum_notice_hours,
   });
+  const readiness = getListingReadinessSummary(listing);
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
@@ -311,6 +313,11 @@ export default async function ListingPage({
               <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
                 Request reviewed before confirmation
               </span>
+              {readiness.score >= 90 ? (
+                <span className="rounded-full bg-[#D6B56D] px-4 py-2 text-[#071F2F]">
+                  Guest-ready listing
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
