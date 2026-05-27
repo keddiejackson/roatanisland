@@ -516,7 +516,10 @@ export default async function ListingPage({
             </div>
           </section>
 
-          <section className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <section
+            id="review"
+            className="scroll-mt-24 rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200"
+          >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">

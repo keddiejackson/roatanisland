@@ -29,6 +29,7 @@ import {
   countListingPhotos,
   getListingStatusSummary,
   getProfileCompletionItems,
+  getVendorFocusItems,
   getVendorDashboardStats,
   sortVendorBookings,
 } from "@/lib/vendor-dashboard";
@@ -961,6 +962,15 @@ export default function VendorDashboardPage() {
   const completedProfileItems = profileCompletionItems.filter(
     (item) => item.complete,
   ).length;
+  const vendorFocusItems = useMemo(
+    () =>
+      getVendorFocusItems({
+        stats: dashboardStats,
+        needsResponseCount,
+        profileCompletionItems,
+      }),
+    [dashboardStats, needsResponseCount, profileCompletionItems],
+  );
 
   if (loading) {
     return (
@@ -1073,6 +1083,50 @@ export default function VendorDashboardPage() {
               <p className="mt-1 text-sm text-gray-600">{item.text}</p>
             </div>
           ))}
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Today{"'"}s focus
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                Start with the highest-impact tasks.
+              </h2>
+            </div>
+            <Link
+              href="#bookings"
+              className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-sm font-bold text-white"
+            >
+              Open bookings
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-3">
+            {vendorFocusItems.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={`rounded-xl border p-5 transition hover:-translate-y-0.5 hover:shadow-lg ${
+                  item.tone === "urgent"
+                    ? "border-[#D6B56D]/40 bg-[#FFF8E8]"
+                    : item.tone === "setup"
+                      ? "border-[#00A8A8]/25 bg-[#EEF7F6]"
+                      : "border-gray-200 bg-white"
+                }`}
+              >
+                <p className="text-sm font-black uppercase tracking-[0.14em] text-[#0B3C5D]/65">
+                  {item.label}
+                </p>
+                <p className="mt-3 text-4xl font-black text-[#0B3C5D]">
+                  {item.value}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  {item.text}
+                </p>
+              </Link>
+            ))}
+          </div>
         </section>
 
         <section className="mt-6 rounded-2xl bg-white p-6 shadow">
@@ -1240,7 +1294,7 @@ export default function VendorDashboardPage() {
           </form>
         </section>
 
-        <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+        <section id="bookings" className="mt-8 scroll-mt-24 rounded-2xl bg-white p-8 shadow">
           <h2 className="text-2xl font-bold text-[#0B3C5D]">
             Business Verification
           </h2>
@@ -1312,7 +1366,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+        <section id="listings" className="mt-8 scroll-mt-24 rounded-2xl bg-white p-8 shadow">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">

@@ -28,6 +28,27 @@ type DocumentLike = {
 
 export type ListingStatusTone = "live" | "rejected" | "review";
 
+type VendorDashboardStats = {
+  newBookings: number;
+  confirmedBookings: number;
+  liveListings: number;
+  reviewListings: number;
+};
+
+type ProfileCompletionItem = {
+  label: string;
+  complete: boolean;
+  text: string;
+};
+
+export type VendorFocusItem = {
+  label: string;
+  value: string;
+  text: string;
+  href: string;
+  tone: "urgent" | "setup" | "growth";
+};
+
 export function getListingStatusSummary(listing: ListingLike): {
   label: string;
   tone: ListingStatusTone;
@@ -126,6 +147,63 @@ export function getVendorDashboardStats({
     liveListings: listings.filter((listing) => Boolean(listing.is_active)).length,
     reviewListings: listings.filter((listing) => !listing.is_active).length,
   };
+}
+
+export function getVendorFocusItems({
+  stats,
+  needsResponseCount,
+  profileCompletionItems,
+}: {
+  stats: VendorDashboardStats;
+  needsResponseCount: number;
+  profileCompletionItems: ProfileCompletionItem[];
+}): VendorFocusItem[] {
+  const incompleteProfileItems = profileCompletionItems.filter(
+    (item) => !item.complete,
+  );
+  const focusItems: VendorFocusItem[] = [];
+
+  if (needsResponseCount > 0 || stats.newBookings > 0) {
+    focusItems.push({
+      label: "Reply to guests",
+      value: String(needsResponseCount || stats.newBookings),
+      text: "Open booking threads that need an answer first.",
+      href: "#bookings",
+      tone: "urgent",
+    });
+  }
+
+  if (incompleteProfileItems.length > 0) {
+    focusItems.push({
+      label: "Finish setup",
+      value: String(incompleteProfileItems.length),
+      text: incompleteProfileItems[0]?.text || "Complete your public profile.",
+      href: "#profile",
+      tone: "setup",
+    });
+  }
+
+  if (stats.liveListings === 0) {
+    focusItems.push({
+      label: "Get a listing live",
+      value: "0",
+      text: "Polish a listing and save it for admin review.",
+      href: "#listings",
+      tone: "growth",
+    });
+  }
+
+  if (focusItems.length === 0) {
+    focusItems.push({
+      label: "Keep listings fresh",
+      value: String(stats.liveListings),
+      text: "Review photos, times, and availability before busy travel days.",
+      href: "#listings",
+      tone: "growth",
+    });
+  }
+
+  return focusItems.slice(0, 3);
 }
 
 function bookingPriority(booking: BookingLike) {

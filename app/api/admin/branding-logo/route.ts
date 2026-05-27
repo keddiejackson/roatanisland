@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import {
+  brandingLogoBucketName,
+  brandingLogoFolder,
+  brandingLogoPathFromPublicUrl,
   cleanBrandingLogoFileName,
+  formatBrandingMediaItems,
+  getBrandingLogoStoragePath,
   validateBrandingLogoFile,
 } from "@/lib/branding-logo-upload";
 import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
-
-const bucketName = "listing-images";
 
 async function verifyAdmin(request: Request) {
   const token = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "");
@@ -52,7 +55,7 @@ export async function POST(request: Request) {
     logo.name,
   )}`;
   const { error } = await supabaseServer.storage
-    .from(bucketName)
+    .from(brandingLogoBucketName)
     .upload(filePath, logo, {
       contentType: logo.type,
       upsert: false,
@@ -74,8 +77,79 @@ export async function POST(request: Request) {
   }
 
   const { data } = supabaseServer.storage
-    .from(bucketName)
+    .from(brandingLogoBucketName)
     .getPublicUrl(filePath);
 
   return NextResponse.json({ logoUrl: data.publicUrl });
+}
+
+export async function GET(request: Request) {
+  const adminEmail = await verifyAdmin(request);
+
+  if (!adminEmail) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { data, error } = await supabaseServer.storage
+    .from(brandingLogoBucketName)
+    .list(brandingLogoFolder, {
+      limit: 100,
+      sortBy: { column: "created_at", order: "desc" },
+    });
+
+  if (error) {
+    await logAppError({
+      source: "admin_branding_logo_list",
+      message: error.message,
+      details: { actorEmail: adminEmail },
+    });
+
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  const media = formatBrandingMediaItems(data || [], (path) => {
+    const { data: publicData } = supabaseServer.storage
+      .from(brandingLogoBucketName)
+      .getPublicUrl(path);
+
+    return publicData.publicUrl;
+  });
+
+  return NextResponse.json({ media });
+}
+
+export async function DELETE(request: Request) {
+  const adminEmail = await verifyAdmin(request);
+
+  if (!adminEmail) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = (await request.json()) as { path?: string; url?: string };
+  const storagePath =
+    (body.path ? getBrandingLogoStoragePath(body.path) : null) ||
+    (body.url ? brandingLogoPathFromPublicUrl(body.url) : null);
+
+  if (!storagePath) {
+    return NextResponse.json(
+      { error: "Choose a valid branding logo to delete." },
+      { status: 400 },
+    );
+  }
+
+  const { error } = await supabaseServer.storage
+    .from(brandingLogoBucketName)
+    .remove([storagePath]);
+
+  if (error) {
+    await logAppError({
+      source: "admin_branding_logo_delete",
+      message: error.message,
+      details: { actorEmail: adminEmail, storagePath },
+    });
+
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ deleted: true });
 }

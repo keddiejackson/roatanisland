@@ -10,6 +10,7 @@ const navItems = [
   { href: "/admin/concierge", label: "Concierge" },
   { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/listings", label: "Listings" },
+  { href: "/admin/media", label: "Media" },
   { href: "/admin/map-cleanup", label: "Map QA" },
   { href: "/admin/listing-review", label: "Review" },
   { href: "/admin/reviews", label: "Reviews" },

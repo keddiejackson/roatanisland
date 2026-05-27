@@ -313,7 +313,7 @@ export default function Home() {
     [listings],
   );
 
-  const visibleListings = filteredListings.slice(0, 9);
+  const visibleListings = filteredListings.slice(0, 6);
   const mapUrl = buildDateAwareMapUrl({
     category,
     location: locationFilter,
@@ -662,6 +662,16 @@ export default function Home() {
                 ))}
               </div>
             )}
+            {filteredListings.length > visibleListings.length ? (
+              <div className="mt-8 flex justify-center">
+                <Link
+                  href={mapUrl}
+                  className="rounded-lg bg-[#071F2F] px-5 py-3 text-sm font-black text-white"
+                >
+                  See all matches on the map
+                </Link>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

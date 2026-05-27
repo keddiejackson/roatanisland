@@ -144,9 +144,11 @@ export function composeBookingGuestMessage({
 export function bookingNextAction({
   status,
   depositStatus,
+  canReview = false,
 }: {
   status: string | null | undefined;
   depositStatus: string | null | undefined;
+  canReview?: boolean;
 }): BookingNextAction {
   if (status === "cancelled") {
     return {
@@ -157,6 +159,14 @@ export function bookingNextAction({
   }
 
   if (status === "completed") {
+    if (canReview) {
+      return {
+        label: "Share your review",
+        text: "Your trip is complete. Leave a review to help the next traveler choose with confidence.",
+        tone: "complete",
+      };
+    }
+
     return {
       label: "Trip complete",
       text: "Thanks for booking. You can keep this page for your records.",

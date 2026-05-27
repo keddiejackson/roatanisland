@@ -95,6 +95,7 @@ export default async function BookingStatusPage({
   const nextAction = bookingNextAction({
     status: booking.status,
     depositStatus: booking.deposit_status,
+    canReview: Boolean(booking.status === "completed" && booking.listing_id),
   });
   const nextActionClass =
     nextAction.tone === "cancelled"
@@ -284,6 +285,14 @@ export default async function BookingStatusPage({
                 className="rounded-xl border border-[#00A8A8] px-5 py-3 font-semibold text-[#007B7B]"
               >
                 View listing
+              </Link>
+            ) : null}
+            {booking.status === "completed" && booking.listing_id ? (
+              <Link
+                href={`/listings/${booking.listing_id}#review`}
+                className="rounded-xl bg-[#D6B56D] px-5 py-3 font-semibold text-[#0B3C5D]"
+              >
+                Leave review
               </Link>
             ) : null}
           </div>

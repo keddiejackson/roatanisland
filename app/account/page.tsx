@@ -15,6 +15,7 @@ import {
   type BookingMessageLike,
   type BookingThreadSummary,
 } from "@/lib/booking-communication";
+import { bookingNextAction } from "@/lib/booking-flow";
 import {
   buildGuestPasswordResetRedirect,
   getGuestAuthSubmitLabel,
@@ -74,6 +75,17 @@ function threadBadgeClass(summary?: BookingThreadSummary) {
   }
 
   return "bg-[#EEF7F6] text-[#0B3C5D]";
+}
+
+function nextActionClass(tone: ReturnType<typeof bookingNextAction>["tone"]) {
+  if (tone === "cancelled") return "border-red-200 bg-red-50 text-red-800";
+  if (tone === "complete" || tone === "paid") {
+    return "border-green-200 bg-green-50 text-green-800";
+  }
+  if (tone === "confirmed") {
+    return "border-[#00A8A8]/25 bg-[#EEF7F6] text-[#0B3C5D]";
+  }
+  return "border-[#D6B56D]/35 bg-[#FFF8E8] text-[#0B3C5D]";
 }
 
 function summarizeThreads(
@@ -768,7 +780,16 @@ export default function AccountPage() {
             </div>
           ) : (
             <div className="mt-8 grid gap-4">
-              {bookings.map((booking) => (
+              {bookings.map((booking) => {
+                const nextAction = bookingNextAction({
+                  status: booking.status,
+                  depositStatus: booking.deposit_status,
+                  canReview: Boolean(
+                    booking.status === "completed" && booking.listing_id,
+                  ),
+                });
+
+                return (
                 <article
                   key={booking.id}
                   className="rounded-xl border border-gray-200 p-5 transition hover:-translate-y-0.5 hover:border-[#00A8A8] hover:shadow-lg"
@@ -804,6 +825,14 @@ export default function AccountPage() {
                     {threadSummaries[booking.id]?.lastMessagePreview ||
                       "No booking messages yet."}
                   </p>
+                  <div
+                    className={`mt-4 rounded-xl border px-4 py-3 text-sm ${nextActionClass(
+                      nextAction.tone,
+                    )}`}
+                  >
+                    <p className="font-black">{nextAction.label}</p>
+                    <p className="mt-1 leading-6">{nextAction.text}</p>
+                  </div>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -821,9 +850,18 @@ export default function AccountPage() {
                     >
                       View details
                     </Link>
+                    {booking.status === "completed" && booking.listing_id ? (
+                      <Link
+                        href={`/listings/${booking.listing_id}#review`}
+                        className="rounded-lg bg-[#D6B56D] px-4 py-2 text-sm font-bold text-[#0B3C5D]"
+                      >
+                        Leave review
+                      </Link>
+                    ) : null}
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
