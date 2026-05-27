@@ -7,7 +7,10 @@ import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
 import { conciergeLeadSummary } from "@/lib/concierge-leads";
-import { getMarketplaceCommandCenter } from "@/lib/marketplace-upgrade";
+import {
+  getAdminCommandDigest,
+  getMarketplaceCommandCenter,
+} from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 
 type Booking = {
@@ -141,6 +144,13 @@ export default function AdminDashboardPage() {
       reviews,
     });
     const concierge = conciergeLeadSummary(conciergeLeads);
+    const commandDigest = getAdminCommandDigest({
+      listings,
+      bookings,
+      vendors,
+      reviews,
+      conciergeLeadCount: concierge.activeCount,
+    });
 
     return {
       newBookings: bookings.filter((booking) => (booking.status || "new") === "new")
@@ -172,6 +182,7 @@ export default function AdminDashboardPage() {
         ),
       nextBookings: upcomingBookings.slice(0, 8),
       commandCenter,
+      commandDigest,
     };
   }, [bookings, conciergeLeads, listings, reviews, vendors]);
 
@@ -247,6 +258,53 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               </div>
+
+              <section className="mt-4 rounded-2xl border border-[#00A8A8]/20 bg-white p-5">
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#00A8A8]">
+                      Operating digest
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                      {summary.commandDigest.headline}
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      Start with {summary.commandDigest.topAction.label.toLowerCase()}.
+                    </p>
+                  </div>
+                  <Link
+                    href={summary.commandDigest.topAction.href}
+                    className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-white"
+                  >
+                    Open top action
+                  </Link>
+                </div>
+                <div className="mt-5 grid gap-3 md:grid-cols-4">
+                  {summary.commandDigest.items.map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      className={`rounded-xl border p-4 transition hover:-translate-y-0.5 ${
+                        item.tone === "urgent"
+                          ? "border-[#D6B56D]/35 bg-[#FFF8E8]"
+                          : item.tone === "quality"
+                            ? "border-[#00A8A8]/20 bg-[#EEF7F6]"
+                            : "border-gray-200 bg-white"
+                      }`}
+                    >
+                      <p className="text-sm font-bold text-[#0B3C5D]">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                        {item.value}
+                      </p>
+                      <p className="mt-1 text-xs leading-5 text-gray-600">
+                        {item.text}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              </section>
 
               <section className="mt-8 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-5">
                 <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">

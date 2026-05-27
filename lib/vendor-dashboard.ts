@@ -6,6 +6,8 @@ type ListingLike = {
   image_url?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  max_guests?: number | null;
+  availability_note?: string | null;
 };
 
 type BookingLike = {
@@ -146,6 +148,48 @@ export function getVendorDashboardStats({
       .length,
     liveListings: listings.filter((listing) => Boolean(listing.is_active)).length,
     reviewListings: listings.filter((listing) => !listing.is_active).length,
+  };
+}
+
+export function getListingReadinessSummary(listing: ListingLike): {
+  score: number;
+  label: "Guest-ready" | "Almost ready" | "Needs basics";
+  missingItems: string[];
+} {
+  const checks = [
+    {
+      label: "Add photos",
+      complete:
+        Boolean(listing.image_url) ||
+        Boolean((listing.gallery_image_urls || []).length),
+    },
+    {
+      label: "Add tour times",
+      complete: Boolean((listing.tour_times || []).length),
+    },
+    {
+      label: "Set a map pin",
+      complete: listing.latitude != null && listing.longitude != null,
+    },
+    {
+      label: "Set max guests",
+      complete: Boolean(listing.max_guests),
+    },
+    {
+      label: "Add availability note",
+      complete: Boolean((listing.availability_note || "").trim()),
+    },
+  ];
+  const completed = checks.filter((check) => check.complete).length;
+  const score = Math.round((completed / checks.length) * 100);
+
+  return {
+    score,
+    label:
+      score >= 90 ? "Guest-ready" : score >= 60 ? "Almost ready" : "Needs basics",
+    missingItems: checks
+      .filter((check) => !check.complete)
+      .map((check) => check.label),
   };
 }
 

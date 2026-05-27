@@ -7,6 +7,7 @@ import {
   buildGuestNotifications,
   getBookingTimeline,
   getGuestCommandSummary,
+  getGuestNextBestAction,
   getGuestProfileCompletion,
   getSavedListingCards,
   getGuestWalletSummary,
@@ -177,6 +178,16 @@ export default function GuestTravelCommandCenter({
     () => buildGuestNotifications({ bookings, plans, savedListingIds, profile }),
     [bookings, plans, profile, savedListingIds],
   );
+  const nextBestAction = useMemo(
+    () =>
+      getGuestNextBestAction({
+        bookings,
+        plans,
+        savedListingIds,
+        profile,
+      }),
+    [bookings, plans, profile, savedListingIds],
+  );
   const wallet = useMemo(() => getGuestWalletSummary(bookings), [bookings]);
   const savedListingCards = useMemo(
     () => getSavedListingCards(savedListingIds, savedListingDetails),
@@ -254,11 +265,25 @@ export default function GuestTravelCommandCenter({
             {email}.
           </p>
         </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[420px]">
         <div className="rounded-2xl border border-white/15 bg-white/10 px-5 py-4">
           <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
             Trip readiness
           </p>
           <p className="mt-1 text-3xl font-black">{summary.tripScore}%</p>
+        </div>
+        <Link
+          href={nextBestAction.href}
+          className="rounded-2xl border border-white/15 bg-white px-5 py-4 text-[#0B3C5D] transition hover:-translate-y-0.5"
+        >
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
+            Next best step
+          </p>
+          <p className="mt-1 text-lg font-black">{nextBestAction.label}</p>
+          <p className="mt-1 text-xs font-bold leading-5 text-[#0B3C5D]/70">
+            {nextBestAction.text}
+          </p>
+        </Link>
         </div>
       </div>
       </div>

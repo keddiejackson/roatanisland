@@ -62,6 +62,13 @@ export type GuestNotification = {
   tone: "info" | "warning" | "success";
 };
 
+export type GuestNextBestAction = {
+  label: string;
+  text: string;
+  href: string;
+  tone: "info" | "warning" | "success";
+};
+
 const paidStatuses = new Set(["paid", "full_paid"]);
 const checkoutStatuses = new Set([
   "checkout_started",
@@ -279,6 +286,65 @@ export function getGuestCommandSummary({
         .filter(Boolean)
         .sort()[0] || "Flexible",
     tripScore,
+  };
+}
+
+export function getGuestNextBestAction({
+  bookings,
+  plans,
+  savedListingIds,
+  profile,
+}: {
+  bookings: GuestCommandBooking[];
+  plans: GuestCommandPlan[];
+  savedListingIds: string[];
+  profile: GuestTravelProfile;
+}): GuestNextBestAction {
+  if (savedListingIds.length === 0) {
+    return {
+      label: "Start with the map",
+      text: "Save a few tours, beaches, hotels, or transport options before requesting help.",
+      href: "/map",
+      tone: "info",
+    };
+  }
+
+  if (plans.length === 0) {
+    return {
+      label: "Save this as a plan",
+      text: "Turn your saved stops into a named itinerary so you can return to it later.",
+      href: "/account",
+      tone: "warning",
+    };
+  }
+
+  if (
+    bookings.some((booking) =>
+      ["confirmed", "completed"].includes(normalizeStatus(booking.status)),
+    )
+  ) {
+    return {
+      label: "Review confirmed trips",
+      text: "Open trip details for pickup notes, payments, chat, and next steps.",
+      href: "/account",
+      tone: "success",
+    };
+  }
+
+  if (getGuestProfileCompletion(profile).percent < 75) {
+    return {
+      label: "Finish travel details",
+      text: "Add arrival, pickup, and travel party details so requests move faster.",
+      href: "/account",
+      tone: "warning",
+    };
+  }
+
+  return {
+    label: "Request concierge help",
+    text: "Send your saved route and profile so the team can shape a custom plan.",
+    href: "/concierge",
+    tone: "info",
   };
 }
 

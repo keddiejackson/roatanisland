@@ -21,6 +21,7 @@ import {
 } from "@/lib/homepage-settings";
 import {
   buildDateAwareMapUrl,
+  getListingConversionTags,
   getListingTrustBadges,
   listingMatchesAvailability,
 } from "@/lib/marketplace-upgrade";
@@ -603,6 +604,42 @@ export default function Home() {
             ) : null}
           </div>
 
+          <div className="mt-5 rounded-lg border border-[#D6B56D]/25 bg-white p-4 shadow-sm">
+            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+                  Trip match brief
+                </p>
+                <p className="mt-1 text-lg font-black text-[#0B3C5D]">
+                  {filteredListings.length} match
+                  {filteredListings.length === 1 ? "" : "es"} for{" "}
+                  {category === "All" ? "all experiences" : category.toLowerCase()}
+                  {locationFilter === "All" ? "" : ` near ${locationFilter}`}
+                  {travelDate ? ` on ${travelDate}` : ""}
+                  {guestCount ? ` for ${guestCount} guests` : ""}.
+                </p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  Open the matched map to compare stops by area, or save options
+                  into your trip board before requesting help.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={mapUrl}
+                  className="rounded-lg bg-[#0B3C5D] px-4 py-3 text-sm font-black text-white"
+                >
+                  Compare on map
+                </Link>
+                <Link
+                  href="/account"
+                  className="rounded-lg bg-[#EEF7F6] px-4 py-3 text-sm font-black text-[#0B3C5D]"
+                >
+                  Open trip board
+                </Link>
+              </div>
+            </div>
+          </div>
+
           <div className="mt-5">
             <TripPlannerDock />
           </div>
@@ -614,6 +651,8 @@ export default function Home() {
                   key={listing.id}
                   listing={listing}
                   homepageControls={homepageControls}
+                  travelDate={travelDate}
+                  guestCount={guestCount}
                   featured
                 />
               ))}
@@ -658,6 +697,8 @@ export default function Home() {
                     key={listing.id}
                     listing={listing}
                     homepageControls={homepageControls}
+                    travelDate={travelDate}
+                    guestCount={guestCount}
                   />
                 ))}
               </div>
@@ -937,13 +978,21 @@ export default function Home() {
 function ListingCard({
   listing,
   homepageControls,
+  travelDate,
+  guestCount,
   featured = false,
 }: {
   listing: Listing;
   homepageControls: HomepageControls;
+  travelDate: string;
+  guestCount: string;
   featured?: boolean;
 }) {
   const trustBadges = getListingTrustBadges(listing);
+  const conversionTags = getListingConversionTags(listing, {
+    date: travelDate,
+    guests: guestCount,
+  });
 
   return (
     <Link
@@ -999,6 +1048,18 @@ function ListingCard({
                 className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-bold text-[#0B3C5D]"
               >
                 {badge}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        {conversionTags.length > 0 ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {conversionTags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-[#FFF8E8] px-3 py-1 text-xs font-bold text-[#7A5A00]"
+              >
+                {tag}
               </span>
             ))}
           </div>

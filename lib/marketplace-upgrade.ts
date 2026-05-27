@@ -1,6 +1,7 @@
 export type MarketplaceListing = {
   id: string;
   title?: string | null;
+  description?: string | null;
   category?: string | null;
   location?: string | null;
   tour_times?: string[] | null;
@@ -31,6 +32,14 @@ export type MarketplaceVendor = {
 export type MarketplaceReview = {
   id: string;
   is_approved?: boolean | null;
+};
+
+export type AdminCommandDigestItem = {
+  label: string;
+  value: number;
+  href: string;
+  text: string;
+  tone: "urgent" | "quality" | "growth";
 };
 
 export type DateAwareFilters = {
@@ -127,6 +136,64 @@ export function getListingTrustBadges(listing: MarketplaceListing) {
   return badges.slice(0, 4);
 }
 
+export function getListingConversionTags(
+  listing: MarketplaceListing,
+  filters: { date?: string; guests?: string } = {},
+) {
+  const tags: string[] = [];
+  const text = [
+    listing.title,
+    listing.description,
+    listing.category,
+    listing.location,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const guests = Number(filters.guests);
+
+  if (
+    filters.date &&
+    !(listing.blocked_dates || []).includes(filters.date)
+  ) {
+    tags.push("Open on your date");
+  }
+
+  if (
+    Number.isFinite(guests) &&
+    guests > 0 &&
+    (!listing.max_guests || guests <= listing.max_guests)
+  ) {
+    tags.push(`Fits ${guests} guest${guests === 1 ? "" : "s"}`);
+  }
+
+  if (text.includes("airport")) {
+    tags.push("Airport pickup");
+  }
+
+  if ((listing.category || "").toLowerCase().includes("private")) {
+    tags.push("Private option");
+  }
+
+  if ((listing.tour_times || []).length > 0) {
+    tags.push("Times listed");
+  }
+
+  if ((listing.rating || 0) >= 4.8) {
+    tags.push("Top rated");
+  }
+
+  if ((listing.reviews_count || 0) >= 3) {
+    tags.push("Verified reviews");
+  }
+
+  if (listing.latitude != null && listing.longitude != null) {
+    tags.push("Exact map pin");
+  }
+
+  return tags.slice(0, 4);
+}
+
 export function getMarketplaceCommandCenter({
   listings,
   bookings,
@@ -187,6 +254,81 @@ export function getMarketplaceCommandCenter({
         href: "/admin/bookings",
       },
     ],
+  };
+}
+
+export function getAdminCommandDigest({
+  listings,
+  bookings,
+  vendors,
+  reviews,
+  conciergeLeadCount = 0,
+}: {
+  listings: MarketplaceListing[];
+  bookings: MarketplaceBooking[];
+  vendors: MarketplaceVendor[];
+  reviews: MarketplaceReview[];
+  conciergeLeadCount?: number;
+}) {
+  const commandCenter = getMarketplaceCommandCenter({
+    listings,
+    bookings,
+    vendors,
+    reviews,
+  });
+  const itemCandidates: AdminCommandDigestItem[] = [
+    {
+      label: "Concierge leads",
+      value: conciergeLeadCount,
+      href: "/admin/concierge",
+      text: "Reply to guests who asked for planning help.",
+      tone: "urgent",
+    },
+    {
+      label: "Missing map pins",
+      value:
+        commandCenter.priorityCards.find(
+          (card) => card.label === "Missing map pins",
+        )?.value || 0,
+      href: "/admin/map-cleanup",
+      text: "Place listings accurately so travelers can plan by area.",
+      tone: "quality",
+    },
+    {
+      label: "Pending reviews",
+      value: reviews.filter((review) => !review.is_approved).length,
+      href: "/admin/reviews",
+      text: "Keep social proof fresh by approving useful reviews.",
+      tone: "growth",
+    },
+    {
+      label: "New bookings",
+      value:
+        commandCenter.priorityCards.find(
+          (card) => card.label === "Unconfirmed bookings",
+        )?.value || 0,
+      href: "/admin/bookings",
+      text: "Confirm or follow up on new traveler requests.",
+      tone: "urgent",
+    },
+  ];
+  const items = itemCandidates.filter((item) => item.value > 0);
+  const attentionCount = items.reduce((total, item) => total + item.value, 0);
+
+  return {
+    headline:
+      attentionCount > 0
+        ? `${attentionCount} item${attentionCount === 1 ? "" : "s"} need attention`
+        : "Everything important is clear",
+    items,
+    topAction:
+      items[0] || {
+        label: "Open analytics",
+        value: 0,
+        href: "/admin/analytics",
+        text: "Review traffic, bookings, and marketplace quality.",
+        tone: "growth" as const,
+      },
   };
 }
 

@@ -27,6 +27,7 @@ import { getMonthCalendarDays } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 import {
   countListingPhotos,
+  getListingReadinessSummary,
   getListingStatusSummary,
   getProfileCompletionItems,
   getVendorFocusItems,
@@ -1767,6 +1768,7 @@ export default function VendorDashboardPage() {
                 }
 
                 const status = getListingStatusSummary(listing);
+                const readiness = getListingReadinessSummary(listing);
                 const photoCount = countListingPhotos(listing);
                 const timeCount = (listing.tour_times || []).length;
                 const hasMapPin =
@@ -1819,6 +1821,40 @@ export default function VendorDashboardPage() {
                             </p>
                           </div>
                         ))}
+                      </div>
+                      <div className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
+                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                              Guest readiness
+                            </p>
+                            <p className="mt-1 text-lg font-black text-[#0B3C5D]">
+                              {readiness.label} - {readiness.score}%
+                            </p>
+                          </div>
+                          <div className="h-2 min-w-36 overflow-hidden rounded-full bg-white">
+                            <span
+                              className="block h-full rounded-full bg-[#00A8A8]"
+                              style={{ width: `${readiness.score}%` }}
+                            />
+                          </div>
+                        </div>
+                        {readiness.missingItems.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {readiness.missingItems.slice(0, 4).map((item) => (
+                              <span
+                                key={item}
+                                className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0B3C5D]"
+                              >
+                                {item}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm font-semibold text-[#0B3C5D]/70">
+                            This listing has the basics travelers need to decide.
+                          </p>
+                        )}
                       </div>
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button
