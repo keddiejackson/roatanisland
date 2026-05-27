@@ -215,10 +215,31 @@ create table if not exists public.bookings (
   deposit_status text not null default 'not_requested',
   deposit_amount_cents integer,
   booking_value_cents integer,
+  payment_schedule_type text not null default 'request_later'
+    check (payment_schedule_type in ('request_later', 'deposit_only', 'full_payment', 'split_payment', 'manual', 'waived')),
+  payment_due_date date,
+  balance_due_date date,
+  amount_paid_cents integer not null default 0,
+  balance_due_cents integer,
+  payment_method text,
+  manual_payment_note text,
+  payment_requested_at timestamptz,
+  payment_last_sent_at timestamptz,
+  payment_link_url text,
+  invoice_number text,
+  receipt_number text,
+  refund_status text not null default 'none'
+    check (refund_status in ('none', 'pending', 'partial', 'full', 'declined')),
+  refund_amount_cents integer,
+  refund_note text,
+  payment_issue_flag boolean not null default false,
+  payment_issue_note text,
   commission_rate numeric not null default 0.10,
   commission_amount_cents integer,
+  commission_override_cents integer,
   commission_status text not null default 'unpaid' check (commission_status in ('unpaid', 'scheduled', 'paid', 'waived')),
   payout_note text,
+  vendor_private_payout_note text,
   payout_scheduled_for date,
   payout_paid_at timestamptz,
   stripe_checkout_session_id text,
@@ -320,6 +341,25 @@ on public.booking_events(booking_id);
 
 create index if not exists booking_events_created_at_idx
 on public.booking_events(created_at);
+
+create table if not exists public.booking_money_events (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references public.bookings(id) on delete cascade,
+  event_type text not null,
+  actor_role text not null default 'system'
+    check (actor_role in ('guest', 'vendor', 'admin', 'system')),
+  actor_email text,
+  amount_cents integer,
+  note text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists booking_money_events_booking_id_idx
+on public.booking_money_events(booking_id);
+
+create index if not exists booking_money_events_created_at_idx
+on public.booking_money_events(created_at);
 
 create table if not exists public.analytics_events (
   id uuid primary key default gen_random_uuid(),
@@ -534,10 +574,78 @@ alter table public.bookings
 add column if not exists booking_value_cents integer;
 
 alter table public.bookings
+add column if not exists payment_schedule_type text not null default 'request_later';
+
+alter table public.bookings
+drop constraint if exists bookings_payment_schedule_type_check;
+
+alter table public.bookings
+add constraint bookings_payment_schedule_type_check
+check (payment_schedule_type in ('request_later', 'deposit_only', 'full_payment', 'split_payment', 'manual', 'waived'));
+
+alter table public.bookings
+add column if not exists payment_due_date date;
+
+alter table public.bookings
+add column if not exists balance_due_date date;
+
+alter table public.bookings
+add column if not exists amount_paid_cents integer not null default 0;
+
+alter table public.bookings
+add column if not exists balance_due_cents integer;
+
+alter table public.bookings
+add column if not exists payment_method text;
+
+alter table public.bookings
+add column if not exists manual_payment_note text;
+
+alter table public.bookings
+add column if not exists payment_requested_at timestamptz;
+
+alter table public.bookings
+add column if not exists payment_last_sent_at timestamptz;
+
+alter table public.bookings
+add column if not exists payment_link_url text;
+
+alter table public.bookings
+add column if not exists invoice_number text;
+
+alter table public.bookings
+add column if not exists receipt_number text;
+
+alter table public.bookings
+add column if not exists refund_status text not null default 'none';
+
+alter table public.bookings
+drop constraint if exists bookings_refund_status_check;
+
+alter table public.bookings
+add constraint bookings_refund_status_check
+check (refund_status in ('none', 'pending', 'partial', 'full', 'declined'));
+
+alter table public.bookings
+add column if not exists refund_amount_cents integer;
+
+alter table public.bookings
+add column if not exists refund_note text;
+
+alter table public.bookings
+add column if not exists payment_issue_flag boolean not null default false;
+
+alter table public.bookings
+add column if not exists payment_issue_note text;
+
+alter table public.bookings
 add column if not exists commission_rate numeric not null default 0.10;
 
 alter table public.bookings
 add column if not exists commission_amount_cents integer;
+
+alter table public.bookings
+add column if not exists commission_override_cents integer;
 
 alter table public.bookings
 add column if not exists commission_status text not null default 'unpaid'
@@ -552,6 +660,9 @@ check (commission_status in ('unpaid', 'scheduled', 'paid', 'waived'));
 
 alter table public.bookings
 add column if not exists payout_note text;
+
+alter table public.bookings
+add column if not exists vendor_private_payout_note text;
 
 alter table public.bookings
 add column if not exists payout_scheduled_for date;
@@ -722,6 +833,7 @@ alter table public.booking_message_reads enable row level security;
 alter table public.booking_change_requests enable row level security;
 alter table public.guest_profiles enable row level security;
 alter table public.booking_events enable row level security;
+alter table public.booking_money_events enable row level security;
 alter table public.analytics_events enable row level security;
 alter table public.app_errors enable row level security;
 alter table public.admin_activity_logs enable row level security;
@@ -746,6 +858,7 @@ grant select, insert, update on public.booking_message_reads to authenticated;
 grant select, insert, update on public.booking_change_requests to authenticated;
 grant select, insert, update on public.guest_profiles to authenticated;
 grant select, insert on public.booking_events to authenticated;
+grant select, insert on public.booking_money_events to authenticated;
 grant insert on public.analytics_events to anon, authenticated;
 grant select on public.analytics_events to authenticated;
 grant select, update on public.app_errors to authenticated;
@@ -1623,6 +1736,56 @@ using (
     join public.listings on listings.id = bookings.listing_id
     join public.vendor_users on vendor_users.vendor_id = listings.vendor_id
     where bookings.id = booking_events.booking_id
+      and vendor_users.user_id = auth.uid()
+  )
+);
+
+drop policy if exists "Admins can manage booking money events" on public.booking_money_events;
+create policy "Admins can manage booking money events"
+on public.booking_money_events
+for all
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Guests can view own booking money events" on public.booking_money_events;
+create policy "Guests can view own booking money events"
+on public.booking_money_events
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.bookings
+    where bookings.id = booking_money_events.booking_id
+      and lower(bookings.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Vendors can view booking money events for own listings" on public.booking_money_events;
+create policy "Vendors can view booking money events for own listings"
+on public.booking_money_events
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.bookings
+    join public.listings on listings.id = bookings.listing_id
+    join public.vendor_users on vendor_users.vendor_id = listings.vendor_id
+    where bookings.id = booking_money_events.booking_id
       and vendor_users.user_id = auth.uid()
   )
 );

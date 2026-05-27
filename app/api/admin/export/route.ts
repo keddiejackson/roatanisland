@@ -75,7 +75,7 @@ async function fetchRows(type: ExportType) {
     const { data, error } = await supabaseServer
       .from("bookings")
       .select(
-        "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, deposit_status, deposit_amount_cents, listing_id, admin_notes, created_at",
+        "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, deposit_status, deposit_amount_cents, booking_value_cents, payment_schedule_type, payment_due_date, balance_due_date, amount_paid_cents, balance_due_cents, payment_method, invoice_number, receipt_number, refund_status, refund_amount_cents, payment_issue_flag, commission_override_cents, vendor_private_payout_note, listing_id, admin_notes, created_at",
       )
       .order("created_at", { ascending: false });
 

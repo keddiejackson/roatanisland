@@ -48,7 +48,7 @@ export async function GET(request: Request) {
   }
 
   const bookingSelectWithPayout =
-    "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, listing_id, deposit_status, booking_value_cents, commission_amount_cents, commission_status, payout_note, payout_scheduled_for, payout_paid_at, selected_addons, created_at";
+    "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, listing_id, deposit_status, deposit_amount_cents, booking_value_cents, payment_schedule_type, payment_due_date, balance_due_date, amount_paid_cents, balance_due_cents, payment_method, invoice_number, receipt_number, refund_status, refund_amount_cents, commission_amount_cents, commission_override_cents, commission_status, payout_note, vendor_private_payout_note, payout_scheduled_for, payout_paid_at, selected_addons, created_at";
   const bookingResult = await supabaseServer
     .from("bookings")
     .select(bookingSelectWithPayout)

@@ -8,6 +8,10 @@ import {
   formatBookingStatus,
   formatDepositStatus,
 } from "@/lib/booking-flow";
+import {
+  formatMoneyCents,
+  getBookingMoneySnapshot,
+} from "@/lib/booking-money-command";
 import { bookingTimeline, type BookingEventLike } from "@/lib/booking-communication";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -20,7 +24,17 @@ type Booking = {
   guests: number;
   status: string;
   deposit_status: string | null;
+  deposit_amount_cents: number | null;
   booking_value_cents: number | null;
+  payment_schedule_type: string | null;
+  payment_due_date: string | null;
+  balance_due_date: string | null;
+  amount_paid_cents: number | null;
+  balance_due_cents: number | null;
+  invoice_number: string | null;
+  receipt_number: string | null;
+  refund_status: string | null;
+  refund_amount_cents: number | null;
   guest_message: string | null;
   vendor_note: string | null;
   selected_addons: { name?: string; price_cents?: number }[] | null;
@@ -40,9 +54,7 @@ export default async function BookingStatusPage({
   const { id } = await params;
   const { data } = await supabaseServer
     .from("bookings")
-    .select(
-      "id, full_name, email, tour_date, tour_time, guests, status, deposit_status, booking_value_cents, guest_message, vendor_note, selected_addons, listing_id, created_at",
-    )
+    .select("*")
     .eq("id", id)
     .maybeSingle();
   const booking = data as Booking | null;
@@ -106,6 +118,7 @@ export default async function BookingStatusPage({
   const selectedAddons = Array.isArray(booking.selected_addons)
     ? booking.selected_addons
     : [];
+  const moneySnapshot = getBookingMoneySnapshot(booking);
   const realTimeline = bookingTimeline({
     booking,
     events: (eventRows as BookingEventLike[] | null) || [],
@@ -202,6 +215,46 @@ export default async function BookingStatusPage({
                       {new Date(item.createdAt).toLocaleString()}
                     </p>
                   ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-5">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
+                  Payment records
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                  Invoice and receipt details
+                </h2>
+              </div>
+              <span className="rounded-xl bg-white px-4 py-2 text-sm font-black text-[#0B3C5D]">
+                Use browser print to save
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                ["Payment", moneySnapshot.paymentLabel],
+                ["Balance due", formatMoneyCents(moneySnapshot.balanceDueCents)],
+                ["Invoice", moneySnapshot.invoiceNumber],
+                ["Receipt", moneySnapshot.receiptNumber],
+                ["Paid", formatMoneyCents(moneySnapshot.paidCents)],
+                ["Total", formatMoneyCents(moneySnapshot.totalCents)],
+                ["Due", moneySnapshot.dueLabel],
+                [
+                  "Refund",
+                  booking.refund_status === "pending"
+                    ? formatMoneyCents(booking.refund_amount_cents || 0)
+                    : booking.refund_status || "None",
+                ],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-xl bg-white p-4">
+                  <p className="text-sm text-gray-500">{label}</p>
+                  <p className="mt-1 break-words font-bold text-[#0B3C5D]">
+                    {value}
+                  </p>
                 </div>
               ))}
             </div>

@@ -14,6 +14,14 @@ import {
 } from "@/lib/admin-revenue";
 import { groupBookingsByDate } from "@/lib/availability-calendar";
 import {
+  formatMoneyCents,
+  getBookingMoneyAlerts,
+  getBookingMoneySnapshot,
+  getCashflowForecast,
+  getPaymentPresets,
+  type RefundStatus,
+} from "@/lib/booking-money-command";
+import {
   getBookingChangeRequestSummary,
   type BookingChangeRequest,
 } from "@/lib/booking-change-requests";
@@ -40,9 +48,28 @@ type BookingRow = {
   deposit_status: string | null;
   deposit_amount_cents: number | null;
   booking_value_cents: number | null;
+  payment_schedule_type: string | null;
+  payment_due_date: string | null;
+  balance_due_date: string | null;
+  amount_paid_cents: number | null;
+  balance_due_cents: number | null;
+  payment_method: string | null;
+  manual_payment_note: string | null;
+  payment_requested_at: string | null;
+  payment_last_sent_at: string | null;
+  payment_link_url: string | null;
+  invoice_number: string | null;
+  receipt_number: string | null;
+  refund_status: string | null;
+  refund_amount_cents: number | null;
+  refund_note: string | null;
+  payment_issue_flag: boolean | null;
+  payment_issue_note: string | null;
   commission_amount_cents: number | null;
   commission_status: string | null;
+  commission_override_cents: number | null;
   payout_note: string | null;
+  vendor_private_payout_note: string | null;
   payout_scheduled_for: string | null;
   payout_paid_at: string | null;
 };
@@ -91,6 +118,15 @@ function formatMoney(cents: number | null) {
     style: "currency",
     currency: "USD",
   }).format(cents / 100);
+}
+
+function moneyInputValue(value: number | null) {
+  return typeof value === "number" ? String(value) : "";
+}
+
+function toNullableCents(value: string) {
+  const parsed = Number(value);
+  return value.trim() && Number.isFinite(parsed) ? Math.round(parsed) : null;
 }
 
 function formatPayoutStatus(status: string | null) {
@@ -351,9 +387,29 @@ export default function AdminBookingsPage() {
     }),
     [bookings, changeRequestsByBooking, filteredBookings, threadSummaries],
   );
+  const moneyForecast = useMemo(
+    () => getCashflowForecast({ bookings: filteredBookings }),
+    [filteredBookings],
+  );
+  const moneyAlerts = useMemo(
+    () => getBookingMoneyAlerts({ bookings: filteredBookings }).slice(0, 6),
+    [filteredBookings],
+  );
+  const paymentPresets = useMemo(() => getPaymentPresets(), []);
 
   if (checkingAuth || !authorized) {
     return null;
+  }
+
+  function patchLocalBooking(
+    bookingId: string,
+    patch: Partial<BookingWithListingName>,
+  ) {
+    setBookings((currentBookings) =>
+      currentBookings.map((booking) =>
+        booking.id === bookingId ? { ...booking, ...patch } : booking,
+      ),
+    );
   }
 
   async function updateBooking(
@@ -365,6 +421,7 @@ export default function AdminBookingsPage() {
       payoutNote?: string | null;
       payoutScheduledFor?: string | null;
     },
+    money?: Record<string, unknown>,
   ) {
     setSavingBookingId(bookingId);
 
@@ -384,6 +441,7 @@ export default function AdminBookingsPage() {
         commissionStatus: payout?.commissionStatus,
         payoutNote: payout?.payoutNote,
         payoutScheduledFor: payout?.payoutScheduledFor,
+        ...(money || {}),
       }),
     });
 
@@ -401,6 +459,7 @@ export default function AdminBookingsPage() {
           ? {
               ...booking,
               ...changes,
+              ...(result.booking || {}),
               ...(payout?.commissionStatus
                 ? { commission_status: payout.commissionStatus }
                 : {}),
@@ -423,6 +482,22 @@ export default function AdminBookingsPage() {
       ),
     );
     setSavingBookingId(null);
+  }
+
+  function saveMoneyCommand(
+    booking: BookingWithListingName,
+    money: Record<string, unknown>,
+  ) {
+    return updateBooking(
+      booking.id,
+      {
+        status: booking.status || "new",
+        admin_notes: booking.admin_notes,
+      },
+      false,
+      undefined,
+      money,
+    );
   }
 
   async function updateChangeRequest(
@@ -546,6 +621,54 @@ export default function AdminBookingsPage() {
                 </div>
               ))}
             </div>
+            <section className="mt-6 rounded-2xl bg-[#071F2F] p-5 text-white shadow-xl shadow-[#071F2F]/10">
+              <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                    Booking Money Command Center
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black">
+                    Payments, refunds, invoices, and payouts in one place.
+                  </h2>
+                </div>
+                <span className="rounded-full bg-white/10 px-4 py-2 text-sm font-black">
+                  Cashflow forecast: {moneyForecast.label}
+                </span>
+              </div>
+              <div className="mt-5 grid gap-3 md:grid-cols-5">
+                {[
+                  ["30-day balances", formatMoneyCents(moneyForecast.next30BalanceCents)],
+                  ["Paid so far", formatMoneyCents(moneyForecast.paidCents)],
+                  ["Refund workflow", formatMoneyCents(moneyForecast.refundPendingCents)],
+                  ["Payout ready", formatMoneyCents(moneyForecast.payoutDueCents)],
+                  ["Money alerts", moneyAlerts.length],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-white/10 p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-[#9EE8E3]">
+                      {label}
+                    </p>
+                    <p className="mt-2 text-xl font-black">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-2 md:grid-cols-3">
+                {moneyAlerts.length === 0 ? (
+                  <p className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75">
+                    No overdue balances, refund flags, or payout issues in the
+                    current view.
+                  </p>
+                ) : (
+                  moneyAlerts.map((alert) => (
+                    <p
+                      key={`${alert.type}-${alert.bookingId}`}
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-bold text-white"
+                    >
+                      {alert.label}: {formatMoneyCents(alert.amountCents)}
+                    </p>
+                  ))
+                )}
+              </div>
+            </section>
             <div className="mt-8 grid gap-4 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_190px_190px_190px_auto] lg:items-center">
               <input
                 value={search}
@@ -653,6 +776,39 @@ export default function AdminBookingsPage() {
                               (booking.commission_amount_cents || 0),
                           )}
                         </p>
+                        <div className="mt-3 grid gap-2 rounded-lg bg-white p-3 text-sm sm:grid-cols-3">
+                          {(() => {
+                            const snapshot = getBookingMoneySnapshot(booking);
+                            return (
+                              <>
+                                <p>
+                                  <span className="block text-xs font-black uppercase text-gray-500">
+                                    Payment
+                                  </span>
+                                  <span className="font-bold text-[#0B3C5D]">
+                                    {snapshot.paymentLabel}
+                                  </span>
+                                </p>
+                                <p>
+                                  <span className="block text-xs font-black uppercase text-gray-500">
+                                    Balance
+                                  </span>
+                                  <span className="font-bold text-[#0B3C5D]">
+                                    {formatMoneyCents(snapshot.balanceDueCents)}
+                                  </span>
+                                </p>
+                                <p>
+                                  <span className="block text-xs font-black uppercase text-gray-500">
+                                    Due
+                                  </span>
+                                  <span className="font-bold text-[#0B3C5D]">
+                                    {snapshot.dueLabel}
+                                  </span>
+                                </p>
+                              </>
+                            );
+                          })()}
+                        </div>
                         {(changeRequestsByBooking[booking.id] || []).filter(
                           (request) => request.status === "pending",
                         ).length > 0 ? (
@@ -761,6 +917,7 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Vendor Note</th>
                   <th className="px-4 py-3">Deposit</th>
                   <th className="px-4 py-3">Value</th>
+                  <th className="px-4 py-3">Money command</th>
                   <th className="px-4 py-3">Vendor payout</th>
                   <th className="px-4 py-3">Payout note</th>
                   <th className="px-4 py-3">Status</th>
@@ -790,6 +947,400 @@ export default function AdminBookingsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {formatMoney(booking.booking_value_cents)}
+                    </td>
+                    <td className="min-w-[430px] px-4 py-3">
+                      {(() => {
+                        const snapshot = getBookingMoneySnapshot(booking);
+
+                        return (
+                          <div className="rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                                  Payment schedule
+                                </p>
+                                <p className="mt-1 font-black text-[#0B3C5D]">
+                                  {snapshot.paymentLabel}
+                                </p>
+                                <p className="text-xs font-bold text-gray-600">
+                                  Balance due:{" "}
+                                  {formatMoneyCents(snapshot.balanceDueCents)} /{" "}
+                                  {snapshot.dueLabel}
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                                {snapshot.invoiceNumber}
+                              </span>
+                            </div>
+                            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Payment schedule
+                                <select
+                                  value={
+                                    booking.payment_schedule_type ||
+                                    "request_later"
+                                  }
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      payment_schedule_type: event.target.value,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      paymentScheduleType: event.target.value,
+                                    });
+                                  }}
+                                  className="rounded-lg border border-white px-3 py-2 text-sm font-semibold normal-case tracking-normal outline-none"
+                                >
+                                  {paymentPresets.map((preset) => (
+                                    <option key={preset.id} value={preset.id}>
+                                      {preset.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Deposit status
+                                <select
+                                  value={
+                                    booking.deposit_status || "not_requested"
+                                  }
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      deposit_status: event.target.value,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      depositStatus: event.target.value,
+                                    });
+                                  }}
+                                  className="rounded-lg border border-white px-3 py-2 text-sm font-semibold normal-case tracking-normal outline-none"
+                                >
+                                  <option value="not_requested">Not requested</option>
+                                  <option value="checkout_started">
+                                    Checkout started
+                                  </option>
+                                  <option value="paid">Deposit paid</option>
+                                  <option value="full_paid">Full paid</option>
+                                  <option value="manual_paid">Manual paid</option>
+                                  <option value="failed">Failed</option>
+                                  <option value="waived">Waived</option>
+                                </select>
+                              </label>
+                              {[
+                                [
+                                  "Booking value cents",
+                                  "booking_value_cents",
+                                  "bookingValueCents",
+                                  booking.booking_value_cents,
+                                ],
+                                [
+                                  "Amount paid cents",
+                                  "amount_paid_cents",
+                                  "amountPaidCents",
+                                  booking.amount_paid_cents,
+                                ],
+                                [
+                                  "Balance due cents",
+                                  "balance_due_cents",
+                                  "balanceDueCents",
+                                  booking.balance_due_cents,
+                                ],
+                              ].map(([label, localKey, payloadKey, value]) => (
+                                <label
+                                  key={String(localKey)}
+                                  className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]"
+                                >
+                                  {label}
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={moneyInputValue(value as number | null)}
+                                    onChange={(event) =>
+                                      patchLocalBooking(booking.id, {
+                                        [localKey as keyof BookingWithListingName]:
+                                          toNullableCents(event.target.value),
+                                      } as Partial<BookingWithListingName>)
+                                    }
+                                    onBlur={(event) =>
+                                      saveMoneyCommand(booking, {
+                                        [payloadKey as string]:
+                                          event.currentTarget.value,
+                                      })
+                                    }
+                                    className="rounded-lg border border-white px-3 py-2 text-sm font-semibold normal-case tracking-normal outline-none"
+                                  />
+                                </label>
+                              ))}
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Balance due date
+                                <input
+                                  type="date"
+                                  value={booking.balance_due_date || ""}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      balance_due_date:
+                                        event.target.value || null,
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      balanceDueDate:
+                                        event.currentTarget.value || null,
+                                    })
+                                  }
+                                  className="rounded-lg border border-white px-3 py-2 text-sm font-semibold normal-case tracking-normal outline-none"
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Payment method
+                                <select
+                                  value={booking.payment_method || ""}
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      payment_method:
+                                        event.target.value || null,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      paymentMethod:
+                                        event.target.value || null,
+                                    });
+                                  }}
+                                  className="rounded-lg border border-white px-3 py-2 text-sm font-semibold normal-case tracking-normal outline-none"
+                                >
+                                  <option value="">Not set</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="cash">Cash</option>
+                                  <option value="zelle">Zelle</option>
+                                  <option value="paypal">PayPal</option>
+                                  <option value="bank">Bank transfer</option>
+                                  <option value="other">Other</option>
+                                </select>
+                              </label>
+                            </div>
+                            <details className="mt-3 rounded-lg bg-white p-3">
+                              <summary className="cursor-pointer text-sm font-black text-[#0B3C5D]">
+                                Invoice and Receipt
+                              </summary>
+                              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <input
+                                  value={booking.invoice_number || ""}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      invoice_number: event.target.value,
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      invoiceNumber: event.currentTarget.value,
+                                    })
+                                  }
+                                  placeholder="Invoice number"
+                                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                                />
+                                <input
+                                  value={booking.receipt_number || ""}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      receipt_number: event.target.value,
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      receiptNumber: event.currentTarget.value,
+                                    })
+                                  }
+                                  placeholder="Receipt number"
+                                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                                />
+                              </div>
+                            </details>
+                            <details className="mt-3 rounded-lg bg-white p-3">
+                              <summary className="cursor-pointer text-sm font-black text-[#0B3C5D]">
+                                Manual payment
+                              </summary>
+                              <textarea
+                                value={booking.manual_payment_note || ""}
+                                onChange={(event) =>
+                                  patchLocalBooking(booking.id, {
+                                    manual_payment_note: event.target.value,
+                                  })
+                                }
+                                onBlur={(event) =>
+                                  saveMoneyCommand(booking, {
+                                    manualPaymentNote: event.currentTarget.value,
+                                  })
+                                }
+                                rows={2}
+                                placeholder="Cash, transfer reference, or other manual payment note"
+                                className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                              />
+                            </details>
+                            <details className="mt-3 rounded-lg bg-white p-3">
+                              <summary className="cursor-pointer text-sm font-black text-[#0B3C5D]">
+                                Refund workflow
+                              </summary>
+                              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <select
+                                  value={booking.refund_status || "none"}
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      refund_status: event.target.value,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      refundStatus: event.target
+                                        .value as RefundStatus,
+                                    });
+                                  }}
+                                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                                >
+                                  <option value="none">No refund</option>
+                                  <option value="pending">Pending</option>
+                                  <option value="partial">Partial</option>
+                                  <option value="full">Full refund</option>
+                                  <option value="declined">Declined</option>
+                                </select>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={moneyInputValue(
+                                    booking.refund_amount_cents,
+                                  )}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      refund_amount_cents: toNullableCents(
+                                        event.target.value,
+                                      ),
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      refundAmountCents:
+                                        event.currentTarget.value,
+                                    })
+                                  }
+                                  placeholder="Refund cents"
+                                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                                />
+                              </div>
+                              <textarea
+                                value={booking.refund_note || ""}
+                                onChange={(event) =>
+                                  patchLocalBooking(booking.id, {
+                                    refund_note: event.target.value,
+                                  })
+                                }
+                                onBlur={(event) =>
+                                  saveMoneyCommand(booking, {
+                                    refundNote: event.currentTarget.value,
+                                  })
+                                }
+                                rows={2}
+                                placeholder="Refund note"
+                                className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                              />
+                            </details>
+                            <details className="mt-3 rounded-lg bg-white p-3">
+                              <summary className="cursor-pointer text-sm font-black text-[#0B3C5D]">
+                                Payment issue
+                              </summary>
+                              <label className="mt-3 flex items-center gap-2 text-sm font-bold text-[#0B3C5D]">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(booking.payment_issue_flag)}
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      payment_issue_flag:
+                                        event.target.checked,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      paymentIssueFlag: event.target.checked,
+                                    });
+                                  }}
+                                />
+                                Flag this booking for payment review
+                              </label>
+                              <textarea
+                                value={booking.payment_issue_note || ""}
+                                onChange={(event) =>
+                                  patchLocalBooking(booking.id, {
+                                    payment_issue_note: event.target.value,
+                                  })
+                                }
+                                onBlur={(event) =>
+                                  saveMoneyCommand(booking, {
+                                    paymentIssueNote:
+                                      event.currentTarget.value,
+                                  })
+                                }
+                                rows={2}
+                                placeholder="Payment issue note"
+                                className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                              />
+                            </details>
+                            <details className="mt-3 rounded-lg bg-white p-3">
+                              <summary className="cursor-pointer text-sm font-black text-[#0B3C5D]">
+                                Commission override and private payout note
+                              </summary>
+                              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={moneyInputValue(
+                                    booking.commission_override_cents,
+                                  )}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      commission_override_cents: toNullableCents(
+                                        event.target.value,
+                                      ),
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      commissionOverrideCents:
+                                        event.currentTarget.value,
+                                    })
+                                  }
+                                  placeholder="Commission override cents"
+                                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                                />
+                                <input
+                                  value={booking.payment_link_url || ""}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      payment_link_url: event.target.value,
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      paymentLinkUrl:
+                                        event.currentTarget.value,
+                                    })
+                                  }
+                                  placeholder="Payment link URL"
+                                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                                />
+                              </div>
+                              <textarea
+                                value={booking.vendor_private_payout_note || ""}
+                                onChange={(event) =>
+                                  patchLocalBooking(booking.id, {
+                                    vendor_private_payout_note:
+                                      event.target.value,
+                                  })
+                                }
+                                onBlur={(event) =>
+                                  saveMoneyCommand(booking, {
+                                    vendorPrivatePayoutNote:
+                                      event.currentTarget.value,
+                                  })
+                                }
+                                rows={2}
+                                placeholder="Private payout note visible to vendor"
+                                className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none"
+                              />
+                            </details>
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td className="px-4 py-3 capitalize">
                       <p className="font-semibold text-[#0B3C5D]">

@@ -8,6 +8,7 @@ import {
   getVendorPayoutReceipts,
 } from "@/lib/admin-revenue";
 import { logActivity } from "@/lib/activity-log";
+import { buildBookingMoneyUpdate } from "@/lib/booking-money-command";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -19,6 +20,7 @@ type BookingUpdateRequest = {
   commissionStatus?: "unpaid" | "scheduled" | "paid" | "waived";
   payoutNote?: string | null;
   payoutScheduledFor?: string | null;
+  paymentLinkUrl?: string | null;
 };
 
 async function verifyAdmin(request: Request) {
@@ -86,10 +88,14 @@ export async function PATCH(
   const { id } = await context.params;
   const body = (await request.json()) as BookingUpdateRequest;
   const nextStatus = body.status || "new";
+  const moneyUpdate = buildBookingMoneyUpdate(
+    body as unknown as Record<string, unknown>,
+  );
   const payoutUpdate =
     body.commissionStatus ||
     "payoutNote" in body ||
-    "payoutScheduledFor" in body;
+    "payoutScheduledFor" in body ||
+    "vendorPrivatePayoutNote" in body;
 
   const { data: currentBooking } = await supabaseServer
     .from("bookings")
@@ -113,10 +119,11 @@ export async function PATCH(
       ...("payoutScheduledFor" in body
         ? { payout_scheduled_for: body.payoutScheduledFor || null }
         : {}),
+      ...moneyUpdate,
     })
     .eq("id", id)
     .select(
-      "id, full_name, email, tour_date, tour_time, guests, status, admin_notes, listing_id, booking_value_cents, commission_amount_cents, commission_status, payout_note, payout_scheduled_for, payout_paid_at",
+      "id, full_name, email, tour_date, tour_time, guests, status, admin_notes, listing_id, deposit_status, deposit_amount_cents, booking_value_cents, payment_schedule_type, payment_due_date, balance_due_date, amount_paid_cents, balance_due_cents, payment_method, manual_payment_note, payment_requested_at, payment_last_sent_at, payment_link_url, invoice_number, receipt_number, refund_status, refund_amount_cents, refund_note, payment_issue_flag, payment_issue_note, commission_amount_cents, commission_override_cents, commission_status, payout_note, vendor_private_payout_note, payout_scheduled_for, payout_paid_at",
     )
     .single();
 
@@ -134,6 +141,25 @@ export async function PATCH(
         from_status: currentBooking?.status || "new",
         to_status: nextStatus,
         note: body.adminNotes || null,
+      },
+    ]);
+  }
+
+  if (Object.keys(moneyUpdate).length > 0) {
+    await supabaseServer.from("booking_money_events").insert([
+      {
+        booking_id: booking.id,
+        event_type: "money_update",
+        actor_role: "admin",
+        actor_email: adminEmail,
+        amount_cents:
+          typeof moneyUpdate.amount_paid_cents === "number"
+            ? moneyUpdate.amount_paid_cents
+            : typeof moneyUpdate.balance_due_cents === "number"
+              ? moneyUpdate.balance_due_cents
+              : null,
+        note: body.adminNotes || null,
+        metadata: moneyUpdate,
       },
     ]);
   }

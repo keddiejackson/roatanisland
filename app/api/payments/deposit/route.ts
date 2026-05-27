@@ -166,6 +166,21 @@ export async function POST(request: Request) {
     })
     .eq("id", booking.id);
 
+  await supabaseServer
+    .from("bookings")
+    .update({
+      payment_schedule_type:
+        body.paymentType === "full" ? "full_payment" : "deposit_only",
+      payment_requested_at: new Date().toISOString(),
+      payment_last_sent_at: new Date().toISOString(),
+      payment_link_url: checkoutSession.url,
+      balance_due_cents:
+        body.paymentType === "full"
+          ? booking.booking_value_cents || checkoutAmountCents
+          : Math.max(0, (booking.booking_value_cents || 0) - checkoutAmountCents),
+    })
+    .eq("id", booking.id);
+
   if (conciergeQuote?.id) {
     await supabaseServer
       .from("concierge_quotes")

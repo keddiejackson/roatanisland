@@ -16,6 +16,11 @@ import {
   type BookingThreadSummary,
 } from "@/lib/booking-communication";
 import {
+  formatMoneyCents,
+  getBookingMoneySnapshot,
+  getGuestBalanceSummary,
+} from "@/lib/booking-money-command";
+import {
   getBookingChangeRequestSummary,
   type BookingChangeRequest,
 } from "@/lib/booking-change-requests";
@@ -38,6 +43,18 @@ type Booking = {
   guests: number;
   status: string | null;
   deposit_status: string | null;
+  deposit_amount_cents: number | null;
+  booking_value_cents: number | null;
+  payment_schedule_type: string | null;
+  payment_due_date: string | null;
+  balance_due_date: string | null;
+  amount_paid_cents: number | null;
+  balance_due_cents: number | null;
+  payment_method: string | null;
+  invoice_number: string | null;
+  receipt_number: string | null;
+  refund_status: string | null;
+  refund_amount_cents: number | null;
   listing_id: string | null;
 };
 
@@ -208,7 +225,7 @@ export default function AccountPage() {
 
       const { data: bookingRows } = await supabase
         .from("bookings")
-        .select("id, full_name, email, tour_date, tour_time, guests, status, deposit_status, listing_id")
+        .select("*")
         .eq("email", data.user.email)
         .order("tour_date", { ascending: false });
       const accountBookings = (bookingRows as Booking[]) || [];
@@ -634,6 +651,7 @@ export default function AccountPage() {
   const confirmedCount = bookings.filter(
     (booking) => booking.status === "confirmed",
   ).length;
+  const guestBalanceSummary = getGuestBalanceSummary(bookings);
   const chatThreads: BookingChatThread[] = bookings.map((booking) => ({
     id: booking.id,
     title: `${booking.tour_date} at ${booking.tour_time}`,
@@ -707,6 +725,7 @@ export default function AccountPage() {
               <div className="flex items-center gap-4 md:block">
                 <div className="grid size-20 place-items-center overflow-hidden rounded-2xl bg-[#EEF7F6] text-xl font-black text-[#007B7B] shadow-inner">
                   {profileForm.profileImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={profileForm.profileImageUrl}
                       alt=""
@@ -818,6 +837,45 @@ export default function AccountPage() {
             <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               {signOutError}
             </p>
+          ) : null}
+
+          {hasSignedIn ? (
+            <section className="mt-6 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-5">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
+                    Guest balance tracking
+                  </p>
+                  <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                    Payments, invoices, and receipts.
+                  </h3>
+                </div>
+                <span className="rounded-full bg-white px-4 py-2 text-sm font-black text-[#0B3C5D]">
+                  {guestBalanceSummary.label}
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-4">
+                {[
+                  ["Paid", formatMoneyCents(guestBalanceSummary.paidCents)],
+                  [
+                    "Balance due",
+                    formatMoneyCents(guestBalanceSummary.balanceDueCents),
+                  ],
+                  [
+                    "Refund pending",
+                    formatMoneyCents(guestBalanceSummary.refundPendingCents),
+                  ],
+                  ["Next due", guestBalanceSummary.nextDueDate || "None"],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-xl bg-white p-4">
+                    <p className="text-xs font-black uppercase tracking-[0.12em] text-gray-500">
+                      {label}
+                    </p>
+                    <p className="mt-2 font-black text-[#0B3C5D]">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
           ) : null}
 
           {isUpdatingPassword || (bookings.length === 0 && !hasSignedIn) ? (
@@ -960,6 +1018,7 @@ export default function AccountPage() {
                   pickupNote: "",
                   reason: "",
                 };
+                const moneySnapshot = getBookingMoneySnapshot(booking);
 
                 return (
                 <article
@@ -992,6 +1051,26 @@ export default function AccountPage() {
                         {threadSummaries[booking.id]?.badgeLabel || "No messages"}
                       </span>
                     </div>
+                  </div>
+                  <div className="mt-4 grid gap-3 rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-4 sm:grid-cols-4">
+                    {[
+                      ["Payment", moneySnapshot.paymentLabel],
+                      [
+                        "Balance due",
+                        formatMoneyCents(moneySnapshot.balanceDueCents),
+                      ],
+                      ["Invoice", moneySnapshot.invoiceNumber],
+                      ["Receipt", moneySnapshot.receiptNumber],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                          {label}
+                        </p>
+                        <p className="mt-1 text-sm font-black text-[#0B3C5D]">
+                          {value}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                   <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">
                     {threadSummaries[booking.id]?.lastMessagePreview ||

@@ -28,6 +28,10 @@ import {
   formatDepositStatus,
 } from "@/lib/booking-flow";
 import {
+  getBookingMoneySnapshot,
+  getVendorPayoutForecast,
+} from "@/lib/booking-money-command";
+import {
   getVendorPayoutReceipts,
   getVendorPayoutStatements,
   getVendorPayoutSummary,
@@ -115,9 +119,22 @@ type BookingRow = {
   vendor_note: string | null;
   status: string | null;
   deposit_status: string | null;
+  deposit_amount_cents: number | null;
   booking_value_cents: number | null;
+  payment_schedule_type: string | null;
+  payment_due_date: string | null;
+  balance_due_date: string | null;
+  amount_paid_cents: number | null;
+  balance_due_cents: number | null;
+  payment_method: string | null;
+  invoice_number: string | null;
+  receipt_number: string | null;
+  refund_status: string | null;
+  refund_amount_cents: number | null;
   commission_amount_cents: number | null;
+  commission_override_cents: number | null;
   commission_status: string | null;
+  vendor_private_payout_note: string | null;
   payout_note: string | null;
   payout_scheduled_for: string | null;
   payout_paid_at: string | null;
@@ -1596,6 +1613,56 @@ export default function VendorDashboardPage() {
             Payouts are updated by the RoatanIsland.life admin after bookings
             are confirmed, completed, or reconciled.
           </p>
+          <div className="mt-6 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                  Vendor payout forecast
+                </p>
+                <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                  What each booking is expected to pay.
+                </h3>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                Private payout note appears per booking
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              {bookings.slice(0, 4).map((booking) => {
+                const payout = getVendorPayoutForecast(booking);
+                const snapshot = getBookingMoneySnapshot(booking);
+
+                return (
+                  <div key={booking.id} className="rounded-lg bg-white p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-[#0B3C5D]">
+                          {booking.full_name}
+                        </p>
+                        <p className="mt-1 text-xs font-bold text-gray-600">
+                          Guest payment status: {snapshot.paymentLabel}
+                        </p>
+                      </div>
+                      <p className="text-right text-sm font-black text-[#0B3C5D]">
+                        {payout.label}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-600">
+                      Private payout note:{" "}
+                      {booking.vendor_private_payout_note ||
+                        booking.payout_note ||
+                        "No private note yet."}
+                    </p>
+                  </div>
+                );
+              })}
+              {bookings.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-[#00A8A8]/25 p-4 text-sm text-gray-600">
+                  Payout forecasts will appear when booking requests arrive.
+                </p>
+              ) : null}
+            </div>
+          </div>
         </section>
 
         <section className="mt-6 rounded-2xl bg-white p-6 shadow">

@@ -5,6 +5,7 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 type StripeCheckoutSession = {
   id: string;
+  amount_total?: number;
   payment_intent?: string;
   payment_status?: string;
   metadata?: {
@@ -56,6 +57,12 @@ async function markBookingPaid(session: StripeCheckoutSession) {
     return;
   }
 
+  const { data: booking } = await supabaseServer
+    .from("bookings")
+    .select("booking_value_cents, deposit_amount_cents")
+    .eq("id", bookingId)
+    .maybeSingle();
+
   await supabaseServer
     .from("bookings")
     .update({
@@ -65,6 +72,24 @@ async function markBookingPaid(session: StripeCheckoutSession) {
       paid_at: session.payment_status === "paid" ? new Date().toISOString() : null,
     })
     .eq("id", bookingId);
+
+  if (session.payment_status === "paid") {
+    const paidCents =
+      session.amount_total ||
+      booking?.deposit_amount_cents ||
+      booking?.booking_value_cents ||
+      0;
+    const totalCents = booking?.booking_value_cents || paidCents;
+
+    await supabaseServer
+      .from("bookings")
+      .update({
+        amount_paid_cents: paidCents,
+        balance_due_cents: Math.max(0, totalCents - paidCents),
+        receipt_number: `RCT-${bookingId.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(-8)}`,
+      })
+      .eq("id", bookingId);
+  }
 
   if (session.payment_status === "paid") {
     const { data: quote } = await supabaseServer
