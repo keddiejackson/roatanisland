@@ -271,6 +271,12 @@ export default async function BookingStatusPage({
               >
                 Printable receipt
               </Link>
+              <Link
+                href={`/book/trip/${booking.id}`}
+                className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white"
+              >
+                Trip packet
+              </Link>
             </div>
           </div>
 

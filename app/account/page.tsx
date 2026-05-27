@@ -1084,6 +1084,12 @@ export default function AccountPage() {
                       >
                         Open receipt
                       </Link>
+                      <Link
+                        href={`/book/trip/${booking.id}`}
+                        className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-xs font-black text-white"
+                      >
+                        Trip packet
+                      </Link>
                     </div>
                   </div>
                   <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">

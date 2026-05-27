@@ -7,6 +7,7 @@ const navItems = [
   { href: "/", label: "Home" },
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/reminders", label: "Reminders" },
   { href: "/admin/concierge", label: "Concierge" },
   { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/listings", label: "Listings" },
