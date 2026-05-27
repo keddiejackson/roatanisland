@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { BookingChangeRequest } from "@/lib/booking-change-requests";
 import { supabaseServer } from "@/lib/supabase-server";
 
 async function getUserId(request: Request) {
@@ -75,14 +76,34 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const bookingRows = (bookings as { id: string; listing_id: string | null }[]) || [];
+  const { data: changeRequests } =
+    bookingRows.length === 0
+      ? { data: [] }
+      : await supabaseServer
+          .from("booking_change_requests")
+          .select("*")
+          .in(
+            "booking_id",
+            bookingRows.map((booking) => booking.id),
+          )
+          .order("created_at", { ascending: false });
+  const requestsByBooking = new Map<string, BookingChangeRequest[]>();
+
+  for (const changeRequest of (changeRequests as BookingChangeRequest[]) || []) {
+    requestsByBooking.set(changeRequest.booking_id, [
+      ...(requestsByBooking.get(changeRequest.booking_id) || []),
+      changeRequest,
+    ]);
+  }
+
   return NextResponse.json({
-    bookings: ((bookings as { listing_id: string | null }[]) || []).map(
-      (booking) => ({
+    bookings: bookingRows.map((booking) => ({
         ...booking,
         listing_name: booking.listing_id
           ? listingMap.get(booking.listing_id) || "Unknown listing"
           : "No listing",
-      }),
-    ),
+        change_requests: requestsByBooking.get(booking.id) || [],
+      })),
   });
 }

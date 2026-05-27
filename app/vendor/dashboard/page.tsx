@@ -19,6 +19,10 @@ import {
   type BookingThreadSummary,
 } from "@/lib/booking-communication";
 import {
+  getBookingChangeRequestSummary,
+  type BookingChangeRequest,
+} from "@/lib/booking-change-requests";
+import {
   formatBookingCents,
   formatBookingStatus,
   formatDepositStatus,
@@ -112,6 +116,7 @@ type BookingRow = {
   payout_scheduled_for: string | null;
   payout_paid_at: string | null;
   selected_addons: { name?: string; price_cents?: number }[] | null;
+  change_requests?: BookingChangeRequest[];
 };
 
 type BookingMessageRow = BookingMessageLike & {
@@ -214,6 +219,10 @@ export default function VendorDashboardPage() {
   const [documentFile, setDocumentFile] = useState<File | null>(null);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [vendorNotes, setVendorNotes] = useState<Record<string, string>>({});
+  const [changeActionNotes, setChangeActionNotes] = useState<Record<string, string>>({});
+  const [changeCounterForms, setChangeCounterForms] = useState<
+    Record<string, { tourDate: string; tourTime: string; guests: string }>
+  >({});
   const [listingTimes, setListingTimes] = useState<Record<string, string>>({});
   const [blockedDates, setBlockedDates] = useState<Record<string, string>>({});
   const [blockedDateQuickPicks, setBlockedDateQuickPicks] = useState<Record<string, string>>({});
@@ -861,6 +870,76 @@ export default function VendorDashboardPage() {
       ...currentNotes,
       [bookingId]: result.booking?.vendor_note || "",
     }));
+  }
+
+  async function updateChangeRequest(
+    bookingId: string,
+    changeRequestId: string,
+    action: "approved" | "declined" | "countered",
+  ) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const note = changeActionNotes[changeRequestId] || "";
+    const counter = changeCounterForms[changeRequestId] || {
+      tourDate: "",
+      tourTime: "",
+      guests: "",
+    };
+
+    setSavingBookingId(bookingId);
+
+    const response = await fetch(`/api/booking-change-requests/${changeRequestId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        action,
+        responseNote: note,
+        requestedTourDate: counter.tourDate || null,
+        requestedTourTime: counter.tourTime || null,
+        requestedGuests: counter.guests ? Number(counter.guests) : null,
+      }),
+    });
+    const result = (await response.json()) as {
+      error?: string;
+      changeRequest?: BookingChangeRequest;
+    };
+
+    setSavingBookingId(null);
+
+    const updatedChangeRequest = result.changeRequest;
+
+    if (!response.ok || !updatedChangeRequest) {
+      alert(result.error || "Unable to update change request.");
+      return;
+    }
+
+    setBookings((currentBookings) =>
+      currentBookings.map((booking) => {
+        if (booking.id !== bookingId) return booking;
+
+        const nextRequests = (booking.change_requests || []).map((request) =>
+          request.id === changeRequestId ? updatedChangeRequest : request,
+        );
+
+        return {
+          ...booking,
+          ...(action === "approved"
+            ? {
+                tour_date:
+                  updatedChangeRequest.requested_tour_date || booking.tour_date,
+                tour_time:
+                  updatedChangeRequest.requested_tour_time || booking.tour_time,
+                guests: updatedChangeRequest.requested_guests || booking.guests,
+              }
+            : {}),
+          change_requests: nextRequests,
+        };
+      }),
+    );
   }
 
   async function addAddon(listingId: string) {
@@ -1764,6 +1843,145 @@ export default function VendorDashboardPage() {
                       className="mt-4 w-full rounded-lg border border-white px-3 py-2 text-sm outline-none"
                       disabled={savingBookingId === booking.id}
                     />
+                    {(booking.change_requests || []).filter(
+                      (request) => request.status === "pending",
+                    ).length > 0 ? (
+                      <div className="mt-4 rounded-xl border border-[#D6B56D]/35 bg-[#FFF8E8] p-4">
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                          Change requests
+                        </p>
+                        <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
+                          {
+                            getBookingChangeRequestSummary(
+                              booking.change_requests || [],
+                            ).latestLabel
+                          }
+                        </p>
+                        {(booking.change_requests || [])
+                          .filter((request) => request.status === "pending")
+                          .slice(0, 1)
+                          .map((request) => (
+                            <div key={request.id} className="mt-3 grid gap-3">
+                              <p className="text-sm leading-6 text-gray-700">
+                                Requested:{" "}
+                                {request.requested_tour_date || booking.tour_date} at{" "}
+                                {request.requested_tour_time || booking.tour_time}
+                                {request.requested_guests
+                                  ? ` for ${request.requested_guests} guests`
+                                  : ""}
+                              </p>
+                              {request.reason ? (
+                                <p className="rounded-lg bg-white p-3 text-sm text-gray-700">
+                                  {request.reason}
+                                </p>
+                              ) : null}
+                              <textarea
+                                value={changeActionNotes[request.id] || ""}
+                                onChange={(event) =>
+                                  setChangeActionNotes((current) => ({
+                                    ...current,
+                                    [request.id]: event.target.value,
+                                  }))
+                                }
+                                rows={2}
+                                placeholder="Response note"
+                                className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                              />
+                              <div className="grid gap-2 sm:grid-cols-3">
+                                <input
+                                  type="date"
+                                  value={changeCounterForms[request.id]?.tourDate || ""}
+                                  onChange={(event) =>
+                                    setChangeCounterForms((current) => ({
+                                      ...current,
+                                      [request.id]: {
+                                        tourDate: event.target.value,
+                                        tourTime: current[request.id]?.tourTime || "",
+                                        guests: current[request.id]?.guests || "",
+                                      },
+                                    }))
+                                  }
+                                  className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                                  aria-label="Suggested date"
+                                />
+                                <input
+                                  value={changeCounterForms[request.id]?.tourTime || ""}
+                                  onChange={(event) =>
+                                    setChangeCounterForms((current) => ({
+                                      ...current,
+                                      [request.id]: {
+                                        tourDate: current[request.id]?.tourDate || "",
+                                        tourTime: event.target.value,
+                                        guests: current[request.id]?.guests || "",
+                                      },
+                                    }))
+                                  }
+                                  placeholder="Suggest time"
+                                  className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                                />
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={changeCounterForms[request.id]?.guests || ""}
+                                  onChange={(event) =>
+                                    setChangeCounterForms((current) => ({
+                                      ...current,
+                                      [request.id]: {
+                                        tourDate: current[request.id]?.tourDate || "",
+                                        tourTime: current[request.id]?.tourTime || "",
+                                        guests: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder="Guests"
+                                  className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                                />
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateChangeRequest(
+                                      booking.id,
+                                      request.id,
+                                      "approved",
+                                    )
+                                  }
+                                  className="rounded-lg bg-green-600 px-3 py-2 text-sm font-bold text-white"
+                                >
+                                  Approve change
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateChangeRequest(
+                                      booking.id,
+                                      request.id,
+                                      "countered",
+                                    )
+                                  }
+                                  className="rounded-lg bg-[#D6B56D] px-3 py-2 text-sm font-bold text-[#0B3C5D]"
+                                >
+                                  Suggest another
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    updateChangeRequest(
+                                      booking.id,
+                                      request.id,
+                                      "declined",
+                                    )
+                                  }
+                                  className="rounded-lg bg-red-500 px-3 py-2 text-sm font-bold text-white"
+                                >
+                                  Decline
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    ) : null}
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button
                         onClick={() => {
@@ -1880,6 +2098,7 @@ export default function VendorDashboardPage() {
                     <th className="px-4 py-3">Thread</th>
                     <th className="px-4 py-3">Your note</th>
                     <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Change requests</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
@@ -1942,6 +2161,77 @@ export default function VendorDashboardPage() {
                       </td>
                       <td className="px-4 py-3">
                         {formatBookingStatus(booking.status)}
+                      </td>
+                      <td className="max-w-80 px-4 py-3">
+                        {booking.change_requests?.length ? (
+                          <div className="grid gap-3">
+                            <span className="w-fit rounded-full bg-[#FFF8E8] px-3 py-1 text-xs font-black text-[#7A5B12]">
+                              {
+                                getBookingChangeRequestSummary(
+                                  booking.change_requests,
+                                ).latestLabel
+                              }
+                            </span>
+                            {(booking.change_requests || [])
+                              .filter((request) => request.status === "pending")
+                              .slice(0, 1)
+                              .map((request) => (
+                                <div key={request.id} className="grid gap-2">
+                                  <p className="text-sm text-gray-600">
+                                    {request.requested_tour_date ||
+                                      booking.tour_date}{" "}
+                                    at{" "}
+                                    {request.requested_tour_time ||
+                                      booking.tour_time}
+                                  </p>
+                                  <textarea
+                                    value={changeActionNotes[request.id] || ""}
+                                    onChange={(event) =>
+                                      setChangeActionNotes((current) => ({
+                                        ...current,
+                                        [request.id]: event.target.value,
+                                      }))
+                                    }
+                                    rows={2}
+                                    placeholder="Response note"
+                                    className="min-w-56 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                                  />
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateChangeRequest(
+                                          booking.id,
+                                          request.id,
+                                          "approved",
+                                        )
+                                      }
+                                      className="rounded-lg bg-green-600 px-3 py-2 text-xs font-bold text-white"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateChangeRequest(
+                                          booking.id,
+                                          request.id,
+                                          "declined",
+                                        )
+                                      }
+                                      className="rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white"
+                                    >
+                                      Decline
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-500">
+                            No changes
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">

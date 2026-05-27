@@ -14,6 +14,10 @@ import {
 } from "@/lib/admin-revenue";
 import { groupBookingsByDate } from "@/lib/availability-calendar";
 import {
+  getBookingChangeRequestSummary,
+  type BookingChangeRequest,
+} from "@/lib/booking-change-requests";
+import {
   bookingThreadSummary,
   type BookingMessageLike,
   type BookingThreadSummary,
@@ -139,6 +143,10 @@ export default function AdminBookingsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [adminEmail, setAdminEmail] = useState("");
   const [bookings, setBookings] = useState<BookingWithListingName[]>([]);
+  const [changeRequestsByBooking, setChangeRequestsByBooking] = useState<
+    Record<string, BookingChangeRequest[]>
+  >({});
+  const [changeActionNotes, setChangeActionNotes] = useState<Record<string, string>>({});
   const [threadSummaries, setThreadSummaries] = useState<
     Record<string, BookingThreadSummary>
   >({});
@@ -207,6 +215,33 @@ export default function AdminBookingsPage() {
       }));
 
       setBookings(enrichedBookings);
+      const bookingIds = enrichedBookings.map((booking) => booking.id);
+
+      if (bookingIds.length > 0) {
+        const { data: changeRows, error: changeError } = await supabase
+          .from("booking_change_requests")
+          .select("*")
+          .in("booking_id", bookingIds)
+          .order("created_at", { ascending: false });
+
+        if (!changeError) {
+          const grouped = new Map<string, BookingChangeRequest[]>();
+
+          for (const changeRequest of (changeRows as BookingChangeRequest[]) || []) {
+            grouped.set(changeRequest.booking_id, [
+              ...(grouped.get(changeRequest.booking_id) || []),
+              changeRequest,
+            ]);
+          }
+
+          setChangeRequestsByBooking(Object.fromEntries(grouped.entries()));
+        } else {
+          setChangeRequestsByBooking({});
+        }
+      } else {
+        setChangeRequestsByBooking({});
+      }
+
       if (enrichedBookings.length > 0) {
         const { data: messageRows, error: messageError } = await supabase
           .from("booking_messages")
@@ -307,9 +342,14 @@ export default function AdminBookingsPage() {
       needsResponse: bookings.filter(
         (booking) => threadSummaries[booking.id]?.needsResponse,
       ).length,
+      pendingChanges: Object.values(changeRequestsByBooking).reduce(
+        (total, requests) =>
+          total + getBookingChangeRequestSummary(requests).pendingCount,
+        0,
+      ),
       payouts: getVendorPayoutSummary({ bookings: filteredBookings }),
     }),
-    [bookings, filteredBookings, threadSummaries],
+    [bookings, changeRequestsByBooking, filteredBookings, threadSummaries],
   );
 
   if (checkingAuth || !authorized) {
@@ -385,6 +425,64 @@ export default function AdminBookingsPage() {
     setSavingBookingId(null);
   }
 
+  async function updateChangeRequest(
+    bookingId: string,
+    changeRequestId: string,
+    action: "approved" | "declined",
+  ) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    setSavingBookingId(bookingId);
+
+    const response = await fetch(`/api/booking-change-requests/${changeRequestId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionData.session?.access_token
+          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        action,
+        responseNote: changeActionNotes[changeRequestId] || "",
+      }),
+    });
+    const result = (await response.json()) as {
+      error?: string;
+      changeRequest?: BookingChangeRequest;
+    };
+
+    setSavingBookingId(null);
+
+    if (!response.ok || !result.changeRequest) {
+      alert(result.error || "Unable to update change request.");
+      return;
+    }
+
+    setChangeRequestsByBooking((current) => ({
+      ...current,
+      [bookingId]: (current[bookingId] || []).map((request) =>
+        request.id === changeRequestId ? result.changeRequest! : request,
+      ),
+    }));
+
+    if (action === "approved") {
+      setBookings((currentBookings) =>
+        currentBookings.map((booking) =>
+          booking.id === bookingId
+            ? {
+                ...booking,
+                tour_date:
+                  result.changeRequest?.requested_tour_date || booking.tour_date,
+                tour_time:
+                  result.changeRequest?.requested_tour_time || booking.tour_time,
+                guests: result.changeRequest?.requested_guests || booking.guests,
+              }
+            : booking,
+        ),
+      );
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
       <div className="mx-auto max-w-7xl">
@@ -429,6 +527,7 @@ export default function AdminBookingsPage() {
                 ["Guests", bookingSummary.totalGuests],
                 ["Needs review", bookingSummary.newRequests],
                 ["Needs response", bookingSummary.needsResponse],
+                ["Pending changes", bookingSummary.pendingChanges],
                 ["Unpaid payouts", formatMoney(bookingSummary.payouts.unpaidCents)],
                 ["Scheduled payouts", formatMoney(bookingSummary.payouts.scheduledCents)],
                 ["Paid payouts", formatMoney(bookingSummary.payouts.paidCents)],
@@ -554,6 +653,72 @@ export default function AdminBookingsPage() {
                               (booking.commission_amount_cents || 0),
                           )}
                         </p>
+                        {(changeRequestsByBooking[booking.id] || []).filter(
+                          (request) => request.status === "pending",
+                        ).length > 0 ? (
+                          <div className="mt-3 rounded-lg bg-[#FFF8E8] p-3">
+                            <p className="text-xs font-black uppercase tracking-[0.12em] text-[#9C7A2F]">
+                              Pending changes
+                            </p>
+                            {(changeRequestsByBooking[booking.id] || [])
+                              .filter((request) => request.status === "pending")
+                              .slice(0, 1)
+                              .map((request) => (
+                                <div key={request.id} className="mt-2">
+                                  <p className="text-sm text-gray-700">
+                                    {request.requested_tour_date ||
+                                      booking.tour_date}{" "}
+                                    at{" "}
+                                    {request.requested_tour_time ||
+                                      booking.tour_time}
+                                    {request.requested_guests
+                                      ? ` / ${request.requested_guests} guests`
+                                      : ""}
+                                  </p>
+                                  <textarea
+                                    value={changeActionNotes[request.id] || ""}
+                                    onChange={(event) =>
+                                      setChangeActionNotes((current) => ({
+                                        ...current,
+                                        [request.id]: event.target.value,
+                                      }))
+                                    }
+                                    rows={2}
+                                    placeholder="Response note"
+                                    className="mt-2 w-full rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                                  />
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateChangeRequest(
+                                          booking.id,
+                                          request.id,
+                                          "approved",
+                                        )
+                                      }
+                                      className="rounded-lg bg-green-600 px-3 py-2 text-xs font-bold text-white"
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateChangeRequest(
+                                          booking.id,
+                                          request.id,
+                                          "declined",
+                                        )
+                                      }
+                                      className="rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white"
+                                    >
+                                      Decline
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        ) : null}
                         {booking.guest_message || booking.vendor_note ? (
                           <p className="mt-3 text-sm leading-6 text-gray-600">
                             {booking.vendor_note ||
@@ -600,6 +765,7 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Payout note</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Notes</th>
+                  <th className="px-4 py-3">Change requests</th>
                   <th className="px-4 py-3">Messages</th>
                   <th className="px-4 py-3">Thread</th>
                 </tr>
@@ -769,6 +935,78 @@ export default function AdminBookingsPage() {
                         placeholder="Add follow-up notes"
                         disabled={savingBookingId === booking.id}
                       />
+                    </td>
+                    <td className="max-w-80 px-4 py-3">
+                      {(changeRequestsByBooking[booking.id] || []).length > 0 ? (
+                        <div className="grid gap-3">
+                          <span className="w-fit rounded-full bg-[#FFF8E8] px-3 py-1 text-xs font-black text-[#7A5B12]">
+                            {
+                              getBookingChangeRequestSummary(
+                                changeRequestsByBooking[booking.id] || [],
+                              ).latestLabel
+                            }
+                          </span>
+                          {(changeRequestsByBooking[booking.id] || [])
+                            .filter((request) => request.status === "pending")
+                            .slice(0, 1)
+                            .map((request) => (
+                              <div key={request.id} className="grid gap-2">
+                                <p className="text-sm text-gray-600">
+                                  {request.requested_tour_date ||
+                                    booking.tour_date}{" "}
+                                  at{" "}
+                                  {request.requested_tour_time ||
+                                    booking.tour_time}
+                                  {request.requested_guests
+                                    ? ` / ${request.requested_guests} guests`
+                                    : ""}
+                                </p>
+                                <textarea
+                                  value={changeActionNotes[request.id] || ""}
+                                  onChange={(event) =>
+                                    setChangeActionNotes((current) => ({
+                                      ...current,
+                                      [request.id]: event.target.value,
+                                    }))
+                                  }
+                                  rows={2}
+                                  placeholder="Response note"
+                                  className="min-w-56 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateChangeRequest(
+                                        booking.id,
+                                        request.id,
+                                        "approved",
+                                      )
+                                    }
+                                    className="rounded-lg bg-green-600 px-3 py-2 text-xs font-bold text-white"
+                                  >
+                                    Approve
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updateChangeRequest(
+                                        booking.id,
+                                        request.id,
+                                        "declined",
+                                      )
+                                    }
+                                    className="rounded-lg bg-red-500 px-3 py-2 text-xs font-bold text-white"
+                                  >
+                                    Decline
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500">No changes</span>
+                      )}
                     </td>
                     <td className="max-w-72 px-4 py-3">
                       <span

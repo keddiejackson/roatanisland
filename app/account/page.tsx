@@ -15,6 +15,10 @@ import {
   type BookingMessageLike,
   type BookingThreadSummary,
 } from "@/lib/booking-communication";
+import {
+  getBookingChangeRequestSummary,
+  type BookingChangeRequest,
+} from "@/lib/booking-change-requests";
 import { bookingNextAction } from "@/lib/booking-flow";
 import {
   buildGuestPasswordResetRedirect,
@@ -50,6 +54,14 @@ type GuestProfile = {
   email: string | null;
   display_name: string | null;
   profile_image_url: string | null;
+};
+
+type ChangeRequestForm = {
+  tourDate: string;
+  tourTime: string;
+  guests: string;
+  pickupNote: string;
+  reason: string;
 };
 
 function statusBadgeClass(status: string | null) {
@@ -138,6 +150,16 @@ export default function AccountPage() {
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [changeRequestsByBooking, setChangeRequestsByBooking] = useState<
+    Record<string, BookingChangeRequest[]>
+  >({});
+  const [changeRequestForms, setChangeRequestForms] = useState<
+    Record<string, ChangeRequestForm>
+  >({});
+  const [changeRequestMessages, setChangeRequestMessages] = useState<
+    Record<string, string>
+  >({});
+  const [savingChangeRequestId, setSavingChangeRequestId] = useState("");
   const [threadSummaries, setThreadSummaries] = useState<
     Record<string, BookingThreadSummary>
   >({});
@@ -191,8 +213,49 @@ export default function AccountPage() {
         .order("tour_date", { ascending: false });
       const accountBookings = (bookingRows as Booking[]) || [];
       setBookings(accountBookings);
+      setChangeRequestForms(
+        Object.fromEntries(
+          accountBookings.map((booking) => [
+            booking.id,
+            {
+              tourDate: "",
+              tourTime: "",
+              guests: "",
+              pickupNote: "",
+              reason: "",
+            },
+          ]),
+        ),
+      );
 
       if (accountBookings.length > 0) {
+        if (sessionData.session?.access_token) {
+          const changeRequestEntries = await Promise.all(
+            accountBookings.map(async (booking) => {
+              const response = await fetch(
+                `/api/bookings/${booking.id}/change-requests`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${sessionData.session?.access_token}`,
+                  },
+                },
+              );
+
+              if (!response.ok) {
+                return [booking.id, []] as const;
+              }
+
+              const result = (await response.json()) as {
+                changeRequests?: BookingChangeRequest[];
+              };
+
+              return [booking.id, result.changeRequests || []] as const;
+            }),
+          );
+
+          setChangeRequestsByBooking(Object.fromEntries(changeRequestEntries));
+        }
+
         const { data: messageRows, error: messageError } = await supabase
           .from("booking_messages")
           .select("booking_id, sender_role, sender_email, message, is_internal, created_at")
@@ -222,6 +285,7 @@ export default function AccountPage() {
         }
       } else {
         setThreadSummaries({});
+        setChangeRequestsByBooking({});
       }
 
       setLoading(false);
@@ -452,6 +516,104 @@ export default function AccountPage() {
       profileImageUrl: result.profile?.profile_image_url || "",
     });
     setProfileMessage("Profile saved.");
+  }
+
+  function updateChangeRequestForm(
+    bookingId: string,
+    values: Partial<ChangeRequestForm>,
+  ) {
+    setChangeRequestForms((current) => {
+      const existing = current[bookingId] || {
+        tourDate: "",
+        tourTime: "",
+        guests: "",
+        pickupNote: "",
+        reason: "",
+      };
+
+      return {
+        ...current,
+        [bookingId]: {
+          ...existing,
+          ...values,
+        },
+      };
+    });
+  }
+
+  async function submitChangeRequest(
+    e: React.FormEvent<HTMLFormElement>,
+    booking: Booking,
+  ) {
+    e.preventDefault();
+    setSavingChangeRequestId(booking.id);
+    setChangeRequestMessages((current) => ({ ...current, [booking.id]: "" }));
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setSavingChangeRequestId("");
+      setChangeRequestMessages((current) => ({
+        ...current,
+        [booking.id]: "Please sign in again to request a change.",
+      }));
+      return;
+    }
+
+    const form = changeRequestForms[booking.id] || {
+      tourDate: "",
+      tourTime: "",
+      guests: "",
+      pickupNote: "",
+      reason: "",
+    };
+    const response = await fetch(`/api/bookings/${booking.id}/change-requests`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        requestedTourDate: form.tourDate || null,
+        requestedTourTime: form.tourTime || null,
+        requestedGuests: form.guests ? Number(form.guests) : null,
+        requestedPickupNote: form.pickupNote || null,
+        reason: form.reason || null,
+      }),
+    });
+    const result = (await response.json()) as {
+      error?: string;
+      changeRequest?: BookingChangeRequest;
+    };
+
+    setSavingChangeRequestId("");
+
+    const createdChangeRequest = result.changeRequest;
+
+    if (!response.ok || !createdChangeRequest) {
+      setChangeRequestMessages((current) => ({
+        ...current,
+        [booking.id]: result.error || "Unable to send change request.",
+      }));
+      return;
+    }
+
+    setChangeRequestsByBooking((current) => ({
+      ...current,
+      [booking.id]: [createdChangeRequest, ...(current[booking.id] || [])],
+    }));
+    updateChangeRequestForm(booking.id, {
+      tourDate: "",
+      tourTime: "",
+      guests: "",
+      pickupNote: "",
+      reason: "",
+    });
+    setChangeRequestMessages((current) => ({
+      ...current,
+      [booking.id]: "Change request sent.",
+    }));
   }
 
   if (loading) {
@@ -788,6 +950,16 @@ export default function AccountPage() {
                     booking.status === "completed" && booking.listing_id,
                   ),
                 });
+                const changeRequests = changeRequestsByBooking[booking.id] || [];
+                const changeSummary =
+                  getBookingChangeRequestSummary(changeRequests);
+                const changeForm = changeRequestForms[booking.id] || {
+                  tourDate: "",
+                  tourTime: "",
+                  guests: "",
+                  pickupNote: "",
+                  reason: "",
+                };
 
                 return (
                 <article
@@ -833,6 +1005,98 @@ export default function AccountPage() {
                     <p className="font-black">{nextAction.label}</p>
                     <p className="mt-1 leading-6">{nextAction.text}</p>
                   </div>
+                  <form
+                    onSubmit={(event) => submitChangeRequest(event, booking)}
+                    className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4"
+                  >
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                          Request changes
+                        </p>
+                        <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
+                          {changeSummary.totalCount > 0
+                            ? `${changeSummary.latestLabel} - ${changeSummary.pendingCount} pending`
+                            : "Need a different date, time, guest count, or pickup detail?"}
+                        </p>
+                      </div>
+                      {changeSummary.needsAction ? (
+                        <span className="rounded-full bg-[#D6B56D] px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                          Pending review
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <input
+                        type="date"
+                        value={changeForm.tourDate}
+                        onChange={(event) =>
+                          updateChangeRequestForm(booking.id, {
+                            tourDate: event.target.value,
+                          })
+                        }
+                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                        aria-label="Requested date"
+                      />
+                      <input
+                        value={changeForm.tourTime}
+                        onChange={(event) =>
+                          updateChangeRequestForm(booking.id, {
+                            tourTime: event.target.value,
+                          })
+                        }
+                        placeholder="Requested time"
+                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                      />
+                      <input
+                        type="number"
+                        min="1"
+                        value={changeForm.guests}
+                        onChange={(event) =>
+                          updateChangeRequestForm(booking.id, {
+                            guests: event.target.value,
+                          })
+                        }
+                        placeholder="Guests"
+                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                      />
+                      <input
+                        value={changeForm.pickupNote}
+                        onChange={(event) =>
+                          updateChangeRequestForm(booking.id, {
+                            pickupNote: event.target.value,
+                          })
+                        }
+                        placeholder="Pickup/details"
+                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                      />
+                    </div>
+                    <textarea
+                      value={changeForm.reason}
+                      onChange={(event) =>
+                        updateChangeRequestForm(booking.id, {
+                          reason: event.target.value,
+                        })
+                      }
+                      placeholder="Reason for the change"
+                      rows={2}
+                      className="mt-3 w-full rounded-lg border border-white px-3 py-2 text-sm outline-none"
+                    />
+                    {changeRequestMessages[booking.id] ? (
+                      <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#0B3C5D]">
+                        {changeRequestMessages[booking.id]}
+                      </p>
+                    ) : null}
+                    <button
+                      type="submit"
+                      disabled={savingChangeRequestId === booking.id}
+                      className="mt-3 rounded-lg bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                    >
+                      {savingChangeRequestId === booking.id
+                        ? "Sending..."
+                        : "Send change request"}
+                    </button>
+                  </form>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
