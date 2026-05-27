@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
+import {
+  getAdminRevenueSummary,
+  getBookingMoneyRows,
+  getVendorRevenueLeaderboard,
+} from "@/lib/admin-revenue";
 import { conciergeLeadSummary } from "@/lib/concierge-leads";
 import {
   getAdminCommandDigest,
@@ -21,8 +26,12 @@ type Booking = {
   guests: number;
   status: string | null;
   listing_id: string | null;
+  deposit_status: string | null;
+  deposit_amount_cents: number | null;
+  booking_value_cents: number | null;
   commission_amount_cents: number | null;
   commission_status: string | null;
+  selected_addons: { name?: string; price_cents?: number }[] | null;
   created_at: string;
 };
 
@@ -42,6 +51,7 @@ type Listing = {
 
 type Vendor = {
   id: string;
+  business_name: string | null;
   is_active: boolean | null;
 };
 
@@ -59,6 +69,14 @@ type ConciergeLead = {
 
 function todayValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function formatMoney(valueCents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(valueCents / 100);
 }
 
 export default function AdminDashboardPage() {
@@ -100,13 +118,13 @@ export default function AdminDashboardPage() {
       ] = await Promise.all([
           supabase
             .from("bookings")
-            .select("id, full_name, tour_date, tour_time, guests, status, listing_id, commission_amount_cents, commission_status, created_at")
+            .select("id, full_name, tour_date, tour_time, guests, status, listing_id, deposit_status, deposit_amount_cents, booking_value_cents, commission_amount_cents, commission_status, selected_addons, created_at")
             .order("tour_date", { ascending: true })
             .limit(200),
           supabase
             .from("listings")
             .select("id, title, is_active, approval_status, vendor_id, image_url, latitude, longitude, is_featured, rating, reviews_count"),
-          supabase.from("vendors").select("id, is_active"),
+          supabase.from("vendors").select("id, business_name, is_active"),
           supabase.from("listing_reviews").select("id, is_approved"),
           supabase
             .from("concierge_leads")
@@ -142,6 +160,17 @@ export default function AdminDashboardPage() {
       bookings,
       vendors,
       reviews,
+    });
+    const revenue = getAdminRevenueSummary({ bookings });
+    const vendorRevenue = getVendorRevenueLeaderboard({
+      bookings,
+      listings,
+      vendors,
+    });
+    const bookingMoneyRows = getBookingMoneyRows({
+      bookings,
+      listings,
+      vendors,
     });
     const concierge = conciergeLeadSummary(conciergeLeads);
     const commandDigest = getAdminCommandDigest({
@@ -183,6 +212,11 @@ export default function AdminDashboardPage() {
       nextBookings: upcomingBookings.slice(0, 8),
       commandCenter,
       commandDigest,
+      revenue,
+      vendorRevenue,
+      highValueBookings: bookingMoneyRows
+        .filter((booking) => booking.highValue)
+        .slice(0, 5),
     };
   }, [bookings, conciergeLeads, listings, reviews, vendors]);
 
@@ -258,6 +292,202 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               </div>
+
+              <section className="mt-6 rounded-2xl bg-[#071F2F] p-6 text-white shadow-xl shadow-[#071F2F]/10">
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                  <div>
+                    <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
+                      Admin Revenue Command Center
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black">
+                      Marketplace money, payouts, and high-value trips.
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">
+                      Track booking value, deposits, commission, vendor payout
+                      estimates, and the vendors driving the most revenue.
+                    </p>
+                  </div>
+                  <ExportCsvButton type="revenue" />
+                </div>
+
+                <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  {[
+                    {
+                      label: "Marketplace value",
+                      value: formatMoney(summary.revenue.grossBookingValueCents),
+                      text: summary.revenue.label,
+                    },
+                    {
+                      label: "Confirmed value",
+                      value: formatMoney(summary.revenue.confirmedValueCents),
+                      text: "Confirmed and completed trips",
+                    },
+                    {
+                      label: "Pending value",
+                      value: formatMoney(summary.revenue.pendingValueCents),
+                      text: "New or waiting requests",
+                    },
+                    {
+                      label: "Platform commission",
+                      value: formatMoney(summary.revenue.platformCommissionCents),
+                      text: "Estimated website earnings",
+                    },
+                    {
+                      label: "Vendor payout estimate",
+                      value: formatMoney(summary.revenue.vendorPayoutCents),
+                      text: "Gross value after commission",
+                    },
+                    {
+                      label: "Paid deposits",
+                      value: formatMoney(summary.revenue.paidDepositCents),
+                      text: "Collected through checkout",
+                    },
+                    {
+                      label: "Open deposits",
+                      value: formatMoney(summary.revenue.unpaidDepositCents),
+                      text: "Started or still due",
+                    },
+                    {
+                      label: "Add-on value",
+                      value: formatMoney(summary.revenue.addonRevenueCents),
+                      text: `Top: ${summary.revenue.topAddonLabel}`,
+                    },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-xl bg-white/10 p-4">
+                      <p className="text-xs font-black uppercase tracking-[0.12em] text-[#9EE8E3]">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-2xl font-black text-white">
+                        {item.value}
+                      </p>
+                      <p className="mt-1 text-sm leading-5 text-white/65">
+                        {item.text}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1fr]">
+                  <div className="rounded-2xl bg-white p-5 text-[#17324D]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                          Vendor leaderboard
+                        </p>
+                        <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
+                          Top earning vendors
+                        </h3>
+                      </div>
+                      <Link
+                        href="/admin/vendors"
+                        className="rounded-xl bg-[#F7F3EA] px-3 py-2 text-sm font-bold text-[#0B3C5D]"
+                      >
+                        Vendors
+                      </Link>
+                    </div>
+                    {summary.vendorRevenue.length === 0 ? (
+                      <p className="mt-4 rounded-xl bg-[#F7F3EA] p-4 text-sm text-gray-600">
+                        No revenue-bearing bookings yet.
+                      </p>
+                    ) : (
+                      <div className="mt-4 grid gap-3">
+                        {summary.vendorRevenue.slice(0, 5).map((vendor) => (
+                          <div
+                            key={vendor.vendorId}
+                            className="rounded-xl border border-gray-100 bg-[#F7F3EA] p-4"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <p className="font-black text-[#0B3C5D]">
+                                  {vendor.vendorName}
+                                </p>
+                                <p className="mt-1 text-sm text-gray-600">
+                                  {vendor.bookingCount} booking
+                                  {vendor.bookingCount === 1 ? "" : "s"} /{" "}
+                                  {vendor.confirmedCount} confirmed
+                                </p>
+                              </div>
+                              {vendor.needsAttention ? (
+                                <span className="rounded-full bg-[#FFF8E8] px-3 py-1 text-xs font-black text-[#9C7A2F]">
+                                  Needs follow-up
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                              <div>
+                                <p className="text-gray-500">Value</p>
+                                <p className="font-black text-[#0B3C5D]">
+                                  {formatMoney(vendor.grossBookingValueCents)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Commission</p>
+                                <p className="font-black text-[#0B3C5D]">
+                                  {formatMoney(vendor.commissionCents)}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-gray-500">Payout</p>
+                                <p className="font-black text-[#0B3C5D]">
+                                  {formatMoney(vendor.payoutCents)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl bg-white p-5 text-[#17324D]">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#D6B56D]">
+                          High-value trips
+                        </p>
+                        <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
+                          Watch the biggest requests
+                        </h3>
+                      </div>
+                      <span className="rounded-xl bg-[#F7F3EA] px-3 py-2 text-sm font-bold text-[#0B3C5D]">
+                        {summary.revenue.highValueBookingCount} total
+                      </span>
+                    </div>
+                    {summary.highValueBookings.length === 0 ? (
+                      <p className="mt-4 rounded-xl bg-[#F7F3EA] p-4 text-sm text-gray-600">
+                        No high-value active bookings yet.
+                      </p>
+                    ) : (
+                      <div className="mt-4 grid gap-3">
+                        {summary.highValueBookings.map((booking) => (
+                          <div
+                            key={booking.bookingId}
+                            className="rounded-xl border border-gray-100 bg-[#F7F3EA] p-4"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <p className="font-black text-[#0B3C5D]">
+                                  {booking.guestName}
+                                </p>
+                                <p className="mt-1 text-sm text-gray-600">
+                                  {booking.listingTitle} - {booking.vendorName}
+                                </p>
+                              </div>
+                              <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-[#0B3C5D]">
+                                {formatMoney(booking.bookingValueCents)}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-gray-600">
+                              {booking.depositLabel} / payout{" "}
+                              {formatMoney(booking.vendorPayoutCents)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </section>
 
               <section className="mt-4 rounded-2xl border border-[#00A8A8]/20 bg-white p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
@@ -454,6 +684,7 @@ export default function AdminDashboardPage() {
                   <ExportCsvButton type="concierge_leads" />
                   <ExportCsvButton type="concierge_assignments" />
                   <ExportCsvButton type="concierge_quotes" />
+                  <ExportCsvButton type="revenue" />
                 </div>
               </section>
             </>

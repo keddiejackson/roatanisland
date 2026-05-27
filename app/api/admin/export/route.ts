@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { buildAdminRevenueExportRows } from "@/lib/admin-revenue";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type ExportType =
@@ -13,7 +14,8 @@ type ExportType =
   | "vendor_documents"
   | "concierge_leads"
   | "concierge_assignments"
-  | "concierge_quotes";
+  | "concierge_quotes"
+  | "revenue";
 
 async function verifyAdmin(request: Request) {
   const token = request.headers
@@ -210,6 +212,29 @@ async function fetchRows(type: ExportType) {
     return (data || []) as Record<string, unknown>[];
   }
 
+  if (type === "revenue") {
+    const [bookingsResult, listingsResult, vendorsResult] = await Promise.all([
+      supabaseServer
+        .from("bookings")
+        .select(
+          "id, full_name, listing_id, status, deposit_status, booking_value_cents, commission_amount_cents, selected_addons",
+        )
+        .order("created_at", { ascending: false }),
+      supabaseServer.from("listings").select("id, title, vendor_id"),
+      supabaseServer.from("vendors").select("id, business_name, is_active"),
+    ]);
+
+    if (bookingsResult.error) throw new Error(bookingsResult.error.message);
+    if (listingsResult.error) throw new Error(listingsResult.error.message);
+    if (vendorsResult.error) throw new Error(vendorsResult.error.message);
+
+    return buildAdminRevenueExportRows({
+      bookings: bookingsResult.data || [],
+      listings: listingsResult.data || [],
+      vendors: vendorsResult.data || [],
+    }) as Record<string, unknown>[];
+  }
+
   const { data, error } = await supabaseServer
     .from("vendors")
     .select(
@@ -247,6 +272,7 @@ export async function GET(request: Request) {
       "concierge_leads",
       "concierge_assignments",
       "concierge_quotes",
+      "revenue",
     ].includes(type)
   ) {
     return NextResponse.json({ error: "Unknown export type." }, { status: 400 });
