@@ -19,6 +19,29 @@ export type BookingNextAction = {
   tone: "review" | "confirmed" | "paid" | "cancelled" | "complete";
 };
 
+export type BookingCheckoutReadiness = {
+  score: number;
+  label: "Ready to send" | "Almost ready" | "Needs details";
+  missingItems: string[];
+};
+
+export type BookingConversionChecklistItem = {
+  label: string;
+  text: string;
+  done: boolean;
+};
+
+export type BookingTrustStep = {
+  label: string;
+  text: string;
+};
+
+export type BookingRecoveryPrompt = {
+  label: string;
+  text: string;
+  shouldShow: boolean;
+};
+
 const bookingStatusLabels: Record<string, string> = {
   new: "Request received",
   confirmed: "Confirmed",
@@ -82,6 +105,146 @@ export function formatBookingStatus(status: string | null | undefined) {
 export function formatDepositStatus(status: string | null | undefined) {
   const normalized = status || "not_requested";
   return depositStatusLabels[normalized] || titleCaseStatus(normalized);
+}
+
+function hasText(value: string | null | undefined) {
+  return Boolean((value || "").trim());
+}
+
+function hasValidEmail(value: string | null | undefined) {
+  const email = (value || "").trim();
+  return Boolean(email && email.includes("@") && email.includes("."));
+}
+
+export function getBookingCheckoutReadiness({
+  fullName,
+  email,
+  tourDate,
+  tourTime,
+  guests,
+  pickupPreference,
+}: {
+  fullName: string;
+  email: string;
+  tourDate: string;
+  tourTime: string;
+  guests: string;
+  pickupPreference: string;
+}): BookingCheckoutReadiness {
+  const checks = [
+    { label: "Name", complete: hasText(fullName) },
+    { label: "Email", complete: hasValidEmail(email) },
+    { label: "Date", complete: hasText(tourDate) },
+    { label: "Time", complete: hasText(tourTime) },
+    {
+      label: "Guest count",
+      complete: Number.isFinite(Number(guests)) && Number(guests) > 0,
+    },
+    { label: "Pickup preference", complete: hasText(pickupPreference) },
+  ];
+  const completed = checks.filter((check) => check.complete).length;
+  const score = Math.round((completed / checks.length) * 100);
+
+  return {
+    score,
+    label:
+      score === 100
+        ? "Ready to send"
+        : score >= 67
+          ? "Almost ready"
+          : "Needs details",
+    missingItems: checks
+      .filter((check) => !check.complete)
+      .map((check) => check.label),
+  };
+}
+
+export function bookingConversionChecklist({
+  hasListing,
+  hasAvailability,
+  hasAddons,
+  hasEstimatedTotal,
+}: {
+  hasListing: boolean;
+  hasAvailability: boolean;
+  hasAddons: boolean;
+  hasEstimatedTotal: boolean;
+}): BookingConversionChecklistItem[] {
+  return [
+    {
+      label: "Experience selected",
+      text: "The request is tied to a specific Roatan listing.",
+      done: hasListing,
+    },
+    {
+      label: "Availability checked",
+      text: "Date, time, and guest count have been checked against limits.",
+      done: hasAvailability,
+    },
+    {
+      label: "Add-ons reviewed",
+      text: "Optional upgrades have been shown before sending.",
+      done: hasAddons,
+    },
+    {
+      label: "Total previewed",
+      text: "The guest can see the estimated request value.",
+      done: hasEstimatedTotal,
+    },
+  ];
+}
+
+export function getBookingTrustSteps(): BookingTrustStep[] {
+  return [
+    {
+      label: "Send request",
+      text: "Share your preferred date, time, pickup, and group details.",
+    },
+    {
+      label: "Local operator confirms",
+      text: "The vendor checks capacity and sends next steps.",
+    },
+    {
+      label: "Pay only when ready",
+      text: "Deposit or full payment is offered after the request is created.",
+    },
+    {
+      label: "Track everything",
+      text: "Use your status page and guest dashboard for updates.",
+    },
+  ];
+}
+
+export function getBookingRecoveryPrompt({
+  fullName,
+  email,
+  tourDate,
+  tourTime,
+  guests,
+}: {
+  fullName: string;
+  email: string;
+  tourDate: string;
+  tourTime: string;
+  guests: string;
+}): BookingRecoveryPrompt {
+  const savedCoreDetails = [fullName, tourDate, guests].filter(hasText).length;
+  const hasAnyDetails = [fullName, email, tourDate, tourTime, guests].some(hasText);
+  const isComplete =
+    hasText(fullName) &&
+    hasValidEmail(email) &&
+    hasText(tourDate) &&
+    hasText(tourTime) &&
+    Number(guests) > 0;
+
+  return {
+    label: "Finish your request",
+    text:
+      savedCoreDetails >= 2
+        ? "Your name, date, and guest count are saved on this device. Add the missing details when you are ready."
+        : "Some booking details are saved on this device. Finish the request when you are ready.",
+    shouldShow: hasAnyDetails && !isComplete,
+  };
 }
 
 export function bookingStatusSteps(status: string | null | undefined): BookingStatusStep[] {

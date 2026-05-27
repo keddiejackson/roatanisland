@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
+import { getBookingTrustSteps } from "@/lib/booking-flow";
 import BookingForm from "./BookingForm";
 
 export default async function BookPage({
@@ -14,6 +15,7 @@ export default async function BookPage({
   }>;
 }) {
   const { listing, date, time, guests } = await searchParams;
+  const trustSteps = getBookingTrustSteps();
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#1F2937]">
@@ -63,6 +65,35 @@ export default async function BookPage({
                   {number}
                 </span>
                 {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mb-8 rounded-2xl bg-white p-6 shadow ring-1 ring-black/5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                Why booking here works
+              </p>
+              <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                Clear requests before anyone commits.
+              </h2>
+            </div>
+            <Link
+              href="/account"
+              className="rounded-xl bg-[#EEF7F6] px-4 py-3 text-sm font-black text-[#0B3C5D]"
+            >
+              View trip dashboard
+            </Link>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
+            {trustSteps.map((step) => (
+              <div key={step.label} className="rounded-xl bg-[#F7F3EA] p-4">
+                <p className="font-black text-[#0B3C5D]">{step.label}</p>
+                <p className="mt-1 text-sm leading-6 text-gray-600">
+                  {step.text}
+                </p>
               </div>
             ))}
           </div>

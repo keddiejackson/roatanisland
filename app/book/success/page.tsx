@@ -75,6 +75,23 @@ export default async function BookingPaymentSuccessPage({
                 </div>
               ))}
             </div>
+            <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-5">
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
+                Confirmation checklist
+              </p>
+              <div className="mt-4 grid gap-3">
+                {[
+                  "Save your booking status page.",
+                  "Check your email for payment and request details.",
+                  "Watch chat for pickup or timing notes.",
+                  "Open your trip dashboard before travel day.",
+                ].map((item) => (
+                  <div key={item} className="rounded-xl bg-white/10 p-3 text-sm font-semibold">
+                    {item}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </section>
       </div>

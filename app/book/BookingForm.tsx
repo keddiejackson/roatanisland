@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  bookingConversionChecklist,
   composeBookingGuestMessage,
   estimateBookingTotalCents,
   formatBookingCents,
+  getBookingCheckoutReadiness,
+  getBookingRecoveryPrompt,
+  getBookingTrustSteps,
 } from "@/lib/booking-flow";
 import {
   buildGuestProfileBookingPrefill,
@@ -45,7 +49,20 @@ type AvailabilityStatus = {
   remainingGuests: number | null;
 };
 
+type BookingDraft = {
+  listingId?: string;
+  fullName?: string;
+  email?: string;
+  tourDate?: string;
+  tourTime?: string;
+  guests?: string;
+  pickupPreference?: string;
+  guestMessage?: string;
+  promoCode?: string;
+};
+
 const DEFAULT_TOUR_TIMES = ["10:30 AM", "4:30 PM Sunset Cruise"];
+const BOOKING_DRAFT_KEY = "roatan-booking-draft";
 const PICKUP_OPTIONS = [
   "Hotel pickup",
   "Cruise port pickup",
@@ -86,6 +103,35 @@ function readGuestProfile(): GuestTravelProfile | null {
   }
 }
 
+function readBookingDraft(listingId?: string): BookingDraft | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const draft = JSON.parse(localStorage.getItem(BOOKING_DRAFT_KEY) || "");
+    if (!draft || typeof draft !== "object") return null;
+    if (draft.listingId && listingId && draft.listingId !== listingId) {
+      return null;
+    }
+    return draft as BookingDraft;
+  } catch {
+    return null;
+  }
+}
+
+function writeBookingDraft(draft: BookingDraft) {
+  if (typeof window === "undefined") return;
+
+  const hasAnyValue = Object.entries(draft).some(
+    ([key, value]) => key !== "listingId" && Boolean(String(value || "").trim()),
+  );
+
+  if (hasAnyValue) {
+    localStorage.setItem(BOOKING_DRAFT_KEY, JSON.stringify(draft));
+  } else {
+    localStorage.removeItem(BOOKING_DRAFT_KEY);
+  }
+}
+
 export default function BookingForm({
   listingId,
   initialDate = "",
@@ -115,9 +161,11 @@ export default function BookingForm({
   const [availabilityStatus, setAvailabilityStatus] =
     useState<AvailabilityStatus | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
+  const [recoveredDraft, setRecoveredDraft] = useState<BookingDraft | null>(null);
 
   useEffect(() => {
     const profile = readGuestProfile();
+    const draft = readBookingDraft(listingId);
 
     if (profile) {
       const prefill = buildGuestProfileBookingPrefill(profile);
@@ -127,12 +175,51 @@ export default function BookingForm({
       setGuestMessage((current) => current || prefill.guestMessage);
     }
 
+    if (draft) {
+      setRecoveredDraft(draft);
+      setFullName((current) => current || draft.fullName || "");
+      setEmail((current) => current || draft.email || "");
+      setTourDate((current) => current || draft.tourDate || "");
+      setTourTime((current) => current || draft.tourTime || "");
+      setGuests((current) => current || draft.guests || "");
+      setPickupPreference((current) => current || draft.pickupPreference || "");
+      setGuestMessage((current) => current || draft.guestMessage || "");
+      setPromoCode((current) => current || draft.promoCode || "");
+    }
+
     supabase.auth.getUser().then(({ data }) => {
       if (data.user?.email) {
         setEmail((current) => current || data.user?.email || "");
       }
     });
-  }, []);
+  }, [listingId]);
+
+  useEffect(() => {
+    if (submitted) return;
+
+    writeBookingDraft({
+      listingId,
+      fullName,
+      email,
+      tourDate,
+      tourTime,
+      guests,
+      pickupPreference,
+      guestMessage,
+      promoCode,
+    });
+  }, [
+    email,
+    fullName,
+    guestMessage,
+    guests,
+    listingId,
+    pickupPreference,
+    promoCode,
+    submitted,
+    tourDate,
+    tourTime,
+  ]);
 
   useEffect(() => {
     async function fetchListing() {
@@ -274,6 +361,28 @@ export default function BookingForm({
       : "";
   const availabilityBlocksBooking =
     availabilityStatus?.tone === "blocked" || availabilityStatus?.tone === "full";
+  const bookingReadiness = getBookingCheckoutReadiness({
+    fullName,
+    email,
+    tourDate,
+    tourTime,
+    guests,
+    pickupPreference,
+  });
+  const conversionChecklist = bookingConversionChecklist({
+    hasListing: Boolean(listingId || listing),
+    hasAvailability: Boolean(availabilityStatus || !listingId),
+    hasAddons: addons.length === 0 || selectedAddons.length > 0,
+    hasEstimatedTotal: showEstimatedTotal,
+  });
+  const trustSteps = getBookingTrustSteps();
+  const recoveryPrompt = getBookingRecoveryPrompt({
+    fullName: recoveredDraft?.fullName || fullName,
+    email: recoveredDraft?.email || email,
+    tourDate: recoveredDraft?.tourDate || tourDate,
+    tourTime: recoveredDraft?.tourTime || tourTime,
+    guests: recoveredDraft?.guests || guests,
+  });
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -311,6 +420,7 @@ export default function BookingForm({
 
       setBookingId(result.bookingId || null);
       setSubmitted(true);
+      localStorage.removeItem(BOOKING_DRAFT_KEY);
     } catch (err) {
       console.error("Unexpected error:", err);
       setSubmitError("Something unexpected went wrong while saving the booking.");
@@ -401,6 +511,52 @@ export default function BookingForm({
         ))}
       </div>
 
+      {recoveryPrompt.shouldShow ? (
+        <div className="mt-6 rounded-xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-4">
+          <p className="text-sm font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+            Finish your request
+          </p>
+          <p className="mt-1 text-sm font-semibold leading-6 text-[#0B3C5D]">
+            {recoveryPrompt.text}
+          </p>
+        </div>
+      ) : null}
+
+      <section className="mt-6 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-5">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
+              Booking readiness
+            </p>
+            <h2 className="mt-1 text-xl font-black text-[#0B3C5D]">
+              {bookingReadiness.label} - {bookingReadiness.score}%
+            </h2>
+          </div>
+          <div className="h-2 min-w-40 overflow-hidden rounded-full bg-white">
+            <span
+              className="block h-full rounded-full bg-[#00A8A8]"
+              style={{ width: `${bookingReadiness.score}%` }}
+            />
+          </div>
+        </div>
+        {bookingReadiness.missingItems.length > 0 ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {bookingReadiness.missingItems.map((item) => (
+              <span
+                key={item}
+                className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#0B3C5D]"
+              >
+                Needs {item.toLowerCase()}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-sm font-semibold text-[#0B3C5D]/70">
+            The request has the details an operator needs to answer quickly.
+          </p>
+        )}
+      </section>
+
       {listing ? (
         <div className="mt-6 rounded-xl border border-[#00A8A8]/20 bg-[#00A8A8]/10 p-4">
           <p className="font-semibold text-[#0B3C5D]">{listing.title}</p>
@@ -410,6 +566,21 @@ export default function BookingForm({
           </p>
         </div>
       ) : null}
+
+      <section className="mt-6 grid gap-3 md:grid-cols-4">
+        {trustSteps.map((step, index) => (
+          <div
+            key={step.label}
+            className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
+          >
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+              {index + 1}
+            </p>
+            <p className="mt-1 font-black text-[#0B3C5D]">{step.label}</p>
+            <p className="mt-1 text-xs leading-5 text-gray-600">{step.text}</p>
+          </div>
+        ))}
+      </section>
 
       <div className="mt-6 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-5">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -461,6 +632,22 @@ export default function BookingForm({
             Promo code entered: {promoCode.trim().toUpperCase()}
           </p>
         ) : null}
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {conversionChecklist.map((item) => (
+            <div
+              key={item.label}
+              className={`rounded-xl px-4 py-3 ${
+                item.done ? "bg-white text-[#0B3C5D]" : "bg-[#FFF3D2] text-[#7A5A00]"
+              }`}
+            >
+              <p className="text-xs font-black uppercase tracking-[0.12em]">
+                {item.done ? "Ready" : "Check"}
+              </p>
+              <p className="mt-1 font-black">{item.label}</p>
+              <p className="mt-1 text-xs leading-5 opacity-75">{item.text}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {submitted ? (
@@ -725,7 +912,19 @@ export default function BookingForm({
 
           {addons.length > 0 ? (
             <div className="md:col-span-2">
-              <p className="mb-2 block font-medium">Add-ons</p>
+              <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                    Optional upgrades
+                  </p>
+                  <p className="mt-1 font-medium text-[#0B3C5D]">
+                    Add-ons can improve pickup, food, privacy, or comfort.
+                  </p>
+                </div>
+                <p className="text-sm font-bold text-gray-500">
+                  {selectedAddons.length} selected
+                </p>
+              </div>
               <div className="grid gap-2">
                 {addons.map((addon) => (
                   <label
