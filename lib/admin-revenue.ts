@@ -12,6 +12,10 @@ export type AdminRevenueBooking = {
   deposit_amount_cents?: number | null;
   booking_value_cents?: number | null;
   commission_amount_cents?: number | null;
+  commission_status?: string | null;
+  payout_note?: string | null;
+  payout_scheduled_for?: string | null;
+  payout_paid_at?: string | null;
   selected_addons?: AdminRevenueAddon[] | null;
   tour_date?: string | null;
   tour_time?: string | null;
@@ -69,6 +73,28 @@ export type BookingMoneyRow = {
   vendorPayoutCents: number;
   addOnValueCents: number;
   highValue: boolean;
+};
+
+export type VendorPayoutStatus = "unpaid" | "scheduled" | "paid" | "waived";
+
+export type VendorPayoutSummary = {
+  unpaidCount: number;
+  scheduledCount: number;
+  paidCount: number;
+  waivedCount: number;
+  unpaidCents: number;
+  scheduledCents: number;
+  paidCents: number;
+  waivedCents: number;
+  nextScheduledDate: string | null;
+  label: string;
+};
+
+export type VendorPayoutRow = BookingMoneyRow & {
+  payoutStatus: VendorPayoutStatus;
+  payoutNote: string | null;
+  payoutScheduledFor: string | null;
+  payoutPaidAt: string | null;
 };
 
 function normalizeStatus(value?: string | null) {
@@ -136,6 +162,24 @@ function depositLabel(status?: string | null) {
   if (normalized === "failed") return "Deposit failed";
 
   return "No deposit";
+}
+
+function moneyLabel(valueCents: number, suffix: string) {
+  return `${new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(valueCents / 100)} ${suffix}`;
+}
+
+function payoutStatus(booking: AdminRevenueBooking): VendorPayoutStatus {
+  const normalized = normalizeStatus(booking.commission_status);
+
+  if (["scheduled", "paid", "waived"].includes(normalized)) {
+    return normalized as VendorPayoutStatus;
+  }
+
+  return "unpaid";
 }
 
 export function getAdminRevenueSummary({
@@ -336,6 +380,118 @@ export function buildAdminRevenueExportRows({
       commission_cents: row.commissionCents,
       vendor_payout_cents: row.vendorPayoutCents,
       add_on_value_cents: row.addOnValueCents,
+    }),
+  );
+}
+
+export function getVendorPayoutSummary({
+  bookings,
+  commissionRate = 0.1,
+}: {
+  bookings: AdminRevenueBooking[];
+  commissionRate?: number;
+}): VendorPayoutSummary {
+  const summary: VendorPayoutSummary = {
+    unpaidCount: 0,
+    scheduledCount: 0,
+    paidCount: 0,
+    waivedCount: 0,
+    unpaidCents: 0,
+    scheduledCents: 0,
+    paidCents: 0,
+    waivedCents: 0,
+    nextScheduledDate: null,
+    label: "$0 unpaid payouts",
+  };
+
+  for (const booking of bookings) {
+    const status = payoutStatus(booking);
+    const value = cents(booking.booking_value_cents) - commissionCents(booking, commissionRate);
+
+    if (status === "unpaid") {
+      summary.unpaidCount += 1;
+      summary.unpaidCents += value;
+    } else if (status === "scheduled") {
+      summary.scheduledCount += 1;
+      summary.scheduledCents += value;
+
+      if (
+        booking.payout_scheduled_for &&
+        (!summary.nextScheduledDate ||
+          booking.payout_scheduled_for < summary.nextScheduledDate)
+      ) {
+        summary.nextScheduledDate = booking.payout_scheduled_for;
+      }
+    } else if (status === "paid") {
+      summary.paidCount += 1;
+      summary.paidCents += value;
+    } else {
+      summary.waivedCount += 1;
+      summary.waivedCents += value;
+    }
+  }
+
+  summary.label = moneyLabel(summary.unpaidCents, "unpaid payouts");
+
+  return summary;
+}
+
+export function getVendorPayoutRows({
+  bookings,
+  listings,
+  vendors,
+  commissionRate = 0.1,
+}: {
+  bookings: AdminRevenueBooking[];
+  listings: AdminRevenueListing[];
+  vendors: AdminRevenueVendor[];
+  commissionRate?: number;
+}): VendorPayoutRow[] {
+  const bookingById = new Map(bookings.map((booking) => [booking.id, booking]));
+
+  return getBookingMoneyRows({
+    bookings,
+    listings,
+    vendors,
+    commissionRate,
+  }).map((row) => {
+    const booking = bookingById.get(row.bookingId);
+
+    return {
+      ...row,
+      payoutStatus: booking ? payoutStatus(booking) : "unpaid",
+      payoutNote: booking?.payout_note || null,
+      payoutScheduledFor: booking?.payout_scheduled_for || null,
+      payoutPaidAt: booking?.payout_paid_at || null,
+    };
+  });
+}
+
+export function buildVendorPayoutExportRows({
+  bookings,
+  listings,
+  vendors,
+  commissionRate = 0.1,
+}: {
+  bookings: AdminRevenueBooking[];
+  listings: AdminRevenueListing[];
+  vendors: AdminRevenueVendor[];
+  commissionRate?: number;
+}) {
+  return getVendorPayoutRows({ bookings, listings, vendors, commissionRate }).map(
+    (row) => ({
+      booking_id: row.bookingId,
+      guest: row.guestName,
+      listing: row.listingTitle,
+      vendor: row.vendorName,
+      booking_status: row.status,
+      payout_status: row.payoutStatus,
+      booking_value_cents: row.bookingValueCents,
+      platform_commission_cents: row.commissionCents,
+      vendor_payout_cents: row.vendorPayoutCents,
+      payout_scheduled_for: row.payoutScheduledFor,
+      payout_paid_at: row.payoutPaidAt,
+      payout_note: row.payoutNote,
     }),
   );
 }

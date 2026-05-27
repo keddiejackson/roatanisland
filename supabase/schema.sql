@@ -193,7 +193,10 @@ create table if not exists public.bookings (
   booking_value_cents integer,
   commission_rate numeric not null default 0.10,
   commission_amount_cents integer,
-  commission_status text not null default 'unpaid' check (commission_status in ('unpaid', 'paid', 'waived')),
+  commission_status text not null default 'unpaid' check (commission_status in ('unpaid', 'scheduled', 'paid', 'waived')),
+  payout_note text,
+  payout_scheduled_for date,
+  payout_paid_at timestamptz,
   stripe_checkout_session_id text,
   stripe_payment_intent_id text,
   paid_at timestamptz,
@@ -486,7 +489,23 @@ add column if not exists commission_amount_cents integer;
 
 alter table public.bookings
 add column if not exists commission_status text not null default 'unpaid'
-check (commission_status in ('unpaid', 'paid', 'waived'));
+check (commission_status in ('unpaid', 'scheduled', 'paid', 'waived'));
+
+alter table public.bookings
+drop constraint if exists bookings_commission_status_check;
+
+alter table public.bookings
+add constraint bookings_commission_status_check
+check (commission_status in ('unpaid', 'scheduled', 'paid', 'waived'));
+
+alter table public.bookings
+add column if not exists payout_note text;
+
+alter table public.bookings
+add column if not exists payout_scheduled_for date;
+
+alter table public.bookings
+add column if not exists payout_paid_at timestamptz;
 
 alter table public.bookings
 add column if not exists stripe_checkout_session_id text;

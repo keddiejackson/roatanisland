@@ -12,7 +12,9 @@ type BookingUpdateRequest = {
   status?: BookingStatus;
   adminNotes?: string | null;
   sendEmail?: boolean;
-  commissionStatus?: "unpaid" | "paid" | "waived";
+  commissionStatus?: "unpaid" | "scheduled" | "paid" | "waived";
+  payoutNote?: string | null;
+  payoutScheduledFor?: string | null;
 };
 
 async function verifyAdmin(request: Request) {
@@ -80,6 +82,10 @@ export async function PATCH(
   const { id } = await context.params;
   const body = (await request.json()) as BookingUpdateRequest;
   const nextStatus = body.status || "new";
+  const payoutUpdate =
+    body.commissionStatus ||
+    "payoutNote" in body ||
+    "payoutScheduledFor" in body;
 
   const { data: currentBooking } = await supabaseServer
     .from("bookings")
@@ -93,12 +99,20 @@ export async function PATCH(
       status: nextStatus,
       admin_notes: body.adminNotes || null,
       ...(body.commissionStatus
-        ? { commission_status: body.commissionStatus }
+        ? {
+            commission_status: body.commissionStatus,
+            payout_paid_at:
+              body.commissionStatus === "paid" ? new Date().toISOString() : null,
+          }
+        : {}),
+      ...("payoutNote" in body ? { payout_note: body.payoutNote || null } : {}),
+      ...("payoutScheduledFor" in body
+        ? { payout_scheduled_for: body.payoutScheduledFor || null }
         : {}),
     })
     .eq("id", id)
     .select(
-      "id, full_name, email, tour_date, tour_time, guests, status, admin_notes, listing_id",
+      "id, full_name, email, tour_date, tour_time, guests, status, admin_notes, listing_id, commission_status, payout_note, payout_scheduled_for, payout_paid_at",
     )
     .single();
 
@@ -173,6 +187,8 @@ export async function PATCH(
       metadata: {
         status: nextStatus,
         emailed: Boolean(body.sendEmail && nextStatus !== "new"),
+        payout_updated: Boolean(payoutUpdate),
+        payout_status: body.commissionStatus || null,
       },
     },
   ]);
@@ -188,6 +204,8 @@ export async function PATCH(
       status: nextStatus,
       emailed: Boolean(body.sendEmail && nextStatus !== "new"),
       listing_id: booking.listing_id,
+      payout_updated: Boolean(payoutUpdate),
+      payout_status: body.commissionStatus || null,
     },
   });
 

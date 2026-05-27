@@ -8,6 +8,10 @@ import BookingChatDrawer, {
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import { isAdminUser } from "@/lib/admin";
+import {
+  getVendorPayoutSummary,
+  type VendorPayoutStatus,
+} from "@/lib/admin-revenue";
 import { groupBookingsByDate } from "@/lib/availability-calendar";
 import {
   bookingThreadSummary,
@@ -34,6 +38,9 @@ type BookingRow = {
   booking_value_cents: number | null;
   commission_amount_cents: number | null;
   commission_status: string | null;
+  payout_note: string | null;
+  payout_scheduled_for: string | null;
+  payout_paid_at: string | null;
 };
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -80,6 +87,10 @@ function formatMoney(cents: number | null) {
     style: "currency",
     currency: "USD",
   }).format(cents / 100);
+}
+
+function formatPayoutStatus(status: string | null) {
+  return (status || "unpaid").replaceAll("_", " ");
 }
 
 function summarizeThreads(
@@ -296,6 +307,7 @@ export default function AdminBookingsPage() {
       needsResponse: bookings.filter(
         (booking) => threadSummaries[booking.id]?.needsResponse,
       ).length,
+      payouts: getVendorPayoutSummary({ bookings: filteredBookings }),
     }),
     [bookings, filteredBookings, threadSummaries],
   );
@@ -308,7 +320,11 @@ export default function AdminBookingsPage() {
     bookingId: string,
     changes: Pick<BookingWithListingName, "status" | "admin_notes">,
     sendEmail = false,
-    commissionStatus?: "unpaid" | "paid" | "waived",
+    payout?: {
+      commissionStatus?: VendorPayoutStatus;
+      payoutNote?: string | null;
+      payoutScheduledFor?: string | null;
+    },
   ) {
     setSavingBookingId(bookingId);
 
@@ -325,7 +341,9 @@ export default function AdminBookingsPage() {
         status: changes.status,
         adminNotes: changes.admin_notes,
         sendEmail,
-        commissionStatus,
+        commissionStatus: payout?.commissionStatus,
+        payoutNote: payout?.payoutNote,
+        payoutScheduledFor: payout?.payoutScheduledFor,
       }),
     });
 
@@ -343,8 +361,22 @@ export default function AdminBookingsPage() {
           ? {
               ...booking,
               ...changes,
-              ...(commissionStatus
-                ? { commission_status: commissionStatus }
+              ...(payout?.commissionStatus
+                ? { commission_status: payout.commissionStatus }
+                : {}),
+              ...(payout && "payoutNote" in payout
+                ? { payout_note: payout.payoutNote || null }
+                : {}),
+              ...(payout && "payoutScheduledFor" in payout
+                ? { payout_scheduled_for: payout.payoutScheduledFor || null }
+                : {}),
+              ...(payout?.commissionStatus
+                ? {
+                    payout_paid_at:
+                      payout.commissionStatus === "paid"
+                        ? new Date().toISOString()
+                        : null,
+                  }
                 : {}),
             }
           : booking,
@@ -396,6 +428,10 @@ export default function AdminBookingsPage() {
                 ["Guests", bookingSummary.totalGuests],
                 ["Needs review", bookingSummary.newRequests],
                 ["Needs response", bookingSummary.needsResponse],
+                ["Unpaid payouts", formatMoney(bookingSummary.payouts.unpaidCents)],
+                ["Scheduled payouts", formatMoney(bookingSummary.payouts.scheduledCents)],
+                ["Paid payouts", formatMoney(bookingSummary.payouts.paidCents)],
+                ["Next payout", bookingSummary.payouts.nextScheduledDate || "Not scheduled"],
               ].map(([label, value]) => (
                 <div
                   key={label}
@@ -510,6 +546,13 @@ export default function AdminBookingsPage() {
                           {booking.guests} guest
                           {booking.guests === 1 ? "" : "s"} - {booking.email}
                         </p>
+                        <p className="mt-2 text-sm font-semibold capitalize text-[#0B3C5D]">
+                          Vendor payout: {formatPayoutStatus(booking.commission_status)} -{" "}
+                          {formatMoney(
+                            (booking.booking_value_cents || 0) -
+                              (booking.commission_amount_cents || 0),
+                          )}
+                        </p>
                         {booking.guest_message || booking.vendor_note ? (
                           <p className="mt-3 text-sm leading-6 text-gray-600">
                             {booking.vendor_note ||
@@ -552,7 +595,8 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3">Vendor Note</th>
                   <th className="px-4 py-3">Deposit</th>
                   <th className="px-4 py-3">Value</th>
-                  <th className="px-4 py-3">Commission</th>
+                  <th className="px-4 py-3">Vendor payout</th>
+                  <th className="px-4 py-3">Payout note</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Notes</th>
                   <th className="px-4 py-3">Messages</th>
@@ -581,7 +625,15 @@ export default function AdminBookingsPage() {
                       {formatMoney(booking.booking_value_cents)}
                     </td>
                     <td className="px-4 py-3 capitalize">
-                      <p>{formatMoney(booking.commission_amount_cents)}</p>
+                      <p className="font-semibold text-[#0B3C5D]">
+                        {formatMoney(
+                          (booking.booking_value_cents || 0) -
+                            (booking.commission_amount_cents || 0),
+                        )}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Commission kept: {formatMoney(booking.commission_amount_cents)}
+                      </p>
                       <select
                         value={booking.commission_status || "unpaid"}
                         onChange={(e) =>
@@ -592,16 +644,84 @@ export default function AdminBookingsPage() {
                               admin_notes: booking.admin_notes,
                             },
                             false,
-                            e.target.value as "unpaid" | "paid" | "waived",
+                            {
+                              commissionStatus:
+                                e.target.value as VendorPayoutStatus,
+                            },
                           )
                         }
                         className="mt-2 rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none"
                         disabled={savingBookingId === booking.id}
                       >
                         <option value="unpaid">Unpaid</option>
+                        <option value="scheduled">Scheduled</option>
                         <option value="paid">Paid</option>
                         <option value="waived">Waived</option>
                       </select>
+                      <input
+                        type="date"
+                        value={booking.payout_scheduled_for || ""}
+                        onChange={(e) =>
+                          updateBooking(
+                            booking.id,
+                            {
+                              status: booking.status || "new",
+                              admin_notes: booking.admin_notes,
+                            },
+                            false,
+                            {
+                              payoutScheduledFor: e.target.value || null,
+                              commissionStatus:
+                                e.target.value &&
+                                (booking.commission_status || "unpaid") === "unpaid"
+                                  ? "scheduled"
+                                  : (booking.commission_status ||
+                                      "unpaid") as VendorPayoutStatus,
+                            },
+                          )
+                        }
+                        className="mt-2 w-36 rounded-lg border border-gray-300 px-2 py-1 text-xs outline-none"
+                        disabled={savingBookingId === booking.id}
+                      />
+                      {booking.payout_paid_at ? (
+                        <p className="mt-1 text-xs text-green-700">
+                          Paid {booking.payout_paid_at.slice(0, 10)}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <label className="sr-only">Payout note</label>
+                      <textarea
+                        value={booking.payout_note || ""}
+                        onChange={(e) => {
+                          const payoutNote = e.target.value;
+                          setBookings((currentBookings) =>
+                            currentBookings.map((currentBooking) =>
+                              currentBooking.id === booking.id
+                                ? {
+                                    ...currentBooking,
+                                    payout_note: payoutNote,
+                                  }
+                                : currentBooking,
+                            ),
+                          );
+                        }}
+                        onBlur={(e) =>
+                          updateBooking(
+                            booking.id,
+                            {
+                              status: booking.status || "new",
+                              admin_notes: booking.admin_notes,
+                            },
+                            false,
+                            { payoutNote: e.target.value || null },
+                          )
+                        }
+                        rows={2}
+                        className="min-w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none"
+                        placeholder="Payout note"
+                        disabled={savingBookingId === booking.id}
+                      />
                     </td>
                     <td className="px-4 py-3">
                       <select

@@ -46,14 +46,30 @@ export async function GET(request: Request) {
     return NextResponse.json({ bookings: [] });
   }
 
-  const { data: bookings, error } = await supabaseServer
+  const bookingSelectWithPayout =
+    "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, listing_id, deposit_status, booking_value_cents, commission_amount_cents, commission_status, payout_note, payout_scheduled_for, payout_paid_at, selected_addons, created_at";
+  const bookingResult = await supabaseServer
     .from("bookings")
-    .select(
-      "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, listing_id, deposit_status, booking_value_cents, selected_addons, created_at",
-    )
+    .select(bookingSelectWithPayout)
     .in("listing_id", listingIds)
     .order("created_at", { ascending: false })
     .limit(100);
+  let bookings = bookingResult.data as unknown[] | null;
+  let error = bookingResult.error;
+
+  if (error?.code === "42703") {
+    const fallback = await supabaseServer
+      .from("bookings")
+      .select(
+        "id, full_name, email, tour_date, tour_time, guests, guest_message, vendor_note, status, listing_id, deposit_status, booking_value_cents, commission_amount_cents, commission_status, selected_addons, created_at",
+      )
+      .in("listing_id", listingIds)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    bookings = fallback.data as unknown[] | null;
+    error = fallback.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

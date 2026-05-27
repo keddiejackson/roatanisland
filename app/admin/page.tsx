@@ -685,6 +685,7 @@ export default function AdminDashboardPage() {
                   <ExportCsvButton type="concierge_assignments" />
                   <ExportCsvButton type="concierge_quotes" />
                   <ExportCsvButton type="revenue" />
+                  <ExportCsvButton type="vendor_payouts" />
                 </div>
               </section>
             </>

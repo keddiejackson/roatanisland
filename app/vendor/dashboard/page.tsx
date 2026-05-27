@@ -23,6 +23,7 @@ import {
   formatBookingStatus,
   formatDepositStatus,
 } from "@/lib/booking-flow";
+import { getVendorPayoutSummary } from "@/lib/admin-revenue";
 import { getMonthCalendarDays } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 import {
@@ -101,6 +102,11 @@ type BookingRow = {
   status: string | null;
   deposit_status: string | null;
   booking_value_cents: number | null;
+  commission_amount_cents: number | null;
+  commission_status: string | null;
+  payout_note: string | null;
+  payout_scheduled_for: string | null;
+  payout_paid_at: string | null;
   selected_addons: { name?: string; price_cents?: number }[] | null;
 };
 
@@ -955,6 +961,10 @@ export default function VendorDashboardPage() {
     () => getVendorRevenueSummary({ bookings }),
     [bookings],
   );
+  const payoutSummary = useMemo(
+    () => getVendorPayoutSummary({ bookings }),
+    [bookings],
+  );
 
   const profileCompletionItems = useMemo(
     () =>
@@ -1147,6 +1157,62 @@ export default function VendorDashboardPage() {
             </span>
             . Add-ons make it easier to lift each booking without changing the
             main price.
+          </p>
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Payout tracker
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                See what is pending, scheduled, and paid.
+              </h2>
+            </div>
+            <p className="rounded-full bg-[#EEF7F6] px-4 py-2 text-sm font-bold text-[#0B3C5D]">
+              {payoutSummary.label}
+            </p>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                label: "Unpaid",
+                value: formatBookingCents(payoutSummary.unpaidCents),
+                text: `${payoutSummary.unpaidCount} payout${payoutSummary.unpaidCount === 1 ? "" : "s"}`,
+              },
+              {
+                label: "Scheduled",
+                value: formatBookingCents(payoutSummary.scheduledCents),
+                text: payoutSummary.nextScheduledDate
+                  ? `Next: ${payoutSummary.nextScheduledDate}`
+                  : `${payoutSummary.scheduledCount} scheduled`,
+              },
+              {
+                label: "Paid",
+                value: formatBookingCents(payoutSummary.paidCents),
+                text: `${payoutSummary.paidCount} marked paid`,
+              },
+              {
+                label: "Waived",
+                value: formatBookingCents(payoutSummary.waivedCents),
+                text: `${payoutSummary.waivedCount} waived`,
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl bg-[#F7F3EA] p-4">
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                  {item.label}
+                </p>
+                <p className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                  {item.value}
+                </p>
+                <p className="mt-1 text-sm text-gray-600">{item.text}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-sm leading-6 text-gray-600">
+            Payouts are updated by the RoatanIsland.life admin after bookings
+            are confirmed, completed, or reconciled.
           </p>
         </section>
 
