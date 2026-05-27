@@ -28,6 +28,12 @@ type VendorListingRequest = {
   availabilityNote?: string;
   maxGuests?: number | string;
   minimumNoticeHours?: number | string;
+  bookingCutoffHours?: number | string;
+  autoConfirmBookings?: boolean;
+  privateBookingMode?: boolean;
+  availableWeekdays?: unknown;
+  seasonStartDate?: string;
+  seasonEndDate?: string;
   latitude?: number | string;
   longitude?: number | string;
 };
@@ -59,6 +65,23 @@ function cleanTextList(values: unknown, limit = 12) {
     .slice(0, limit);
 }
 
+function cleanWeekdays(values: unknown) {
+  if (!Array.isArray(values)) {
+    return [0, 1, 2, 3, 4, 5, 6];
+  }
+
+  const days = values
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6);
+
+  return days.length > 0 ? Array.from(new Set(days)).sort() : [0, 1, 2, 3, 4, 5, 6];
+}
+
+function cleanMonthDay(value: string | undefined) {
+  const trimmed = value?.trim() || "";
+  return /^\d{2}-\d{2}$/.test(trimmed) ? trimmed : null;
+}
+
 async function getSessionFromRequest(request: Request) {
   const authorization = request.headers.get("authorization");
   const token = authorization?.replace(/^Bearer\s+/i, "");
@@ -82,6 +105,9 @@ export async function POST(request: Request) {
   const minimumNoticeHours = body.minimumNoticeHours
     ? Number(body.minimumNoticeHours)
     : null;
+  const bookingCutoffHours = body.bookingCutoffHours
+    ? Number(body.bookingCutoffHours)
+    : null;
   const latitude = body.latitude ? Number(body.latitude) : null;
   const longitude = body.longitude ? Number(body.longitude) : null;
 
@@ -101,7 +127,9 @@ export async function POST(request: Request) {
   if (
     (maxGuests !== null && (!Number.isInteger(maxGuests) || maxGuests < 1)) ||
     (minimumNoticeHours !== null &&
-      (!Number.isInteger(minimumNoticeHours) || minimumNoticeHours < 0))
+      (!Number.isInteger(minimumNoticeHours) || minimumNoticeHours < 0)) ||
+    (bookingCutoffHours !== null &&
+      (!Number.isInteger(bookingCutoffHours) || bookingCutoffHours < 0))
   ) {
     return NextResponse.json(
       { error: "Please check the capacity and notice settings." },
@@ -208,6 +236,12 @@ export async function POST(request: Request) {
         availability_note: body.availabilityNote?.trim() || null,
         max_guests: maxGuests,
         minimum_notice_hours: minimumNoticeHours,
+        booking_cutoff_hours: bookingCutoffHours,
+        auto_confirm_bookings: body.autoConfirmBookings === true,
+        private_booking_mode: body.privateBookingMode === true,
+        available_weekdays: cleanWeekdays(body.availableWeekdays),
+        season_start_date: cleanMonthDay(body.seasonStartDate),
+        season_end_date: cleanMonthDay(body.seasonEndDate),
         latitude,
         longitude,
         is_active: false,

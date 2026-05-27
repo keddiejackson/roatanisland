@@ -13,6 +13,7 @@ import {
 } from "@/lib/booking-flow";
 import {
   checkBookingAvailability,
+  getAvailabilityPreviewDays,
   getMinimumNoticeDateValue,
   normalizeTourTimes,
 } from "@/lib/booking-availability";
@@ -39,6 +40,12 @@ type ListingSummary = {
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
+  booking_cutoff_hours: number | null;
+  auto_confirm_bookings: boolean | null;
+  private_booking_mode: boolean | null;
+  available_weekdays: number[] | null;
+  season_start_date: string | null;
+  season_end_date: string | null;
 };
 
 type Addon = {
@@ -226,7 +233,7 @@ export default function BookingForm({
       const { data, error } = await supabase
         .from("listings")
         .select(
-          "title, price, location, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours",
+          "title, price, location, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date",
         )
         .eq("id", listingId)
         .single();
@@ -258,12 +265,24 @@ export default function BookingForm({
               | "availability_note"
               | "max_guests"
               | "minimum_notice_hours"
+              | "booking_cutoff_hours"
+              | "auto_confirm_bookings"
+              | "private_booking_mode"
+              | "available_weekdays"
+              | "season_start_date"
+              | "season_end_date"
             >),
             tour_times: DEFAULT_TOUR_TIMES,
             blocked_dates: [],
             availability_note: null,
             max_guests: null,
             minimum_notice_hours: null,
+            booking_cutoff_hours: null,
+            auto_confirm_bookings: false,
+            private_booking_mode: false,
+            available_weekdays: null,
+            season_start_date: null,
+            season_end_date: null,
             id: listingId,
           });
         }
@@ -329,11 +348,6 @@ export default function BookingForm({
       ? []
       : DEFAULT_TOUR_TIMES;
   const hasListedTourTimes = availableTourTimes.length > 0;
-  const minimumTourDate =
-    listing?.minimum_notice_hours !== null &&
-    listing?.minimum_notice_hours !== undefined
-      ? getMinimumNoticeDateValue(listing.minimum_notice_hours)
-      : undefined;
   const guestCount = Number(guests);
   const selectedAddons = useMemo(
     () => addons.filter((addon) => selectedAddonIds.includes(addon.id)),
@@ -351,6 +365,10 @@ export default function BookingForm({
       }),
     [listing, previewGuestCount, tourDate, tourTime],
   );
+  const minimumTourDate =
+    localAvailabilityCheck.bookingCutoffHours !== null
+      ? getMinimumNoticeDateValue(localAvailabilityCheck.bookingCutoffHours)
+      : undefined;
   const estimatedTotalCents = estimateBookingTotalCents({
     price: listing?.price,
     guests: previewGuestCount,
@@ -399,6 +417,16 @@ export default function BookingForm({
     tourTime: recoveredDraft?.tourTime || tourTime,
     guests: recoveredDraft?.guests || guests,
   });
+  const availabilityPreviewDays = useMemo(
+    () =>
+      getAvailabilityPreviewDays({
+        listing,
+        listingId,
+        startDate: minimumTourDate,
+        count: 14,
+      }),
+    [listing, listingId, minimumTourDate],
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -812,10 +840,11 @@ export default function BookingForm({
               className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               required
             />
-            {listing?.minimum_notice_hours ? (
+            {localAvailabilityCheck.bookingCutoffHours ? (
               <p className="mt-2 text-sm text-gray-500">
-                Please book at least {listing.minimum_notice_hours} hours in
-                advance.
+                Please book at least{" "}
+                {localAvailabilityCheck.bookingCutoffHours}{" "}
+                hours in advance.
               </p>
             ) : null}
             {dateWarning ? (
@@ -829,6 +858,59 @@ export default function BookingForm({
               </p>
             ) : null}
           </div>
+
+          {listing ? (
+            <section className="rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4 md:col-span-2">
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                    Availability calendar
+                  </p>
+                  <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                    Pick an open day.
+                  </h3>
+                </div>
+                {listing.auto_confirm_bookings ? (
+                  <span className="rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
+                    Auto-confirm eligible
+                  </span>
+                ) : null}
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
+                {availabilityPreviewDays.map((day) => (
+                  <button
+                    key={day.date}
+                    type="button"
+                    onClick={() => {
+                      if (day.status !== "blocked") {
+                        setTourDate(day.date);
+                        if (!tourTime && availableTourTimes[0]) {
+                          setTourTime(availableTourTimes[0]);
+                        }
+                      }
+                    }}
+                    disabled={day.status === "blocked"}
+                    className={`min-h-20 rounded-xl border p-3 text-left text-xs transition ${
+                      day.status === "blocked"
+                        ? "border-red-100 bg-red-50 text-red-700 opacity-70"
+                        : day.status === "limited"
+                          ? "border-[#D6B56D]/40 bg-white text-[#7A5B12] hover:border-[#D6B56D]"
+                          : "border-[#00A8A8]/25 bg-white text-[#0B3C5D] hover:border-[#00A8A8]"
+                    }`}
+                  >
+                    <span className="block font-black">{day.dayLabel}</span>
+                    <span className="mt-1 block font-semibold">{day.label}</span>
+                  </button>
+                ))}
+              </div>
+              {listing.private_booking_mode ? (
+                <p className="mt-3 text-sm font-semibold text-[#0B3C5D]">
+                  Private booking mode: once a time is reserved, that time closes
+                  for other guests.
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
           <div>
             <label className="mb-2 block font-medium">

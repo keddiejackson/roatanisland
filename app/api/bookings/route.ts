@@ -5,7 +5,10 @@ import {
   sendEmailNotification,
 } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
-import { checkBookingAvailability } from "@/lib/booking-availability";
+import {
+  checkBookingAvailability,
+  shouldAutoConfirmBooking,
+} from "@/lib/booking-availability";
 import { formatBookingCents } from "@/lib/booking-flow";
 import { logAppError } from "@/lib/error-log";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -26,6 +29,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as BookingRequest;
   const guests = Number(body.guests);
   const guestMessage = body.guestMessage?.trim().slice(0, 1000) || null;
+  let bookingStatus = "new";
   let estimatedBookingValueCents: number | null = null;
   let estimatedCommissionCents: number | null = null;
   let discountAmountCents: number | null = null;
@@ -50,7 +54,7 @@ export async function POST(request: Request) {
     const { data: listing, error: listingRulesError } = await supabaseServer
       .from("listings")
       .select(
-        "tour_times, max_guests, minimum_notice_hours, price, blocked_dates",
+        "tour_times, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date, price, blocked_dates",
       )
       .eq("id", body.listingId)
       .maybeSingle();
@@ -66,6 +70,12 @@ export async function POST(request: Request) {
       tour_times?: string[] | null;
       max_guests?: number | null;
       minimum_notice_hours?: number | null;
+      booking_cutoff_hours?: number | null;
+      auto_confirm_bookings?: boolean | null;
+      private_booking_mode?: boolean | null;
+      available_weekdays?: number[] | null;
+      season_start_date?: string | null;
+      season_end_date?: string | null;
       price?: number | null;
       blocked_dates?: string[] | null;
     } | null;
@@ -141,7 +151,7 @@ export async function POST(request: Request) {
 
     let reservedGuests = 0;
 
-    if (listingRules.max_guests) {
+    if (listingRules.max_guests || listingRules.private_booking_mode) {
       const { data: existingBookings, error: existingBookingsError } =
         await supabaseServer
           .from("bookings")
@@ -180,6 +190,15 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
+
+    if (
+      shouldAutoConfirmBooking({
+        listing: listingRules,
+        availability: availabilityCheck,
+      })
+    ) {
+      bookingStatus = "confirmed";
+    }
   }
 
   const { data: booking, error } = await supabaseServer
@@ -191,6 +210,7 @@ export async function POST(request: Request) {
         tour_date: body.tourDate,
         tour_time: body.tourTime,
         guests,
+        status: bookingStatus,
         guest_message: guestMessage,
         listing_id: body.listingId || null,
         booking_value_cents: estimatedBookingValueCents,
@@ -202,7 +222,7 @@ export async function POST(request: Request) {
       },
     ])
     .select(
-      "id, full_name, email, tour_date, tour_time, guests, guest_message, listing_id",
+      "id, full_name, email, tour_date, tour_time, guests, guest_message, listing_id, status",
     )
     .single();
 
@@ -225,8 +245,11 @@ export async function POST(request: Request) {
       event_type: "created",
       actor_role: "guest",
       actor_email: booking.email,
-      to_status: "new",
-      note: "Booking request submitted.",
+      to_status: booking.status || "new",
+      note:
+        booking.status === "confirmed"
+          ? "Booking request auto-confirmed by listing rules."
+          : "Booking request submitted.",
     },
   ]);
 

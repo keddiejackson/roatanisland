@@ -7,6 +7,11 @@ type ListingAvailabilityRules = {
   max_guests: number | null;
   blocked_dates: string[] | null;
   minimum_notice_hours: number | null;
+  booking_cutoff_hours: number | null;
+  private_booking_mode: boolean | null;
+  available_weekdays: number[] | null;
+  season_start_date: string | null;
+  season_end_date: string | null;
 };
 
 export async function GET(request: Request) {
@@ -26,7 +31,9 @@ export async function GET(request: Request) {
 
   const { data: listing, error: listingError } = await supabaseServer
     .from("listings")
-    .select("tour_times, max_guests, blocked_dates, minimum_notice_hours")
+    .select(
+      "tour_times, max_guests, blocked_dates, minimum_notice_hours, booking_cutoff_hours, private_booking_mode, available_weekdays, season_start_date, season_end_date",
+    )
     .eq("id", listingId)
     .maybeSingle();
 

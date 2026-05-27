@@ -133,6 +133,12 @@ create table if not exists public.listings (
   availability_note text,
   max_guests integer,
   minimum_notice_hours integer,
+  booking_cutoff_hours integer,
+  auto_confirm_bookings boolean not null default false,
+  private_booking_mode boolean not null default false,
+  available_weekdays integer[] not null default array[0,1,2,3,4,5,6]::integer[],
+  season_start_date text,
+  season_end_date text,
   is_active boolean not null default true,
   approval_status text not null default 'approved' check (approval_status in ('pending', 'approved', 'rejected')),
   approval_note text,
@@ -175,6 +181,24 @@ add column if not exists max_guests integer;
 
 alter table public.listings
 add column if not exists minimum_notice_hours integer;
+
+alter table public.listings
+add column if not exists booking_cutoff_hours integer;
+
+alter table public.listings
+add column if not exists auto_confirm_bookings boolean not null default false;
+
+alter table public.listings
+add column if not exists private_booking_mode boolean not null default false;
+
+alter table public.listings
+add column if not exists available_weekdays integer[] not null default array[0,1,2,3,4,5,6]::integer[];
+
+alter table public.listings
+add column if not exists season_start_date text;
+
+alter table public.listings
+add column if not exists season_end_date text;
 
 create table if not exists public.bookings (
   id uuid primary key default gen_random_uuid(),

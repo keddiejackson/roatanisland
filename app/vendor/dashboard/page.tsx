@@ -80,6 +80,12 @@ type ListingRow = {
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
+  booking_cutoff_hours: number | null;
+  auto_confirm_bookings: boolean | null;
+  private_booking_mode: boolean | null;
+  available_weekdays: number[] | null;
+  season_start_date: string | null;
+  season_end_date: string | null;
   latitude: number | null;
   longitude: number | null;
 };
@@ -146,6 +152,44 @@ type VendorDocument = {
 
 function currentMonthValue() {
   return new Date().toISOString().slice(0, 7);
+}
+
+const WEEKDAY_OPTIONS = [
+  ["0", "Sun"],
+  ["1", "Mon"],
+  ["2", "Tue"],
+  ["3", "Wed"],
+  ["4", "Thu"],
+  ["5", "Fri"],
+  ["6", "Sat"],
+];
+
+function weekdayValue(days: number[] | null | undefined) {
+  const normalized = days && days.length > 0 ? days : [0, 1, 2, 3, 4, 5, 6];
+  return normalized.join(",");
+}
+
+function parseWeekdayValue(value: string) {
+  const days = value
+    .split(",")
+    .map((day) => Number(day))
+    .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+
+  return days.length > 0 ? Array.from(new Set(days)).sort() : [0, 1, 2, 3, 4, 5, 6];
+}
+
+function toggleWeekdayValue(value: string, day: string) {
+  const days = new Set(parseWeekdayValue(value).map(String));
+  if (days.has(day)) {
+    days.delete(day);
+  } else {
+    days.add(day);
+  }
+
+  return Array.from(days)
+    .map((item) => Number(item))
+    .sort()
+    .join(",");
 }
 
 function summarizeThreads(
@@ -230,6 +274,12 @@ export default function VendorDashboardPage() {
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
+  const [bookingCutoffByListing, setBookingCutoffByListing] = useState<Record<string, string>>({});
+  const [autoConfirmByListing, setAutoConfirmByListing] = useState<Record<string, boolean>>({});
+  const [privateModeByListing, setPrivateModeByListing] = useState<Record<string, boolean>>({});
+  const [weekdaysByListing, setWeekdaysByListing] = useState<Record<string, string>>({});
+  const [seasonStartByListing, setSeasonStartByListing] = useState<Record<string, string>>({});
+  const [seasonEndByListing, setSeasonEndByListing] = useState<Record<string, string>>({});
   const [expandedListingIds, setExpandedListingIds] = useState<Record<string, boolean>>({});
   const [selectedBookingId, setSelectedBookingId] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
@@ -278,7 +328,7 @@ export default function VendorDashboardPage() {
       });
 
       const listingSelectWithAvailability =
-        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, approval_status, approval_note, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, latitude, longitude";
+        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, approval_status, approval_note, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date, latitude, longitude";
       const listingResult = await supabase
         .from("listings")
         .select(listingSelectWithAvailability)
@@ -309,6 +359,12 @@ export default function VendorDashboardPage() {
         availability_note: listing.availability_note || null,
         max_guests: listing.max_guests ?? null,
         minimum_notice_hours: listing.minimum_notice_hours ?? null,
+        booking_cutoff_hours: listing.booking_cutoff_hours ?? null,
+        auto_confirm_bookings: listing.auto_confirm_bookings ?? false,
+        private_booking_mode: listing.private_booking_mode ?? false,
+        available_weekdays: listing.available_weekdays || [0, 1, 2, 3, 4, 5, 6],
+        season_start_date: listing.season_start_date || null,
+        season_end_date: listing.season_end_date || null,
       })) as ListingRow[];
 
       setListings(rows);
@@ -373,6 +429,44 @@ export default function VendorDashboardPage() {
               ? String(listing.minimum_notice_hours)
               : "",
           ]),
+        ),
+      );
+      setBookingCutoffByListing(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            listing.booking_cutoff_hours !== null
+              ? String(listing.booking_cutoff_hours)
+              : "",
+          ]),
+        ),
+      );
+      setAutoConfirmByListing(
+        Object.fromEntries(
+          rows.map((listing) => [listing.id, listing.auto_confirm_bookings === true]),
+        ),
+      );
+      setPrivateModeByListing(
+        Object.fromEntries(
+          rows.map((listing) => [listing.id, listing.private_booking_mode === true]),
+        ),
+      );
+      setWeekdaysByListing(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            weekdayValue(listing.available_weekdays),
+          ]),
+        ),
+      );
+      setSeasonStartByListing(
+        Object.fromEntries(
+          rows.map((listing) => [listing.id, listing.season_start_date || ""]),
+        ),
+      );
+      setSeasonEndByListing(
+        Object.fromEntries(
+          rows.map((listing) => [listing.id, listing.season_end_date || ""]),
         ),
       );
       const listingIds = rows.map((listing) => listing.id);
@@ -639,6 +733,34 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function updateBookingCutoff(listingId: string, value: string) {
+    setBookingCutoffByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: value,
+    }));
+  }
+
+  function updateWeekdays(listingId: string, value: string) {
+    setWeekdaysByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: value,
+    }));
+  }
+
+  function updateSeasonStart(listingId: string, value: string) {
+    setSeasonStartByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: value,
+    }));
+  }
+
+  function updateSeasonEnd(listingId: string, value: string) {
+    setSeasonEndByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: value,
+    }));
+  }
+
   function toggleListingEditor(listingId: string) {
     setExpandedListingIds((currentIds) => ({
       ...currentIds,
@@ -747,6 +869,12 @@ export default function VendorDashboardPage() {
         availabilityNote: availabilityNotes[listingId] || "",
         maxGuests: maxGuestsByListing[listingId] || "",
         minimumNoticeHours: noticeHoursByListing[listingId] || "",
+        bookingCutoffHours: bookingCutoffByListing[listingId] || "",
+        autoConfirmBookings: autoConfirmByListing[listingId] === true,
+        privateBookingMode: privateModeByListing[listingId] === true,
+        availableWeekdays: parseWeekdayValue(weekdaysByListing[listingId] || ""),
+        seasonStartDate: seasonStartByListing[listingId] || "",
+        seasonEndDate: seasonEndByListing[listingId] || "",
         latitude: draft.latitude,
         longitude: draft.longitude,
       }),
@@ -777,6 +905,12 @@ export default function VendorDashboardPage() {
               availability_note: result.listing.availability_note || null,
               max_guests: result.listing.max_guests,
               minimum_notice_hours: result.listing.minimum_notice_hours,
+              booking_cutoff_hours: result.listing.booking_cutoff_hours,
+              auto_confirm_bookings: result.listing.auto_confirm_bookings,
+              private_booking_mode: result.listing.private_booking_mode,
+              available_weekdays: result.listing.available_weekdays || [0, 1, 2, 3, 4, 5, 6],
+              season_start_date: result.listing.season_start_date || null,
+              season_end_date: result.listing.season_end_date || null,
               is_active: false,
               approval_status: result.listing.approval_status || "pending",
               approval_note: result.listing.approval_note || null,
@@ -823,6 +957,33 @@ export default function VendorDashboardPage() {
         result.listing.minimum_notice_hours !== null
           ? String(result.listing.minimum_notice_hours)
           : "",
+    }));
+    setBookingCutoffByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]:
+        result.listing.booking_cutoff_hours !== null
+          ? String(result.listing.booking_cutoff_hours)
+          : "",
+    }));
+    setAutoConfirmByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: result.listing.auto_confirm_bookings === true,
+    }));
+    setPrivateModeByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: result.listing.private_booking_mode === true,
+    }));
+    setWeekdaysByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: weekdayValue(result.listing.available_weekdays),
+    }));
+    setSeasonStartByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: result.listing.season_start_date || "",
+    }));
+    setSeasonEndByListing((currentValues) => ({
+      ...currentValues,
+      [listingId]: result.listing.season_end_date || "",
     }));
   }
 
@@ -2878,6 +3039,113 @@ export default function VendorDashboardPage() {
                             placeholder="24"
                             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
                           />
+                        </div>
+                      </div>
+                      <div className="mt-4 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4">
+                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                          Smart booking rules
+                        </p>
+                        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                              Booking cutoff hours
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              value={bookingCutoffByListing[listing.id] || ""}
+                              onChange={(e) =>
+                                updateBookingCutoff(listing.id, e.target.value)
+                              }
+                              placeholder="24"
+                              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                              Season start
+                            </label>
+                            <input
+                              value={seasonStartByListing[listing.id] || ""}
+                              onChange={(e) =>
+                                updateSeasonStart(listing.id, e.target.value)
+                              }
+                              placeholder="06-01"
+                              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                              Season end
+                            </label>
+                            <input
+                              value={seasonEndByListing[listing.id] || ""}
+                              onChange={(e) =>
+                                updateSeasonEnd(listing.id, e.target.value)
+                              }
+                              placeholder="08-31"
+                              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-4">
+                          <p className="mb-2 text-sm font-semibold text-[#0B3C5D]">
+                            Available weekdays
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {WEEKDAY_OPTIONS.map(([value, label]) => (
+                              <button
+                                key={value}
+                                type="button"
+                                onClick={() =>
+                                  updateWeekdays(
+                                    listing.id,
+                                    toggleWeekdayValue(
+                                      weekdaysByListing[listing.id] || "",
+                                      value,
+                                    ),
+                                  )
+                                }
+                                className={`rounded-full border px-3 py-1 text-sm font-bold ${
+                                  parseWeekdayValue(
+                                    weekdaysByListing[listing.id] || "",
+                                  ).includes(Number(value))
+                                    ? "border-[#00A8A8] bg-white text-[#0B3C5D]"
+                                    : "border-gray-200 bg-white/60 text-gray-400"
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <label className="flex items-center gap-3 rounded-lg border border-[#D6B56D]/30 bg-white px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+                            <input
+                              type="checkbox"
+                              checked={autoConfirmByListing[listing.id] === true}
+                              onChange={(e) =>
+                                setAutoConfirmByListing((currentValues) => ({
+                                  ...currentValues,
+                                  [listing.id]: e.target.checked,
+                                }))
+                              }
+                            />
+                            Auto-confirm available bookings
+                          </label>
+                          <label className="flex items-center gap-3 rounded-lg border border-[#D6B56D]/30 bg-white px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+                            <input
+                              type="checkbox"
+                              checked={privateModeByListing[listing.id] === true}
+                              onChange={(e) =>
+                                setPrivateModeByListing((currentValues) => ({
+                                  ...currentValues,
+                                  [listing.id]: e.target.checked,
+                                }))
+                              }
+                            />
+                            Private booking mode
+                          </label>
                         </div>
                       </div>
                       <div className="mt-4 rounded-xl bg-[#F7F3EA] p-4">

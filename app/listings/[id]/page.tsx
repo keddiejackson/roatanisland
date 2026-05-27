@@ -17,6 +17,7 @@ import {
   buildListingHighlights,
   getTourTimeLabels,
 } from "@/lib/listing-detail";
+import { getAvailabilityPreviewDays } from "@/lib/booking-availability";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getListingReadinessSummary } from "@/lib/vendor-dashboard";
 
@@ -31,9 +32,16 @@ type Listing = {
   gallery_image_urls: string[] | null;
   category: string | null;
   tour_times: string[] | null;
+  blocked_dates: string[] | null;
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
+  booking_cutoff_hours: number | null;
+  auto_confirm_bookings: boolean | null;
+  private_booking_mode: boolean | null;
+  available_weekdays: number[] | null;
+  season_start_date: string | null;
+  season_end_date: string | null;
   is_active: boolean | null;
   rating: number | null;
   reviews_count: number | null;
@@ -240,6 +248,11 @@ export default async function ListingPage({
     minimumNoticeHours: listing.minimum_notice_hours,
   });
   const readiness = getListingReadinessSummary(listing);
+  const availabilityPreviewDays = getAvailabilityPreviewDays({
+    listing,
+    listingId: listing.id,
+    count: 10,
+  });
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
@@ -645,6 +658,43 @@ export default async function ListingPage({
                 </span>
               ))}
             </div>
+          </div>
+
+          <div className="mt-5 border-t border-gray-100 pt-5">
+            <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#0B3C5D]">
+              Upcoming availability
+            </p>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {availabilityPreviewDays.slice(0, 6).map((day) =>
+                day.status === "blocked" ? (
+                  <div
+                    key={day.date}
+                    className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-700"
+                  >
+                    <p className="font-black">{day.dayLabel}</p>
+                    <p className="mt-1 font-semibold">Unavailable</p>
+                  </div>
+                ) : (
+                  <Link
+                    key={day.date}
+                    href={day.href}
+                    className={`rounded-lg border px-3 py-2 text-xs transition ${
+                      day.status === "limited"
+                        ? "border-[#D6B56D]/40 bg-[#FFF8E8] text-[#7A5B12]"
+                        : "border-[#00A8A8]/25 bg-[#EEF7F6] text-[#0B3C5D]"
+                    }`}
+                  >
+                    <p className="font-black">{day.dayLabel}</p>
+                    <p className="mt-1 font-semibold">{day.label}</p>
+                  </Link>
+                ),
+              )}
+            </div>
+            {listing.auto_confirm_bookings ? (
+              <p className="mt-3 rounded-lg bg-[#EEF7F6] px-3 py-2 text-xs font-bold text-[#0B3C5D]">
+                Eligible open slots can auto-confirm after request.
+              </p>
+            ) : null}
           </div>
 
           <div className="mt-5 border-t border-gray-100 pt-5">

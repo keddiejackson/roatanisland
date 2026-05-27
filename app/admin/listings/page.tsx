@@ -22,6 +22,12 @@ type ListingRow = {
   availability_note: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
+  booking_cutoff_hours: number | null;
+  auto_confirm_bookings: boolean | null;
+  private_booking_mode: boolean | null;
+  available_weekdays: number[] | null;
+  season_start_date: string | null;
+  season_end_date: string | null;
   is_active: boolean | null;
   is_featured: boolean | null;
   latitude: number | null;
@@ -47,11 +53,55 @@ type ListingDraft = {
   availability_note: string;
   max_guests: string;
   minimum_notice_hours: string;
+  booking_cutoff_hours: string;
+  auto_confirm_bookings: boolean;
+  private_booking_mode: boolean;
+  available_weekdays: string;
+  season_start_date: string;
+  season_end_date: string;
   is_active: boolean;
   is_featured: boolean;
   latitude: string;
   longitude: string;
 };
+
+const WEEKDAY_OPTIONS = [
+  ["0", "Sun"],
+  ["1", "Mon"],
+  ["2", "Tue"],
+  ["3", "Wed"],
+  ["4", "Thu"],
+  ["5", "Fri"],
+  ["6", "Sat"],
+];
+
+function weekdayValue(days: number[] | null | undefined) {
+  const normalized = days && days.length > 0 ? days : [0, 1, 2, 3, 4, 5, 6];
+  return normalized.join(",");
+}
+
+function parseWeekdayValue(value: string) {
+  const days = value
+    .split(",")
+    .map((day) => Number(day))
+    .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6);
+
+  return days.length > 0 ? Array.from(new Set(days)).sort() : [0, 1, 2, 3, 4, 5, 6];
+}
+
+function toggleWeekdayValue(value: string, day: string) {
+  const days = new Set(parseWeekdayValue(value).map(String));
+  if (days.has(day)) {
+    days.delete(day);
+  } else {
+    days.add(day);
+  }
+
+  return Array.from(days)
+    .map((item) => Number(item))
+    .sort()
+    .join(",");
+}
 
 function toDraft(listing: ListingRow): ListingDraft {
   return {
@@ -73,6 +123,15 @@ function toDraft(listing: ListingRow): ListingDraft {
       listing.minimum_notice_hours !== null
         ? String(listing.minimum_notice_hours)
         : "",
+    booking_cutoff_hours:
+      listing.booking_cutoff_hours !== null
+        ? String(listing.booking_cutoff_hours)
+        : "",
+    auto_confirm_bookings: listing.auto_confirm_bookings ?? false,
+    private_booking_mode: listing.private_booking_mode ?? false,
+    available_weekdays: weekdayValue(listing.available_weekdays),
+    season_start_date: listing.season_start_date || "",
+    season_end_date: listing.season_end_date || "",
     is_active: listing.is_active ?? true,
     is_featured: listing.is_featured ?? false,
     latitude: listing.latitude === null ? "" : String(listing.latitude),
@@ -140,7 +199,7 @@ export default function AdminListingsPage() {
     async function fetchListings() {
       const { data, error } = await supabase
         .from("listings")
-        .select("id, vendor_id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, availability_note, max_guests, minimum_notice_hours, is_active, is_featured, latitude, longitude")
+        .select("id, vendor_id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, availability_note, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date, is_active, is_featured, latitude, longitude")
         .order("created_at", { ascending: false });
 
       if (error) {
@@ -153,6 +212,12 @@ export default function AdminListingsPage() {
           error.message.includes("availability_note") ||
           error.message.includes("max_guests") ||
           error.message.includes("minimum_notice_hours") ||
+          error.message.includes("booking_cutoff_hours") ||
+          error.message.includes("auto_confirm_bookings") ||
+          error.message.includes("private_booking_mode") ||
+          error.message.includes("available_weekdays") ||
+          error.message.includes("season_start_date") ||
+          error.message.includes("season_end_date") ||
           error.message.includes("latitude") ||
           error.message.includes("longitude") ||
           error.code === "42703";
@@ -185,6 +250,12 @@ export default function AdminListingsPage() {
           | "availability_note"
           | "max_guests"
           | "minimum_notice_hours"
+          | "booking_cutoff_hours"
+          | "auto_confirm_bookings"
+          | "private_booking_mode"
+          | "available_weekdays"
+          | "season_start_date"
+          | "season_end_date"
         >[]) || []).map((listing) => ({
           ...listing,
           vendor_id: null,
@@ -192,6 +263,12 @@ export default function AdminListingsPage() {
           availability_note: null,
           max_guests: null,
           minimum_notice_hours: null,
+          booking_cutoff_hours: null,
+          auto_confirm_bookings: false,
+          private_booking_mode: false,
+          available_weekdays: [0, 1, 2, 3, 4, 5, 6],
+          season_start_date: null,
+          season_end_date: null,
               is_active: true,
               is_featured: false,
               gallery_image_urls: [],
@@ -367,6 +444,10 @@ export default function AdminListingsPage() {
     const minimumNoticeHours = draft.minimum_notice_hours
       ? Number(draft.minimum_notice_hours)
       : null;
+    const bookingCutoffHours = draft.booking_cutoff_hours
+      ? Number(draft.booking_cutoff_hours)
+      : null;
+    const availableWeekdays = parseWeekdayValue(draft.available_weekdays);
     const latitude = draft.latitude ? Number(draft.latitude) : null;
     const longitude = draft.longitude ? Number(draft.longitude) : null;
 
@@ -390,6 +471,12 @@ export default function AdminListingsPage() {
           : {
               max_guests: maxGuests,
               minimum_notice_hours: minimumNoticeHours,
+              booking_cutoff_hours: bookingCutoffHours,
+              auto_confirm_bookings: draft.auto_confirm_bookings,
+              private_booking_mode: draft.private_booking_mode,
+              available_weekdays: availableWeekdays,
+              season_start_date: draft.season_start_date || null,
+              season_end_date: draft.season_end_date || null,
               latitude,
               longitude,
             }),
@@ -422,6 +509,12 @@ export default function AdminListingsPage() {
               availability_note: draft.availability_note || null,
               max_guests: maxGuests,
               minimum_notice_hours: minimumNoticeHours,
+              booking_cutoff_hours: bookingCutoffHours,
+              auto_confirm_bookings: draft.auto_confirm_bookings,
+              private_booking_mode: draft.private_booking_mode,
+              available_weekdays: availableWeekdays,
+              season_start_date: draft.season_start_date || null,
+              season_end_date: draft.season_end_date || null,
               latitude,
               longitude,
               is_active: draft.is_active,
@@ -832,6 +925,130 @@ export default function AdminListingsPage() {
                           }
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
                         />
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4">
+                      <p className="text-sm font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                        Smart booking rules
+                      </p>
+                      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+                        <div>
+                          <label className="mb-2 block text-sm font-medium">
+                            Booking cutoff hours
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={draft.booking_cutoff_hours}
+                            disabled={Boolean(setupMessage)}
+                            onChange={(e) =>
+                              updateDraft(
+                                listing.id,
+                                "booking_cutoff_hours",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="24"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-medium">
+                            Season start
+                          </label>
+                          <input
+                            value={draft.season_start_date}
+                            disabled={Boolean(setupMessage)}
+                            onChange={(e) =>
+                              updateDraft(
+                                listing.id,
+                                "season_start_date",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="06-01"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-medium">
+                            Season end
+                          </label>
+                          <input
+                            value={draft.season_end_date}
+                            disabled={Boolean(setupMessage)}
+                            onChange={(e) =>
+                              updateDraft(
+                                listing.id,
+                                "season_end_date",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="08-31"
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {WEEKDAY_OPTIONS.map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            disabled={Boolean(setupMessage)}
+                            onClick={() =>
+                              updateDraft(
+                                listing.id,
+                                "available_weekdays",
+                                toggleWeekdayValue(
+                                  draft.available_weekdays,
+                                  value,
+                                ),
+                              )
+                            }
+                            className={`rounded-full border px-3 py-1 text-sm font-bold ${
+                              parseWeekdayValue(draft.available_weekdays).includes(
+                                Number(value),
+                              )
+                                ? "border-[#00A8A8] bg-white text-[#0B3C5D]"
+                                : "border-gray-200 bg-white/60 text-gray-400"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <label className="flex items-center gap-3 rounded-lg border border-[#D6B56D]/30 bg-white px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+                          <input
+                            type="checkbox"
+                            checked={draft.auto_confirm_bookings}
+                            disabled={Boolean(setupMessage)}
+                            onChange={(e) =>
+                              updateDraft(
+                                listing.id,
+                                "auto_confirm_bookings",
+                                e.target.checked,
+                              )
+                            }
+                          />
+                          Auto-confirm available bookings
+                        </label>
+                        <label className="flex items-center gap-3 rounded-lg border border-[#D6B56D]/30 bg-white px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+                          <input
+                            type="checkbox"
+                            checked={draft.private_booking_mode}
+                            disabled={Boolean(setupMessage)}
+                            onChange={(e) =>
+                              updateDraft(
+                                listing.id,
+                                "private_booking_mode",
+                                e.target.checked,
+                              )
+                            }
+                          />
+                          Private booking mode
+                        </label>
                       </div>
                     </div>
 
