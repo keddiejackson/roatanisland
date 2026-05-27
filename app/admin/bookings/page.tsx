@@ -403,6 +403,7 @@ export default function AdminBookingsPage() {
 
             <div className="flex flex-wrap gap-2">
               <ExportCsvButton type="bookings" />
+              <ExportCsvButton type="vendor_payout_statements" />
               <button
                 onClick={async () => {
                   await supabase.auth.signOut();

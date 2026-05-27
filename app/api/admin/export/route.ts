@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   buildAdminRevenueExportRows,
   buildVendorPayoutExportRows,
+  buildVendorPayoutStatementExportRows,
 } from "@/lib/admin-revenue";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -19,7 +20,8 @@ type ExportType =
   | "concierge_assignments"
   | "concierge_quotes"
   | "revenue"
-  | "vendor_payouts";
+  | "vendor_payouts"
+  | "vendor_payout_statements";
 
 async function verifyAdmin(request: Request) {
   const token = request.headers
@@ -262,6 +264,29 @@ async function fetchRows(type: ExportType) {
     }) as Record<string, unknown>[];
   }
 
+  if (type === "vendor_payout_statements") {
+    const [bookingsResult, listingsResult, vendorsResult] = await Promise.all([
+      supabaseServer
+        .from("bookings")
+        .select(
+          "id, full_name, listing_id, status, deposit_status, booking_value_cents, commission_amount_cents, commission_status, payout_note, payout_scheduled_for, payout_paid_at, tour_date, tour_time, selected_addons",
+        )
+        .order("created_at", { ascending: false }),
+      supabaseServer.from("listings").select("id, title, vendor_id"),
+      supabaseServer.from("vendors").select("id, business_name, is_active"),
+    ]);
+
+    if (bookingsResult.error) throw new Error(bookingsResult.error.message);
+    if (listingsResult.error) throw new Error(listingsResult.error.message);
+    if (vendorsResult.error) throw new Error(vendorsResult.error.message);
+
+    return buildVendorPayoutStatementExportRows({
+      bookings: bookingsResult.data || [],
+      listings: listingsResult.data || [],
+      vendors: vendorsResult.data || [],
+    }) as Record<string, unknown>[];
+  }
+
   const { data, error } = await supabaseServer
     .from("vendors")
     .select(
@@ -301,6 +326,7 @@ export async function GET(request: Request) {
       "concierge_quotes",
       "revenue",
       "vendor_payouts",
+      "vendor_payout_statements",
     ].includes(type)
   ) {
     return NextResponse.json({ error: "Unknown export type." }, { status: 400 });

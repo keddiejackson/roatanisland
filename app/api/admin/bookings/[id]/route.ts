@@ -3,6 +3,10 @@ import {
   escapeHtml,
   sendEmailNotification,
 } from "@/lib/notifications";
+import {
+  buildVendorPayoutReceiptEmail,
+  getVendorPayoutReceipts,
+} from "@/lib/admin-revenue";
 import { logActivity } from "@/lib/activity-log";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -89,7 +93,7 @@ export async function PATCH(
 
   const { data: currentBooking } = await supabaseServer
     .from("bookings")
-    .select("status")
+    .select("status, commission_status")
     .eq("id", id)
     .maybeSingle();
 
@@ -112,7 +116,7 @@ export async function PATCH(
     })
     .eq("id", id)
     .select(
-      "id, full_name, email, tour_date, tour_time, guests, status, admin_notes, listing_id, commission_status, payout_note, payout_scheduled_for, payout_paid_at",
+      "id, full_name, email, tour_date, tour_time, guests, status, admin_notes, listing_id, booking_value_cents, commission_amount_cents, commission_status, payout_note, payout_scheduled_for, payout_paid_at",
     )
     .single();
 
@@ -135,16 +139,41 @@ export async function PATCH(
   }
 
   let listingTitle = "Roatan booking";
+  let payoutListing: { id: string; title: string; vendor_id: string | null } | null =
+    null;
+  let payoutVendor: {
+    id: string;
+    business_name: string | null;
+    email: string | null;
+  } | null = null;
 
   if (booking.listing_id) {
     const { data: listing } = await supabaseServer
       .from("listings")
-      .select("title")
+      .select("id, title, vendor_id")
       .eq("id", booking.listing_id)
       .maybeSingle();
 
     if (listing?.title) {
       listingTitle = listing.title;
+    }
+
+    payoutListing = {
+      id: booking.listing_id,
+      title: listing?.title || listingTitle,
+      vendor_id: listing?.vendor_id || null,
+    };
+
+    if (listing?.vendor_id) {
+      const { data: vendor } = await supabaseServer
+        .from("vendors")
+        .select("id, business_name, email")
+        .eq("id", listing.vendor_id)
+        .maybeSingle();
+
+      if (vendor) {
+        payoutVendor = vendor;
+      }
     }
   }
 
@@ -177,6 +206,36 @@ export async function PATCH(
         .filter(Boolean)
         .join("\n"),
     });
+  }
+
+  if (
+    body.commissionStatus === "paid" &&
+    currentBooking?.commission_status !== "paid" &&
+    payoutVendor?.email
+  ) {
+    // Vendor payout paid email
+    const [receipt] = getVendorPayoutReceipts({
+      bookings: [booking],
+      listings: payoutListing ? [payoutListing] : [],
+      vendors: [
+        {
+          id: payoutVendor.id,
+          business_name: payoutVendor.business_name || "Vendor",
+          is_active: true,
+        },
+      ],
+    });
+
+    if (receipt) {
+      const email = buildVendorPayoutReceiptEmail(receipt);
+
+      await sendEmailNotification({
+        to: payoutVendor.email,
+        subject: email.subject,
+        html: email.html,
+        text: email.text,
+      });
+    }
   }
 
   await supabaseServer.from("analytics_events").insert([

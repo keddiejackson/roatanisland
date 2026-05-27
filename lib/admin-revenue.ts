@@ -91,10 +91,49 @@ export type VendorPayoutSummary = {
 };
 
 export type VendorPayoutRow = BookingMoneyRow & {
+  vendorId: string;
+  tourDate: string | null;
+  tourTime: string | null;
   payoutStatus: VendorPayoutStatus;
   payoutNote: string | null;
   payoutScheduledFor: string | null;
   payoutPaidAt: string | null;
+};
+
+export type VendorPayoutStatement = {
+  statementId: string;
+  vendorId: string;
+  vendorName: string;
+  period: string;
+  bookingCount: number;
+  bookingValueCents: number;
+  commissionCents: number;
+  vendorPayoutCents: number;
+  paidCents: number;
+  scheduledCents: number;
+  unpaidCents: number;
+  waivedCents: number;
+  receiptCount: number;
+  lastPaidAt: string | null;
+  label: string;
+  rows: VendorPayoutRow[];
+};
+
+export type VendorPayoutReceipt = {
+  receiptId: string;
+  bookingId: string;
+  vendorId: string;
+  vendorName: string;
+  guestName: string;
+  listingTitle: string;
+  tourDate: string | null;
+  tourTime: string | null;
+  bookingValueCents: number;
+  commissionCents: number;
+  vendorPayoutCents: number;
+  payoutPaidAt: string | null;
+  payoutNote: string | null;
+  label: string;
 };
 
 function normalizeStatus(value?: string | null) {
@@ -164,12 +203,16 @@ function depositLabel(status?: string | null) {
   return "No deposit";
 }
 
-function moneyLabel(valueCents: number, suffix: string) {
-  return `${new Intl.NumberFormat("en-US", {
+function currencyLabel(valueCents: number) {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 0,
-  }).format(valueCents / 100)} ${suffix}`;
+  }).format(valueCents / 100);
+}
+
+function moneyLabel(valueCents: number, suffix: string) {
+  return `${currencyLabel(valueCents)} ${suffix}`;
 }
 
 function payoutStatus(booking: AdminRevenueBooking): VendorPayoutStatus {
@@ -180,6 +223,59 @@ function payoutStatus(booking: AdminRevenueBooking): VendorPayoutStatus {
   }
 
   return "unpaid";
+}
+
+function payoutPeriod(row: VendorPayoutRow) {
+  const dateSource = row.payoutPaidAt || row.payoutScheduledFor || row.tourDate;
+
+  return dateSource ? dateSource.slice(0, 7) : "unscheduled";
+}
+
+function payoutStatementLabel(statement: VendorPayoutStatement) {
+  if (
+    statement.paidCents > 0 &&
+    statement.scheduledCents === 0 &&
+    statement.unpaidCents === 0
+  ) {
+    return moneyLabel(statement.paidCents, `paid for ${statement.vendorName}`);
+  }
+
+  if (
+    statement.scheduledCents > 0 &&
+    statement.paidCents === 0 &&
+    statement.unpaidCents === 0
+  ) {
+    return moneyLabel(
+      statement.scheduledCents,
+      `scheduled for ${statement.vendorName}`,
+    );
+  }
+
+  if (
+    statement.unpaidCents > 0 &&
+    statement.paidCents === 0 &&
+    statement.scheduledCents === 0
+  ) {
+    return moneyLabel(statement.unpaidCents, `unpaid for ${statement.vendorName}`);
+  }
+
+  return moneyLabel(
+    statement.vendorPayoutCents,
+    `statement for ${statement.vendorName}`,
+  );
+}
+
+function receiptId(bookingId: string) {
+  return `PAY-${bookingId.slice(0, 8).toUpperCase()}`;
+}
+
+function escapeEmailValue(value: string | number | null | undefined) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
 export function getAdminRevenueSummary({
@@ -448,6 +544,7 @@ export function getVendorPayoutRows({
   commissionRate?: number;
 }): VendorPayoutRow[] {
   const bookingById = new Map(bookings.map((booking) => [booking.id, booking]));
+  const listingsById = listingById(listings);
 
   return getBookingMoneyRows({
     bookings,
@@ -456,15 +553,161 @@ export function getVendorPayoutRows({
     commissionRate,
   }).map((row) => {
     const booking = bookingById.get(row.bookingId);
+    const listing = booking?.listing_id
+      ? listingsById.get(booking.listing_id)
+      : null;
 
     return {
       ...row,
+      vendorId: listing?.vendor_id || "unassigned",
+      tourDate: booking?.tour_date || null,
+      tourTime: booking?.tour_time || null,
       payoutStatus: booking ? payoutStatus(booking) : "unpaid",
       payoutNote: booking?.payout_note || null,
       payoutScheduledFor: booking?.payout_scheduled_for || null,
       payoutPaidAt: booking?.payout_paid_at || null,
     };
   });
+}
+
+export function getVendorPayoutStatements({
+  bookings,
+  listings,
+  vendors,
+  commissionRate = 0.1,
+}: {
+  bookings: AdminRevenueBooking[];
+  listings: AdminRevenueListing[];
+  vendors: AdminRevenueVendor[];
+  commissionRate?: number;
+}): VendorPayoutStatement[] {
+  const statements = new Map<string, VendorPayoutStatement>();
+
+  for (const row of getVendorPayoutRows({
+    bookings,
+    listings,
+    vendors,
+    commissionRate,
+  })) {
+    const period = payoutPeriod(row);
+    const statementId = `${row.vendorId}-${period}`;
+    const existing =
+      statements.get(statementId) ||
+      ({
+        statementId,
+        vendorId: row.vendorId,
+        vendorName: row.vendorName,
+        period,
+        bookingCount: 0,
+        bookingValueCents: 0,
+        commissionCents: 0,
+        vendorPayoutCents: 0,
+        paidCents: 0,
+        scheduledCents: 0,
+        unpaidCents: 0,
+        waivedCents: 0,
+        receiptCount: 0,
+        lastPaidAt: null,
+        label: "",
+        rows: [],
+      } satisfies VendorPayoutStatement);
+
+    existing.bookingCount += 1;
+    existing.bookingValueCents += row.bookingValueCents;
+    existing.commissionCents += row.commissionCents;
+    existing.vendorPayoutCents += row.vendorPayoutCents;
+    existing.rows.push(row);
+
+    if (row.payoutStatus === "paid") {
+      existing.paidCents += row.vendorPayoutCents;
+      existing.receiptCount += 1;
+
+      if (
+        row.payoutPaidAt &&
+        (!existing.lastPaidAt || row.payoutPaidAt > existing.lastPaidAt)
+      ) {
+        existing.lastPaidAt = row.payoutPaidAt;
+      }
+    } else if (row.payoutStatus === "scheduled") {
+      existing.scheduledCents += row.vendorPayoutCents;
+    } else if (row.payoutStatus === "waived") {
+      existing.waivedCents += row.vendorPayoutCents;
+    } else {
+      existing.unpaidCents += row.vendorPayoutCents;
+    }
+
+    statements.set(statementId, existing);
+  }
+
+  return [...statements.values()]
+    .map((statement) => ({
+      ...statement,
+      label: payoutStatementLabel(statement),
+      rows: [...statement.rows].sort(
+        (first, second) =>
+          (second.payoutPaidAt || second.payoutScheduledFor || second.tourDate || "")
+            .localeCompare(
+              first.payoutPaidAt || first.payoutScheduledFor || first.tourDate || "",
+            ) || first.guestName.localeCompare(second.guestName),
+      ),
+    }))
+    .sort((first, second) => {
+      if (first.period === "unscheduled" && second.period !== "unscheduled") {
+        return 1;
+      }
+
+      if (second.period === "unscheduled" && first.period !== "unscheduled") {
+        return -1;
+      }
+
+      return (
+        second.period.localeCompare(first.period) ||
+        second.paidCents - first.paidCents ||
+        second.scheduledCents - first.scheduledCents ||
+        second.unpaidCents - first.unpaidCents ||
+        first.vendorName.localeCompare(second.vendorName)
+      );
+    });
+}
+
+export function getVendorPayoutReceipts({
+  bookings,
+  listings,
+  vendors,
+  commissionRate = 0.1,
+}: {
+  bookings: AdminRevenueBooking[];
+  listings: AdminRevenueListing[];
+  vendors: AdminRevenueVendor[];
+  commissionRate?: number;
+}): VendorPayoutReceipt[] {
+  return getVendorPayoutRows({ bookings, listings, vendors, commissionRate })
+    .filter((row) => row.payoutStatus === "paid")
+    .map((row) => {
+      const id = receiptId(row.bookingId);
+
+      return {
+        receiptId: id,
+        bookingId: row.bookingId,
+        vendorId: row.vendorId,
+        vendorName: row.vendorName,
+        guestName: row.guestName,
+        listingTitle: row.listingTitle,
+        tourDate: row.tourDate,
+        tourTime: row.tourTime,
+        bookingValueCents: row.bookingValueCents,
+        commissionCents: row.commissionCents,
+        vendorPayoutCents: row.vendorPayoutCents,
+        payoutPaidAt: row.payoutPaidAt,
+        payoutNote: row.payoutNote,
+        label: `Payout receipt ${id}`,
+      };
+    })
+    .sort(
+      (first, second) =>
+        (second.payoutPaidAt || "").localeCompare(first.payoutPaidAt || "") ||
+        first.vendorName.localeCompare(second.vendorName),
+    );
 }
 
 export function buildVendorPayoutExportRows({
@@ -494,4 +737,87 @@ export function buildVendorPayoutExportRows({
       payout_note: row.payoutNote,
     }),
   );
+}
+
+export function buildVendorPayoutStatementExportRows({
+  bookings,
+  listings,
+  vendors,
+  commissionRate = 0.1,
+}: {
+  bookings: AdminRevenueBooking[];
+  listings: AdminRevenueListing[];
+  vendors: AdminRevenueVendor[];
+  commissionRate?: number;
+}) {
+  return getVendorPayoutStatements({
+    bookings,
+    listings,
+    vendors,
+    commissionRate,
+  }).map((statement) => ({
+    statement_id: statement.statementId,
+    vendor: statement.vendorName,
+    period: statement.period,
+    booking_count: statement.bookingCount,
+    booking_value_cents: statement.bookingValueCents,
+    platform_commission_cents: statement.commissionCents,
+    vendor_payout_cents: statement.vendorPayoutCents,
+    paid_cents: statement.paidCents,
+    scheduled_cents: statement.scheduledCents,
+    unpaid_cents: statement.unpaidCents,
+    receipt_count: statement.receiptCount,
+    last_paid_at: statement.lastPaidAt,
+    label: statement.label,
+  }));
+}
+
+export function buildVendorPayoutReceiptEmail(receipt: VendorPayoutReceipt) {
+  const rows: [string, string | number | null][] = [
+    ["Receipt", receipt.receiptId],
+    ["Vendor", receipt.vendorName],
+    ["Listing", receipt.listingTitle],
+    ["Guest", receipt.guestName],
+    ["Tour date", receipt.tourDate],
+    ["Tour time", receipt.tourTime],
+    ["Booking value", currencyLabel(receipt.bookingValueCents)],
+    ["Platform commission", currencyLabel(receipt.commissionCents)],
+    ["Vendor payout", currencyLabel(receipt.vendorPayoutCents)],
+    ["Paid at", receipt.payoutPaidAt],
+  ];
+  const htmlRows = rows
+    .map(
+      ([label, value]) => `
+        <tr>
+          <td style="padding:10px 0;color:#64748b">${escapeEmailValue(label)}</td>
+          <td style="padding:10px 0;text-align:right;font-weight:700;color:#0b3c5d">${escapeEmailValue(value)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+  const note = receipt.payoutNote
+    ? `<p style="margin-top:18px"><strong>Note:</strong> ${escapeEmailValue(receipt.payoutNote)}</p>`
+    : "";
+
+  return {
+    subject: receipt.label,
+    html: `
+      <p>Your RoatanIsland.life vendor payout has been marked paid.</p>
+      <table style="width:100%;border-collapse:collapse">${htmlRows}</table>
+      ${note}
+    `,
+    text: [
+      receipt.label,
+      `Vendor: ${receipt.vendorName}`,
+      `Listing: ${receipt.listingTitle}`,
+      `Guest: ${receipt.guestName}`,
+      `Booking value: ${currencyLabel(receipt.bookingValueCents)}`,
+      `Platform commission: ${currencyLabel(receipt.commissionCents)}`,
+      `Vendor payout: ${currencyLabel(receipt.vendorPayoutCents)}`,
+      `Paid at: ${receipt.payoutPaidAt || ""}`,
+      receipt.payoutNote ? `Note: ${receipt.payoutNote}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  };
 }

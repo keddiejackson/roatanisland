@@ -23,7 +23,11 @@ import {
   formatBookingStatus,
   formatDepositStatus,
 } from "@/lib/booking-flow";
-import { getVendorPayoutSummary } from "@/lib/admin-revenue";
+import {
+  getVendorPayoutReceipts,
+  getVendorPayoutStatements,
+  getVendorPayoutSummary,
+} from "@/lib/admin-revenue";
 import { getMonthCalendarDays } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 import {
@@ -965,6 +969,46 @@ export default function VendorDashboardPage() {
     () => getVendorPayoutSummary({ bookings }),
     [bookings],
   );
+  const payoutListings = useMemo(
+    () =>
+      listings.map((listing) => ({
+        id: listing.id,
+        title: listing.title,
+        vendor_id: vendorAccount?.vendor_id || null,
+      })),
+    [listings, vendorAccount?.vendor_id],
+  );
+  const payoutVendors = useMemo(
+    () =>
+      vendorAccount
+        ? [
+            {
+              id: vendorAccount.vendor_id,
+              business_name: vendorAccount.vendors?.business_name || "Your business",
+              is_active: true,
+            },
+          ]
+        : [],
+    [vendorAccount],
+  );
+  const payoutStatements = useMemo(
+    () =>
+      getVendorPayoutStatements({
+        bookings,
+        listings: payoutListings,
+        vendors: payoutVendors,
+      }),
+    [bookings, payoutListings, payoutVendors],
+  );
+  const payoutReceipts = useMemo(
+    () =>
+      getVendorPayoutReceipts({
+        bookings,
+        listings: payoutListings,
+        vendors: payoutVendors,
+      }),
+    [bookings, payoutListings, payoutVendors],
+  );
 
   const profileCompletionItems = useMemo(
     () =>
@@ -1209,6 +1253,104 @@ export default function VendorDashboardPage() {
                 <p className="mt-1 text-sm text-gray-600">{item.text}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                    Payout statements
+                  </p>
+                  <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                    Monthly payout summary
+                  </h3>
+                </div>
+                <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                  {payoutStatements.length}
+                </span>
+              </div>
+              <div className="mt-4 space-y-3">
+                {payoutStatements.slice(0, 3).map((statement) => (
+                  <div
+                    key={statement.statementId}
+                    className="rounded-lg bg-[#F7F3EA] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-[#0B3C5D]">
+                          {statement.period === "unscheduled"
+                            ? "Unscheduled"
+                            : statement.period}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {statement.bookingCount} booking
+                          {statement.bookingCount === 1 ? "" : "s"} /{" "}
+                          {statement.receiptCount} receipt
+                          {statement.receiptCount === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <p className="text-right text-sm font-black text-[#0B3C5D]">
+                        {formatBookingCents(statement.vendorPayoutCents)}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-xs font-bold text-gray-600">
+                      {statement.label}
+                    </p>
+                  </div>
+                ))}
+                {payoutStatements.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-600">
+                    Statements will appear after bookings have payout amounts.
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                    Recent payout receipts
+                  </p>
+                  <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                    Paid payout proof
+                  </h3>
+                </div>
+                <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                  {payoutReceipts.length}
+                </span>
+              </div>
+              <div className="mt-4 space-y-3">
+                {payoutReceipts.slice(0, 3).map((receipt) => (
+                  <div
+                    key={receipt.receiptId}
+                    className="rounded-lg bg-[#F7F3EA] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-black text-[#0B3C5D]">
+                          {receipt.receiptId}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-600">
+                          {receipt.listingTitle} / {receipt.guestName}
+                        </p>
+                      </div>
+                      <p className="text-right text-sm font-black text-[#0B3C5D]">
+                        {formatBookingCents(receipt.vendorPayoutCents)}
+                      </p>
+                    </div>
+                    <p className="mt-2 text-xs font-bold text-gray-600">
+                      Paid {receipt.payoutPaidAt?.slice(0, 10) || "recently"}
+                    </p>
+                  </div>
+                ))}
+                {payoutReceipts.length === 0 ? (
+                  <p className="rounded-lg border border-dashed border-gray-200 p-4 text-sm text-gray-600">
+                    Receipts will appear when payouts are marked paid.
+                  </p>
+                ) : null}
+              </div>
+            </div>
           </div>
           <p className="mt-4 text-sm leading-6 text-gray-600">
             Payouts are updated by the RoatanIsland.life admin after bookings
