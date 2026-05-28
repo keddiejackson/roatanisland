@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -27,6 +28,12 @@ const navItems = [
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function signOut() {
+    await supabase.auth.signOut();
+    router.replace("/admin/login");
+  }
 
   return (
     <nav className="mb-8 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
@@ -47,6 +54,13 @@ export default function AdminNav() {
           </Link>
         );
       })}
+      <button
+        type="button"
+        onClick={signOut}
+        className="rounded-xl bg-[#071F2F] px-4 py-2 text-center text-sm font-semibold text-white shadow"
+      >
+        Sign out
+      </button>
     </nav>
   );
 }

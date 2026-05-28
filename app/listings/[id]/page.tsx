@@ -3,6 +3,9 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
+import ListingConversionTools, {
+  type ListingShortlistItem,
+} from "@/app/listings/[id]/ListingConversionTools";
 import ListingGallery from "@/app/listings/[id]/ListingGallery";
 import ReviewForm from "@/app/listings/[id]/ReviewForm";
 import ReportListingForm from "@/app/listings/[id]/ReportListingForm";
@@ -18,6 +21,11 @@ import {
   getTourTimeLabels,
 } from "@/lib/listing-detail";
 import { getAvailabilityPreviewDays } from "@/lib/booking-availability";
+import {
+  buildListingComparisonFacts,
+  getListingConversionScore,
+  getListingTrustBadges,
+} from "@/lib/booking-conversion-pro";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getListingReadinessSummary } from "@/lib/vendor-dashboard";
 
@@ -248,11 +256,30 @@ export default async function ListingPage({
     minimumNoticeHours: listing.minimum_notice_hours,
   });
   const readiness = getListingReadinessSummary(listing);
+  const conversionScore = getListingConversionScore(listing);
+  const trustBadges = getListingTrustBadges({ listing, vendor });
+  const comparisonFacts = buildListingComparisonFacts(listing);
   const availabilityPreviewDays = getAvailabilityPreviewDays({
     listing,
     listingId: listing.id,
     count: 10,
   });
+  const shortlistItem: ListingShortlistItem = {
+    id: listing.id,
+    title: listing.title,
+    priceLabel,
+    location: listing.location || "Roatan",
+    category: listing.category || "Experience",
+    imageUrl: listing.image_url,
+  };
+  const relatedShortlistItems = nearbyListings.map((nearby) => ({
+    id: nearby.id,
+    title: nearby.title,
+    priceLabel: formatPrice(nearby.price),
+    location: nearby.location || "Roatan",
+    category: nearby.category || "Experience",
+    imageUrl: nearby.image_url,
+  }));
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
@@ -376,6 +403,67 @@ export default async function ListingPage({
               </div>
             ))}
           </div>
+
+          <ListingConversionTools
+            listing={shortlistItem}
+            relatedListings={relatedShortlistItems}
+          />
+
+          <section className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-[#00A8A8]/20 sm:p-8">
+            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Trust this listing
+                </p>
+                <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                  Clear details before you request.
+                </h2>
+                <p className="mt-3 max-w-2xl leading-7 text-gray-600">
+                  This score checks the pieces travelers usually need before
+                  sending a booking request: photos, times, capacity, map
+                  context, and operator details.
+                </p>
+              </div>
+              <div className="rounded-xl bg-[#071F2F] px-5 py-4 text-white">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9EE8E3]">
+                  Conversion score
+                </p>
+                <p className="mt-2 text-4xl font-black">
+                  {conversionScore.score}%
+                </p>
+                <p className="mt-1 text-sm font-bold text-white/70">
+                  {conversionScore.label}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 md:grid-cols-2">
+              {trustBadges.map((badge) => (
+                <div
+                  key={badge.label}
+                  className="rounded-lg border border-[#00A8A8]/15 bg-[#EEF7F6] p-4"
+                >
+                  <p className="font-black text-[#0B3C5D]">{badge.label}</p>
+                  <p className="mt-1 text-sm leading-6 text-gray-600">
+                    {badge.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {comparisonFacts.map((fact) => (
+                <div key={fact.label} className="rounded-lg bg-[#F7F3EA] p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                    {fact.label}
+                  </p>
+                  <p className="mt-2 font-black text-[#0B3C5D]">
+                    {fact.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {vendor ? (
             <section className="rounded-lg border border-[#00A8A8]/20 bg-white p-6 shadow-sm sm:p-8">
@@ -745,11 +833,26 @@ export default async function ListingPage({
             <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#9C7A2F]">
               Booking confidence
             </p>
+            <div className="mt-3 rounded-full bg-[#F7F3EA] p-1">
+              <div
+                className="h-2 rounded-full bg-[#00A8A8]"
+                style={{ width: `${conversionScore.score}%` }}
+              />
+            </div>
+            <p className="mt-2 text-sm font-bold text-[#0B3C5D]">
+              {conversionScore.label} - {conversionScore.score}%
+            </p>
             <ul className="mt-3 grid gap-2 text-sm leading-6 text-gray-600">
-              {goodToKnow.slice(0, 3).map((note) => (
-                <li key={note} className="flex gap-2">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D6B56D]" />
-                  <span>{note}</span>
+              {[...conversionScore.completeItems, ...conversionScore.incompleteItems]
+                .slice(0, 5)
+                .map((item) => (
+                <li key={item.label} className="flex gap-2">
+                  <span
+                    className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${
+                      item.complete ? "bg-[#00A8A8]" : "bg-[#D6B56D]"
+                    }`}
+                  />
+                  <span>{item.label}: {item.complete ? item.text : item.action}</span>
                 </li>
               ))}
             </ul>

@@ -6,6 +6,10 @@ import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
 import PinPicker from "@/app/map/PinPicker";
 import { isAdminUser } from "@/lib/admin";
+import {
+  getListingConversionScore,
+  getListingConversionSummary,
+} from "@/lib/booking-conversion-pro";
 import { supabase } from "@/lib/supabase";
 
 type ListingRow = {
@@ -136,6 +140,38 @@ function toDraft(listing: ListingRow): ListingDraft {
     is_featured: listing.is_featured ?? false,
     latitude: listing.latitude === null ? "" : String(listing.latitude),
     longitude: listing.longitude === null ? "" : String(listing.longitude),
+  };
+}
+
+function draftToConversionListing(listingId: string, draft: ListingDraft) {
+  const galleryImageUrls = draft.gallery_image_urls
+    .split("\n")
+    .map((url) => url.trim())
+    .filter(Boolean);
+  const tourTimes = draft.tour_times
+    .split("\n")
+    .map((time) => time.trim())
+    .filter(Boolean);
+
+  return {
+    id: listingId,
+    vendor_id: draft.vendor_id || null,
+    title: draft.title,
+    description: draft.description,
+    price: draft.price ? Number(draft.price) : null,
+    location: draft.location,
+    category: draft.category,
+    image_url: draft.image_url || null,
+    gallery_image_urls: galleryImageUrls,
+    tour_times: tourTimes,
+    latitude: draft.latitude ? Number(draft.latitude) : null,
+    longitude: draft.longitude ? Number(draft.longitude) : null,
+    max_guests: draft.max_guests ? Number(draft.max_guests) : null,
+    availability_note: draft.availability_note,
+    minimum_notice_hours: draft.minimum_notice_hours
+      ? Number(draft.minimum_notice_hours)
+      : null,
+    is_active: draft.is_active,
   };
 }
 
@@ -382,6 +418,25 @@ export default function AdminListingsPage() {
       vendors,
     ],
   );
+  const conversionListings = useMemo(
+    () =>
+      filteredListings
+        .map((listing) => {
+          const draft = drafts[listing.id];
+          return draft ? draftToConversionListing(listing.id, draft) : null;
+        })
+        .filter(
+          (
+            listing,
+          ): listing is ReturnType<typeof draftToConversionListing> =>
+            listing !== null,
+        ),
+    [drafts, filteredListings],
+  );
+  const conversionSummary = useMemo(
+    () => getListingConversionSummary(conversionListings),
+    [conversionListings],
+  );
 
   if (checkingAuth || !authorized) {
     return null;
@@ -600,6 +655,55 @@ export default function AdminListingsPage() {
             </div>
           ) : null}
 
+          {!loading && listings.length > 0 ? (
+            <section className="mt-6 grid gap-4 lg:grid-cols-4">
+              <div className="rounded-2xl bg-[#071F2F] p-5 text-white">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9EE8E3]">
+                  Conversion score
+                </p>
+                <p className="mt-2 text-4xl font-black">
+                  {conversionSummary.averageScore}%
+                </p>
+                <p className="mt-1 text-sm text-white/70">
+                  Average of filtered listings
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[#EEF7F6] p-5">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                  Ready to book
+                </p>
+                <p className="mt-2 text-4xl font-black text-[#0B3C5D]">
+                  {conversionSummary.readyCount}
+                </p>
+                <p className="mt-1 text-sm text-gray-600">
+                  Listings above 90%
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[#FFF8E8] p-5">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                  Needs attention
+                </p>
+                <p className="mt-2 text-4xl font-black text-[#0B3C5D]">
+                  {conversionSummary.needsAttentionCount}
+                </p>
+                <p className="mt-1 text-sm text-gray-600">
+                  Listings under 60%
+                </p>
+              </div>
+              <div className="rounded-2xl bg-[#F7F3EA] p-5">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                  Quality checklist
+                </p>
+                <p className="mt-2 text-xl font-black text-[#0B3C5D]">
+                  {conversionSummary.topActionLabel}
+                </p>
+                <p className="mt-1 text-sm text-gray-600">
+                  Most common next fix
+                </p>
+              </div>
+            </section>
+          ) : null}
+
           {loading ? (
             <p className="mt-8">Loading listings...</p>
           ) : listings.length === 0 ? (
@@ -668,11 +772,57 @@ export default function AdminListingsPage() {
                   return null;
                 }
 
+                const conversion = getListingConversionScore(
+                  draftToConversionListing(listing.id, draft),
+                );
+
                 return (
                   <section
                     key={listing.id}
                     className="rounded-xl border border-gray-200 p-5"
                   >
+                    <div className="mb-5 grid gap-4 rounded-xl bg-[#F7F3EA] p-4 lg:grid-cols-[220px_1fr_auto] lg:items-center">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                          Conversion score
+                        </p>
+                        <p className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                          {conversion.score}%
+                        </p>
+                        <p className="text-sm font-bold text-gray-600">
+                          {conversion.label}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-[#0B3C5D]">
+                          Quality checklist
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {[
+                            ...conversion.completeItems,
+                            ...conversion.incompleteItems,
+                          ]
+                            .slice(0, 6)
+                            .map((item) => (
+                              <span
+                                key={item.label}
+                                className={`rounded-full px-3 py-1 text-xs font-black ${
+                                  item.complete
+                                    ? "bg-[#EEF7F6] text-[#007B7B]"
+                                    : "bg-[#FFF8E8] text-[#9C7A2F]"
+                                }`}
+                              >
+                                {item.complete ? "Done: " : "Fix: "}
+                                {item.label}
+                              </span>
+                            ))}
+                        </div>
+                      </div>
+                      <p className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+                        Next: {conversion.nextBestAction}
+                      </p>
+                    </div>
+
                     <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr_0.8fr_0.6fr_0.7fr]">
                       <div>
                         <label className="mb-2 block text-sm font-medium">

@@ -32,6 +32,10 @@ import {
   getVendorPayoutForecast,
 } from "@/lib/booking-money-command";
 import {
+  getListingConversionScore,
+  getVendorGrowthTasks,
+} from "@/lib/booking-conversion-pro";
+import {
   getVendorPayoutReceipts,
   getVendorPayoutStatements,
   getVendorPayoutSummary,
@@ -1289,6 +1293,20 @@ export default function VendorDashboardPage() {
       }),
     [dashboardStats, needsResponseCount, profileCompletionItems],
   );
+  const vendorGrowthTasks = useMemo(
+    () => getVendorGrowthTasks({ listings }),
+    [listings],
+  );
+  const averageListingConversionScore = useMemo(() => {
+    if (listings.length === 0) return 0;
+
+    return Math.round(
+      listings.reduce(
+        (total, listing) => total + getListingConversionScore(listing).score,
+        0,
+      ) / listings.length,
+    );
+  }, [listings]);
 
   if (loading) {
     return (
@@ -1320,7 +1338,7 @@ export default function VendorDashboardPage() {
               onClick={logout}
               className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
             >
-              Logout
+              Sign out
             </button>
           </div>
         </header>
@@ -1705,6 +1723,60 @@ export default function VendorDashboardPage() {
                   {item.text}
                 </p>
               </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                Growth checklist
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+                Make every listing easier to book.
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                These are the biggest things travelers look for before sending
+                a request.
+              </p>
+            </div>
+            <div className="rounded-xl bg-[#071F2F] px-5 py-4 text-white">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9EE8E3]">
+                Conversion score
+              </p>
+              <p className="mt-2 text-3xl font-black">
+                {averageListingConversionScore}%
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {(vendorGrowthTasks.length
+              ? vendorGrowthTasks
+              : [
+                  {
+                    label: "Keep listings fresh",
+                    count: listings.length,
+                    text: "Review photos, times, map pins, and availability before busy travel days.",
+                  },
+                ]
+            ).map((task) => (
+              <div
+                key={task.label}
+                className="rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-black text-[#0B3C5D]">{task.label}</p>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      {task.text}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-[#0B3C5D]">
+                    {task.count}
+                  </span>
+                </div>
+              </div>
             ))}
           </div>
         </section>
