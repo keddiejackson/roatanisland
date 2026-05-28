@@ -158,6 +158,7 @@ export default function Home() {
     null,
   );
   const [homeAccountLoading, setHomeAccountLoading] = useState(true);
+  const [homeSignOutLoading, setHomeSignOutLoading] = useState(false);
 
   useEffect(() => {
     async function fetchListings() {
@@ -366,6 +367,13 @@ export default function Home() {
     setLeadMessage("");
   }
 
+  async function signOutHomeAccount() {
+    setHomeSignOutLoading(true);
+    await supabase.auth.signOut();
+    setHomeAccount(null);
+    setHomeSignOutLoading(false);
+  }
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#F7F3EA] text-[#102A43]">
       <section className="relative min-h-[720px] overflow-hidden bg-[#071F2F] text-white">
@@ -400,30 +408,44 @@ export default function Home() {
                 Vendors
               </Link>
               {homeAccountLoading ? null : homeAccount ? (
-                <Link
-                  href={homeAccount.href}
-                  className="flex max-w-[220px] items-center gap-2 rounded-lg border border-white/15 bg-white/10 px-3 py-2 text-white shadow-lg shadow-black/10 backdrop-blur hover:bg-white/15"
-                >
-                  <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
-                    {homeAccount.profileImageUrl ? (
-                      <img
-                        src={homeAccount.profileImageUrl}
-                        alt=""
-                        className="size-full object-cover"
-                      />
-                    ) : (
-                      profileInitials(homeAccount.displayName, homeAccount.email)
-                    )}
-                  </span>
-                  <span className="min-w-0 leading-tight">
-                    <span className="block truncate text-xs font-black">
-                      {homeAccount.displayName}
+                <div className="flex max-w-[300px] items-center gap-1 rounded-lg border border-white/15 bg-white/10 p-1 text-white shadow-lg shadow-black/10 backdrop-blur">
+                  <Link
+                    href={homeAccount.href}
+                    className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/15"
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
+                      {homeAccount.profileImageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={homeAccount.profileImageUrl}
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        profileInitials(
+                          homeAccount.displayName,
+                          homeAccount.email,
+                        )
+                      )}
                     </span>
-                    <span className="block truncate text-[10px] font-bold uppercase tracking-[0.08em] text-white/70">
-                      {homeAccount.label}
+                    <span className="min-w-0 leading-tight">
+                      <span className="block truncate text-xs font-black">
+                        {homeAccount.displayName}
+                      </span>
+                      <span className="block truncate text-[10px] font-bold uppercase tracking-[0.08em] text-white/70">
+                        {homeAccount.label}
+                      </span>
                     </span>
-                  </span>
-                </Link>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={signOutHomeAccount}
+                    disabled={homeSignOutLoading}
+                    className="rounded-md bg-white px-3 py-2 text-xs font-black text-[#071F2F] disabled:opacity-60"
+                  >
+                    {homeSignOutLoading ? "Signing out..." : "Sign out"}
+                  </button>
+                </div>
               ) : (
                 <Link href="/signin" className="rounded-lg px-3 py-2 hover:bg-white/10">
                   Sign in

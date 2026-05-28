@@ -52,7 +52,12 @@ export default function GlobalAccountButton() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  if (pathname?.startsWith("/admin") || pathname === "/signin" || loading) {
+  if (
+    pathname === "/" ||
+    pathname?.startsWith("/admin") ||
+    pathname === "/signin" ||
+    loading
+  ) {
     return null;
   }
 
