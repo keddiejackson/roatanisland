@@ -2,22 +2,44 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import {
+  COMPARE_LISTINGS_KEY,
+  SAVED_LISTINGS_KEY,
+  TRIP_PLAN_KEY,
+  mergeTripBoardSavedItems,
+  normalizeTripBoardItems,
+} from "@/lib/trip-board";
 
 export default function TripPlannerDock() {
   const [savedIds, setSavedIds] = useState<string[]>([]);
+  const [compareCount, setCompareCount] = useState(0);
   const [savedPlanCount, setSavedPlanCount] = useState(0);
 
   useEffect(() => {
     function loadSavedTrip() {
       try {
-        const saved = JSON.parse(localStorage.getItem("roatan-trip-plan") || "[]");
-        setSavedIds(
-          Array.isArray(saved)
-            ? saved.filter((id): id is string => typeof id === "string").slice(0, 8)
-            : [],
+        const saved = JSON.parse(localStorage.getItem(TRIP_PLAN_KEY) || "[]");
+        const savedListings = JSON.parse(
+          localStorage.getItem(SAVED_LISTINGS_KEY) || "[]",
         );
+        const merged = mergeTripBoardSavedItems({
+          tripPlanIds: saved,
+          savedItems: savedListings,
+          limit: 12,
+        });
+
+        setSavedIds(merged.savedIds.slice(0, 8));
       } catch {
         setSavedIds([]);
+      }
+
+      try {
+        const compared = JSON.parse(
+          localStorage.getItem(COMPARE_LISTINGS_KEY) || "[]",
+        );
+        setCompareCount(normalizeTripBoardItems(compared, 4).length);
+      } catch {
+        setCompareCount(0);
       }
 
       try {
@@ -41,11 +63,13 @@ export default function TripPlannerDock() {
   }, [savedIds]);
   const plannerProgress = Math.min(
     100,
-    savedIds.length * 18 + savedPlanCount * 28,
+    savedIds.length * 16 + compareCount * 8 + savedPlanCount * 28,
   );
   const nextStep =
     savedIds.length === 0
       ? "Save stops from the map"
+      : compareCount === 0
+        ? "Compare your best options"
       : savedPlanCount === 0
         ? "Turn saved stops into a plan"
         : "Open your guest dashboard";
@@ -79,6 +103,7 @@ export default function TripPlannerDock() {
             </div>
             <p className="mt-2 text-sm font-semibold text-[#0B3C5D]/75">
               Next: {nextStep}
+              {compareCount > 0 ? ` - ${compareCount} in compare` : ""}
             </p>
           </div>
         </div>
@@ -90,10 +115,10 @@ export default function TripPlannerDock() {
             {savedIds.length > 0 ? "Open saved plan" : "Start planning"}
           </Link>
           <Link
-            href={savedPlanCount > 0 ? "/account" : "/concierge"}
+            href={savedIds.length > 0 ? "/account?tab=saved" : "/concierge"}
             className="rounded-lg bg-white px-4 py-3 text-center text-sm font-bold text-[#0B3C5D]"
           >
-            {savedPlanCount > 0 ? "My trips" : "Concierge"}
+            {savedIds.length > 0 ? "Trip board" : "Concierge"}
           </Link>
         </div>
       </div>

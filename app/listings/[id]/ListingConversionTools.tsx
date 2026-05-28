@@ -2,6 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import {
+  COMPARE_LISTINGS_KEY,
+  RECENT_LISTINGS_KEY,
+  SAVED_LISTINGS_KEY,
+  TRIP_PLAN_KEY,
+  normalizeTripBoardItems,
+} from "@/lib/trip-board";
 
 export type ListingShortlistItem = {
   id: string;
@@ -12,16 +19,12 @@ export type ListingShortlistItem = {
   imageUrl?: string | null;
 };
 
-const SAVED_KEY = "roatan-saved-listings";
-const COMPARE_KEY = "roatan-compare-listings";
-const RECENT_KEY = "roatan-recent-listings";
-
 function readItems(key: string): ListingShortlistItem[] {
   if (typeof window === "undefined") return [];
 
   try {
     const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
-    return Array.isArray(parsed) ? parsed : [];
+    return normalizeTripBoardItems(parsed) as ListingShortlistItem[];
   } catch {
     return [];
   }
@@ -29,6 +32,34 @@ function readItems(key: string): ListingShortlistItem[] {
 
 function writeItems(key: string, items: ListingShortlistItem[]) {
   window.localStorage.setItem(key, JSON.stringify(items));
+}
+
+function readIds(key: string) {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(key) || "[]");
+    return Array.isArray(parsed)
+      ? parsed.filter((id): id is string => typeof id === "string" && Boolean(id))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeIds(key: string, ids: string[]) {
+  window.localStorage.setItem(key, JSON.stringify(ids));
+}
+
+function uniqueIds(ids: string[]) {
+  const seen = new Set<string>();
+  return ids.filter((id) => {
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+function notifyTripStorage() {
+  window.dispatchEvent(new Event("storage"));
 }
 
 function upsertItem(
@@ -55,14 +86,15 @@ export default function ListingConversionTools({
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const saved = readItems(SAVED_KEY);
-      const compared = readItems(COMPARE_KEY);
-      const recent = upsertItem(readItems(RECENT_KEY), listing, 6);
+      const saved = readItems(SAVED_LISTINGS_KEY);
+      const compared = readItems(COMPARE_LISTINGS_KEY);
+      const recent = upsertItem(readItems(RECENT_LISTINGS_KEY), listing, 6);
 
-      writeItems(RECENT_KEY, recent);
+      writeItems(RECENT_LISTINGS_KEY, recent);
       setSavedItems(saved);
       setCompareItems(compared);
       setRecentItems(recent);
+      notifyTripStorage();
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -80,8 +112,17 @@ export default function ListingConversionTools({
       ? savedItems.filter((item) => item.id !== listing.id)
       : upsertItem(savedItems, listing, 12);
 
-    writeItems(SAVED_KEY, nextItems);
+    const nextTripIds = isSaved
+      ? readIds(TRIP_PLAN_KEY).filter((id) => id !== listing.id)
+      : uniqueIds([
+          ...nextItems.map((item) => item.id),
+          ...readIds(TRIP_PLAN_KEY),
+        ]).slice(0, 12);
+
+    writeItems(SAVED_LISTINGS_KEY, nextItems);
+    writeIds(TRIP_PLAN_KEY, nextTripIds);
     setSavedItems(nextItems);
+    notifyTripStorage();
   }
 
   function toggleCompare() {
@@ -89,8 +130,9 @@ export default function ListingConversionTools({
       ? compareItems.filter((item) => item.id !== listing.id)
       : upsertItem(compareItems, listing, 4);
 
-    writeItems(COMPARE_KEY, nextItems);
+    writeItems(COMPARE_LISTINGS_KEY, nextItems);
     setCompareItems(nextItems);
+    notifyTripStorage();
   }
 
   return (
@@ -131,6 +173,12 @@ export default function ListingConversionTools({
           >
             {isCompared ? "Comparing" : "Compare"}
           </button>
+          <Link
+            href="/account?tab=saved"
+            className="rounded-lg border border-[#0B3C5D]/15 px-4 py-3 text-sm font-black text-[#0B3C5D]"
+          >
+            Trip board
+          </Link>
         </div>
       </div>
 
