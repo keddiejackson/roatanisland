@@ -1104,62 +1104,52 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       }
     >
       <div className="min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-4 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
-        <div className="mb-4 flex min-w-0 flex-col justify-between gap-4 rounded-2xl bg-[#071F2F] p-4 text-white sm:flex-row sm:items-center">
+        <div className="mb-3 flex min-w-0 flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] px-4 py-3 text-white sm:flex-row sm:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
+              Island Planner
+            </p>
+            <h2 className="mt-1 text-xl font-bold leading-tight">
               Roatan Day Map
-            </p>
-            <h2 className="mt-1 text-2xl font-bold leading-tight">
-              Pick a start, choose a day, save your stops
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-              A simpler map for cruise guests, airport arrivals, beach days, and
-              private island plans.
-            </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setFullMap((current) => !current)}
-            className="min-h-11 rounded-xl border border-[#D6B56D]/50 px-4 text-sm font-semibold text-[#FFF6DA] hover:bg-white/10"
-          >
-            {fullMap ? "Close full map" : "Open full map"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-black text-white">
+              {filteredListings.length} option
+              {filteredListings.length === 1 ? "" : "s"}
+            </span>
+            <button
+              type="button"
+              onClick={() => setFullMap((current) => !current)}
+              className="min-h-10 rounded-xl border border-[#D6B56D]/50 px-4 text-sm font-semibold text-[#FFF6DA] hover:bg-white/10"
+            >
+              {fullMap ? "Close map" : "Open map"}
+            </button>
+          </div>
         </div>
 
-        <div className="mb-4 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3">
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
-                Step 1
-              </p>
-              <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
-                Where are you starting?
-              </h3>
-            </div>
-            <p className="rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D]">
+        <div className="mb-3 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
+              Start point
+            </p>
+            <p className="rounded-full bg-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D]">
               {selectedPickup?.label || activeConciergeMode?.label || "Choose one"}
             </p>
           </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {mapConciergeModes.map((mode) => (
               <button
                 key={mode.id}
                 type="button"
                 onClick={() => applyMapConciergeMode(mode)}
-                className={`rounded-xl p-3 text-left transition hover:-translate-y-0.5 ${
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
                   activeModeId === mode.id
                     ? "bg-[#071F2F] text-white shadow-lg shadow-[#071F2F]/15"
-                    : "bg-white text-[#0B3C5D] shadow-sm"
+                    : "bg-white text-[#0B3C5D] shadow-sm hover:bg-[#FFFDF7]"
                 }`}
               >
-                <span
-                  className={`block text-[0.66rem] font-black uppercase tracking-[0.16em] ${
-                    activeModeId === mode.id ? "text-[#D6B56D]" : "text-[#00A8A8]"
-                  }`}
-                >
-                  {mode.eyebrow}
-                </span>
-                <span className="mt-1 block text-sm font-black">{mode.label}</span>
+                {mode.label}
               </button>
             ))}
           </div>
@@ -1167,20 +1157,15 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
         <div className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9C7A2F]">
-                Suggested routes
-              </p>
-              <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
-                Choose your day style
-              </h3>
-            </div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9C7A2F]">
+              Day style
+            </p>
             <div className="flex flex-wrap gap-2">
               {activeCollection ? (
                 <button
                   type="button"
                   onClick={clearCollection}
-                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm"
+                  className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm"
                 >
                   Clear style
                 </button>
@@ -1188,7 +1173,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               <button
                 type="button"
                 onClick={() => setShowAdvancedFilters((current) => !current)}
-                className="rounded-xl bg-[#071F2F] px-4 py-2 text-sm font-semibold text-white"
+                className="rounded-full bg-[#071F2F] px-4 py-2 text-sm font-semibold text-white"
               >
                 {showAdvancedFilters ? "Hide filters" : "More filters"}
               </button>
@@ -1200,31 +1185,22 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 key={collection.id}
                 type="button"
                 onClick={() => applyCollection(collection)}
-                className={`shrink-0 rounded-xl px-4 py-3 text-left text-sm font-semibold transition ${
+                className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
                   activeCollectionId === collection.id
                     ? "bg-[#071F2F] text-[#FFF6DA] ring-1 ring-[#D6B56D]/70"
-                    : "bg-white text-[#0B3C5D] shadow-sm hover:-translate-y-0.5"
+                    : "bg-white text-[#0B3C5D] shadow-sm hover:bg-[#FFFDF7]"
                 }`}
               >
-                <span className="block">{collection.label}</span>
-                <span
-                  className={`mt-1 block text-xs ${
-                    activeCollectionId === collection.id
-                      ? "text-white/70"
-                      : "text-gray-500"
-                  }`}
-                >
-                  {collectionCounts[collection.id] || 0} match
-                  {collectionCounts[collection.id] === 1 ? "" : "es"}
-                </span>
+                {collection.label}
               </button>
             ))}
           </div>
-          <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-[#0B3C5D]">
-            {activeCollection
-              ? activeCollection.blurb
-              : "Start with a route style, then use More filters only when you need details."}
-          </div>
+          {activeCollection ? (
+            <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-[#0B3C5D]">
+              {activeCollection.blurb} {collectionCounts[activeCollection.id] || 0} match
+              {collectionCounts[activeCollection.id] === 1 ? "" : "es"} ready.
+            </div>
+          ) : null}
 
           {showAdvancedFilters ? (
             <div className="mt-3 grid gap-3 rounded-2xl border border-[#D6B56D]/25 bg-white p-3">
@@ -1645,30 +1621,25 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             ) : null}
           </div>
 
-          <div className="mt-4 rounded-xl bg-white/10 p-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
-                Route readiness
-              </p>
-              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#071F2F]">
-                {routeReadyCount}/{routeReadinessItems.length}
-              </span>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {routeReadinessItems.map((item) => (
+          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-white/10 p-3">
+            <p className="mr-auto text-xs font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
+              Plan status
+            </p>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#071F2F]">
+              {routeReadyCount}/{routeReadinessItems.length} ready
+            </span>
+            {routeReadinessItems
+              .filter((item) => !item.done)
+              .slice(0, 2)
+              .map((item) => (
                 <span
                   key={item.label}
-                  className={`rounded-full px-3 py-1 text-xs font-bold ${
-                    item.done
-                      ? "bg-[#9EE8E3] text-[#071F2F]"
-                      : "bg-white/10 text-white/62"
-                  }`}
+                  className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white/72"
                   title={item.detail}
                 >
                   {item.label}
                 </span>
               ))}
-            </div>
           </div>
 
           <div className="mt-4 rounded-xl border border-[#D6B56D]/35 bg-[#FFF6DA] p-4 text-[#071F2F]">
@@ -1686,24 +1657,13 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </div>
 
           {savedTripPins.length === 0 ? (
-            <div className="mt-4 rounded-xl bg-white/10 p-4">
-              <p className="text-sm font-bold text-[#FFF6DA]">
-                Start your route
+            <div className="mt-4 rounded-xl bg-white/10 p-4 text-sm leading-6 text-white/78">
+              <p className="font-bold text-[#FFF6DA]">
+                Save a stop to build your day.
               </p>
-              <div className="mt-3 grid gap-2 text-sm text-white/78">
-                {[
-                  "Pick a listing",
-                  "Save it as a stop",
-                  "Add pickup context",
-                ].map((step, index) => (
-                  <div key={step} className="flex items-center gap-3">
-                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-black text-[#D6B56D]">
-                      {index + 1}
-                    </span>
-                    <span>{step}</span>
-                  </div>
-                ))}
-              </div>
+              <p className="mt-1">
+                Open a listing on the map and save the places you want to compare.
+              </p>
             </div>
           ) : (
             <div className="mt-4 grid gap-2">
@@ -1774,7 +1734,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               disabled={savedTripPins.length === 0}
               className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Save dashboard
+              Save plan
             </button>
             <Link
               href={

@@ -61,30 +61,16 @@ export default async function MapPage() {
           </div>
         </header>
 
-        <section className="mb-6">
+        <section className="mb-5">
           <p className="brand-eyebrow">
-            Explore by area
+            Plan by place
           </p>
           <h1 className="brand-display mt-2 text-4xl sm:text-5xl">
             Roatan Day Map
           </h1>
           <p className="brand-subtitle mt-3 max-w-2xl">
-            Plan around the airport, cruise ports, beaches, and private island
-            days. Exact coordinates show as precise pins; area-only listings are
-            grouped near their listed town or beach.
+            Choose a start point, pick a day style, then save the stops that fit.
           </p>
-          <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
-            {["Airport pickup", "Cruise ports", "Beach areas", "Trip planner"].map(
-              (item) => (
-                <span
-                  key={item}
-                  className="brand-badge"
-                >
-                  {item}
-                </span>
-              ),
-            )}
-          </div>
         </section>
 
         <MapBrowser listings={(data as MapListing[]) || []} />
