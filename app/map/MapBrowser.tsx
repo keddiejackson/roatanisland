@@ -50,6 +50,20 @@ type PickupPoint = {
   note: string;
 };
 
+type MapConciergeMode = {
+  id: string;
+  label: string;
+  eyebrow: string;
+  description: string;
+  pickupId: string;
+  collectionId: string;
+  category: string;
+  area: string;
+  search: string;
+  center: { latitude: number; longitude: number };
+  zoom: number;
+};
+
 const luxuryLayers = [
   "All",
   "Tours",
@@ -204,6 +218,65 @@ const mapCollections: MapCollection[] = [
     category: "All",
     area: "French Harbour",
     keywords: ["east", "french", "oak ridge", "camp bay", "punta gorda", "adventure"],
+    center: { latitude: 16.385, longitude: -86.39 },
+    zoom: 12,
+  },
+];
+
+const mapConciergeModes: MapConciergeMode[] = [
+  {
+    id: "cruise-day",
+    label: "Cruise day",
+    eyebrow: "Port timing",
+    description:
+      "Focuses the map around cruise-friendly areas with pickup context already set.",
+    pickupId: "coxen-hole",
+    collectionId: "cruise-port",
+    category: "All",
+    area: "Coxen Hole",
+    search: "",
+    center: { latitude: 16.315, longitude: -86.548 },
+    zoom: 13,
+  },
+  {
+    id: "airport-arrival",
+    label: "Airport arrival",
+    eyebrow: "Landing day",
+    description:
+      "Starts from the airport and brings transport, easy transfers, and nearby plans forward.",
+    pickupId: "airport",
+    collectionId: "",
+    category: "All",
+    area: "All",
+    search: "",
+    center: { latitude: 16.3169, longitude: -86.5229 },
+    zoom: 13,
+  },
+  {
+    id: "west-bay-day",
+    label: "West Bay beach day",
+    eyebrow: "Beach first",
+    description:
+      "Centers the map on West Bay for beach time, nearby food, charters, and easy pickups.",
+    pickupId: "west-bay",
+    collectionId: "west-bay",
+    category: "All",
+    area: "West Bay",
+    search: "",
+    center: { latitude: 16.274, longitude: -86.599 },
+    zoom: 13,
+  },
+  {
+    id: "east-end-adventure",
+    label: "East End adventure",
+    eyebrow: "Longer route",
+    description:
+      "Sets up an east-side view for French Harbour, Oak Ridge, Camp Bay, and custom days.",
+    pickupId: "french-harbour",
+    collectionId: "east-end",
+    category: "All",
+    area: "French Harbour",
+    search: "",
     center: { latitude: 16.385, longitude: -86.39 },
     zoom: 12,
   },
@@ -401,6 +474,7 @@ function defaultMapState(listings: MapListing[]) {
     selectedId: listings[0]?.id || "",
     center: roatanCenter,
     zoom: 12,
+    modeId: "",
     collectionId: "",
     tripIds: [] as string[],
     pickupId: "",
@@ -418,6 +492,8 @@ function readBrowserMapState(listings: MapListing[]) {
   const search = params.get("search") || "";
   const collectionId = params.get("collection") || "";
   const collection = mapCollections.find((item) => item.id === collectionId);
+  const modeId = params.get("mode") || "";
+  const mode = mapConciergeModes.find((item) => item.id === modeId);
   const pickupId = params.get("pickup") || "";
   const date = params.get("date") || "";
   const time = params.get("time") || "";
@@ -429,23 +505,28 @@ function readBrowserMapState(listings: MapListing[]) {
   const requestedZoom = Number(params.get("zoom"));
 
   return {
-    category: category && luxuryLayers.includes(category) ? category : "All",
-    location: collection?.area || location,
-    search,
+    category:
+      mode?.category ||
+      (category && luxuryLayers.includes(category) ? category : "All"),
+    location: mode?.area || collection?.area || location,
+    search: mode?.search || search,
     selectedId,
     center: selectedPin
       ? { latitude: selectedPin.latitudeValue, longitude: selectedPin.longitudeValue }
+      : mode
+        ? mode.center
       : collection
         ? collection.center
       : location === "All"
         ? roatanCenter
         : findAreaPosition(location),
-    zoom: zoomLevels.includes(requestedZoom) ? requestedZoom : 12,
-    collectionId: collection?.id || "",
+    zoom: mode?.zoom || (zoomLevels.includes(requestedZoom) ? requestedZoom : 12),
+    modeId: mode?.id || "",
+    collectionId: mode?.collectionId || collection?.id || "",
     tripIds: readSavedTripIds(listings),
-    pickupId: pickupPoints.some((point) => point.id === pickupId)
-      ? pickupId
-      : "",
+    pickupId:
+      mode?.pickupId ||
+      (pickupPoints.some((point) => point.id === pickupId) ? pickupId : ""),
     date,
     time,
     guests,
@@ -461,6 +542,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [selectedId, setSelectedId] = useState(initialMapState.selectedId);
   const [center, setCenter] = useState(initialMapState.center);
   const [zoom, setZoom] = useState(initialMapState.zoom);
+  const [activeModeId, setActiveModeId] = useState(initialMapState.modeId);
   const [activeCollectionId, setActiveCollectionId] = useState(
     initialMapState.collectionId,
   );
@@ -517,6 +599,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       setSelectedId(browserMapState.selectedId);
       setCenter(browserMapState.center);
       setZoom(browserMapState.zoom);
+      setActiveModeId(browserMapState.modeId);
       setActiveCollectionId(browserMapState.collectionId);
       setSavedTripIds(browserMapState.tripIds);
       setPickupId(browserMapState.pickupId);
@@ -532,6 +615,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     if (!browserStateLoaded) return;
 
     const params = new URLSearchParams();
+    if (activeModeId) params.set("mode", activeModeId);
     if (activeCollectionId) params.set("collection", activeCollectionId);
     if (category !== "All") params.set("category", category);
     if (location !== "All") params.set("area", location);
@@ -550,6 +634,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     window.history.replaceState(null, "", nextUrl);
   }, [
     activeCollectionId,
+    activeModeId,
     browserStateLoaded,
     category,
     dateFilter,
@@ -607,6 +692,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const activeCollection =
     mapCollections.find((collection) => collection.id === activeCollectionId) ||
     null;
+  const activeConciergeMode =
+    mapConciergeModes.find((mode) => mode.id === activeModeId) || null;
   const selectedPickup =
     pickupPoints.find((point) => point.id === pickupId) || null;
   const directionsOrigin = userLocation || selectedPickup;
@@ -776,6 +863,41 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       .sort((a, b) => a.miles - b.miles)
       .slice(0, 3);
   }, [pins, selectedPin]);
+  const routeReadinessItems = [
+    {
+      label: "Pickup",
+      done: Boolean(selectedPickup),
+      detail: selectedPickup?.label || "Choose pickup first",
+    },
+    {
+      label: "Stops",
+      done: savedTripPins.length > 0,
+      detail:
+        savedTripPins.length > 0
+          ? `${savedTripPins.length} saved stop${savedTripPins.length === 1 ? "" : "s"}`
+          : "Save a stop",
+    },
+    {
+      label: "Date",
+      done: Boolean(dateFilter),
+      detail: dateFilter || "Add travel date",
+    },
+    {
+      label: "Group",
+      done: Boolean(guestFilter),
+      detail: guestFilter ? `${guestFilter} guest${guestFilter === "1" ? "" : "s"}` : "Add guests",
+    },
+  ];
+  const routeReadyCount = routeReadinessItems.filter((item) => item.done).length;
+  const bestNextStep = !selectedPickup
+    ? "Choose pickup first"
+    : savedTripPins.length === 0
+      ? "Save your first stop"
+      : !dateFilter
+        ? "Add travel date"
+        : !guestFilter
+          ? "Add guest count"
+          : "Book first stop";
 
   useEffect(() => {
     if (!selectedId) return;
@@ -796,6 +918,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }
 
   function focusArea(area: string) {
+    setActiveModeId("");
     setActiveCollectionId("");
     setLocation(area);
     const nextCenter = area === "All" ? roatanCenter : findAreaPosition(area);
@@ -811,6 +934,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }
 
   function applyCollection(collection: MapCollection) {
+    setActiveModeId("");
     setActiveCollectionId(collection.id);
     setCategory(collection.category);
     setLocation(collection.area);
@@ -821,12 +945,26 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }
 
   function clearCollection() {
+    setActiveModeId("");
     setActiveCollectionId("");
     setCategory("All");
     setLocation("All");
     setSearch("");
     setCenter(roatanCenter);
     setZoom(12);
+  }
+
+  function applyMapConciergeMode(mode: MapConciergeMode) {
+    setActiveModeId(mode.id);
+    setActiveCollectionId(mode.collectionId);
+    setCategory(mode.category);
+    setLocation(mode.area);
+    setSearch(mode.search);
+    setPickupId(mode.pickupId);
+    setCenter(mode.center);
+    setZoom(mode.zoom);
+    setSelectedId("");
+    setLocationMessage(`${mode.label} mode is ready.`);
   }
 
   function toggleTripStop(pin: Pin) {
@@ -911,6 +1049,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   }
 
   function useNearMe() {
+    setActiveModeId("");
     if (!navigator.geolocation) {
       setLocationMessage("Your browser does not support location sharing.");
       return;
@@ -981,14 +1120,18 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       }
     >
       <div className="min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-4 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
-        <div className="mb-4 flex min-w-0 flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] p-4 text-white sm:flex-row sm:items-center">
+        <div className="mb-4 flex min-w-0 flex-col justify-between gap-4 rounded-2xl bg-[#071F2F] p-4 text-white sm:flex-row sm:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
-              Roatan atlas
+              Map Concierge Pro
             </p>
             <h2 className="mt-1 text-2xl font-bold leading-tight">
-              Explore by coast, cove, and crew
+              Build the right island day from the map
             </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
+              Choose a mode, set pickup, save stops, and compare the route
+              before you request a booking.
+            </p>
           </div>
           <button
             type="button"
@@ -999,11 +1142,61 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </button>
         </div>
 
+        <div className="mb-4 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
+                Concierge map modes
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
+                Start with the situation most guests arrive with, then fine-tune
+                the map.
+              </p>
+            </div>
+            {activeConciergeMode ? (
+              <p className="rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D]">
+                {activeConciergeMode.label} active
+              </p>
+            ) : null}
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            {mapConciergeModes.map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => applyMapConciergeMode(mode)}
+                className={`rounded-xl p-3 text-left transition hover:-translate-y-0.5 ${
+                  activeModeId === mode.id
+                    ? "bg-[#071F2F] text-white shadow-lg shadow-[#071F2F]/15"
+                    : "bg-white text-[#0B3C5D] shadow-sm"
+                }`}
+              >
+                <span
+                  className={`block text-[0.66rem] font-black uppercase tracking-[0.16em] ${
+                    activeModeId === mode.id ? "text-[#D6B56D]" : "text-[#00A8A8]"
+                  }`}
+                >
+                  {mode.eyebrow}
+                </span>
+                <span className="mt-1 block text-sm font-black">{mode.label}</span>
+                <span
+                  className={`mt-1 block text-xs leading-5 ${
+                    activeModeId === mode.id ? "text-white/70" : "text-gray-600"
+                  }`}
+                >
+                  {mode.description}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid gap-3 md:grid-cols-[1fr_150px_190px_auto]">
           <div className="relative">
             <input
               value={search}
               onChange={(e) => {
+                setActiveModeId("");
                 setActiveCollectionId("");
                 setSearch(e.target.value);
               }}
@@ -1033,6 +1226,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <select
             value={category}
             onChange={(e) => {
+              setActiveModeId("");
               setActiveCollectionId("");
               setCategory(e.target.value);
             }}
@@ -1116,6 +1310,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 const nextPickup =
                   pickupPoints.find((point) => point.id === event.target.value) ||
                   null;
+                setActiveModeId("");
                 setPickupId(event.target.value);
                 if (nextPickup) {
                   setCenter({
@@ -1137,7 +1332,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             {selectedPickup ? (
               <button
                 type="button"
-                onClick={() => setPickupId("")}
+                onClick={() => {
+                  setActiveModeId("");
+                  setPickupId("");
+                }}
                 className="min-h-12 rounded-xl bg-white px-4 text-sm font-semibold text-[#0B3C5D] shadow-sm"
               >
                 Clear
@@ -1168,10 +1366,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9C7A2F]">
-                Curated map collections
+                Suggested routes
               </p>
               <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
-                Tap a collection for a guided island view.
+                Tap a route for a guided island view, then save the stops that
+                fit your day.
               </p>
             </div>
             {activeCollection ? (
@@ -1223,6 +1422,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               key={layer}
               type="button"
               onClick={() => {
+                setActiveModeId("");
                 setActiveCollectionId("");
                 setCategory(layer);
               }}
@@ -1408,11 +1608,24 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
           {pins.length === 0 ? (
             <div className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center">
-              <div className="rounded-2xl bg-white/95 p-6 shadow">
+              <div className="max-w-md rounded-2xl bg-white/95 p-6 shadow">
                 <p className="font-bold text-[#0B3C5D]">No matches here yet</p>
                 <p className="mt-2 text-sm text-gray-600">
-                  Try clearing the filters or searching another area.
+                  Try a guest-ready mode or clear the filters to reopen the map.
                 </p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                  {mapConciergeModes.slice(0, 3).map((mode) => (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => applyMapConciergeMode(mode)}
+                      className="rounded-xl bg-[#EEF7F6] px-3 py-2 text-xs font-bold text-[#0B3C5D]"
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : null}
@@ -1485,7 +1698,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
-                Trip plan
+                Plan your day
               </p>
               <h2 className="mt-1 text-xl font-bold">
                 {savedTripPins.length} saved stop
@@ -1523,6 +1736,52 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                   : "Pending"}
               </p>
             </div>
+          </div>
+
+          <div className="mt-4 rounded-xl bg-white/10 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
+                  Route readiness
+                </p>
+                <p className="mt-1 text-sm text-white/70">
+                  {routeReadyCount} of {routeReadinessItems.length} planning
+                  details ready
+                </p>
+              </div>
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#071F2F]">
+                {Math.round((routeReadyCount / routeReadinessItems.length) * 100)}%
+              </span>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {routeReadinessItems.map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between gap-3 rounded-xl bg-white/10 px-3 py-2 text-sm"
+                >
+                  <span className="font-bold text-white">{item.label}</span>
+                  <span
+                    className={`text-right text-xs font-semibold ${
+                      item.done ? "text-[#9EE8E3]" : "text-white/55"
+                    }`}
+                  >
+                    {item.detail}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl border border-[#D6B56D]/35 bg-[#FFF6DA] p-4 text-[#071F2F]">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Best next step
+            </p>
+            <p className="mt-1 text-lg font-black">{bestNextStep}</p>
+            <p className="mt-1 text-sm leading-6 text-[#0B3C5D]/75">
+              {activeConciergeMode
+                ? `${activeConciergeMode.label} is shaping the map.`
+                : "Use a concierge mode if you want the map to make the first planning decision."}
+            </p>
           </div>
 
           {savedTripPins.length === 0 ? (
@@ -1698,6 +1957,21 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-600">
               {selectedPin.description || "Details coming soon."}
             </p>
+            <div className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3 text-sm text-[#0B3C5D]">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
+                Planner fit
+              </p>
+              <p className="mt-1 font-bold">
+                {activeConciergeMode
+                  ? `${activeConciergeMode.label} candidate`
+                  : "Flexible island stop"}
+              </p>
+              <p className="mt-1 leading-6 text-gray-600">
+                {selectedPickup
+                  ? pickupNoteForPin(selectedPin)
+                  : "Add a pickup point to see whether this stop fits your day."}
+              </p>
+            </div>
             <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div className="rounded-xl bg-[#F7F3EA] p-3">
                 <p className="text-gray-500">Area</p>

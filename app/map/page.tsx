@@ -66,12 +66,12 @@ export default async function MapPage() {
             Explore by area
           </p>
           <h1 className="brand-display mt-2 text-4xl sm:text-5xl">
-            Roatan map
+            Roatan trip map
           </h1>
           <p className="brand-subtitle mt-3 max-w-2xl">
-            Browse tours, stays, and transport by island area. Exact coordinates
-            show as precise pins; area-only listings are grouped near their
-            listed town or beach.
+            Plan around the airport, cruise ports, beaches, and private island
+            days. Exact coordinates show as precise pins; area-only listings are
+            grouped near their listed town or beach.
           </p>
           <div className="mt-5 flex flex-wrap gap-2 text-sm font-semibold">
             {["Airport pickup", "Cruise ports", "Beach areas", "Trip planner"].map(
