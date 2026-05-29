@@ -5,103 +5,34 @@ import { motion, useReducedMotion, type Variants } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import EmptyState from "@/app/EmptyState";
+import HomeHeroHeader, {
+  type HomeAccountProfile,
+} from "@/app/HomeHeroHeader";
+import HomeListingCard, {
+  type HomePageListing,
+} from "@/app/HomeListingCard";
 import SiteFooter from "@/app/SiteFooter";
-import SiteLogo from "@/app/SiteLogo";
 import {
   filterHomeListings,
   homeListingFilterDefaults,
   selectHomeSpotlightListings,
-  type HomeListing,
 } from "@/lib/home-listings";
+import { homepageCategories, homepageTrustSignals } from "@/lib/homepage-content";
 import {
   defaultHomepageControls,
   normalizeHomepageControls,
-  type HomepageControls,
 } from "@/lib/homepage-settings";
 import {
   applyTravelerPersonaToFilters,
   buildDateAwareMapUrl,
-  getListingConversionTags,
-  getListingTrustBadges,
-  getLuxuryMarketplaceMatch,
   getTravelerPersonaPresets,
   listingMatchesAvailability,
   sortListingsForLuxuryMatch,
 } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
-import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
-
-type Listing = HomeListing & {
-  image_url: string | null;
-  reviews_count: number | null;
-};
-
-type HomeAccountProfile = {
-  email: string;
-  displayName: string;
-  profileImageUrl: string | null;
-  href: string;
-  label: string;
-};
-
-const categories = [
-  "All",
-  "Tours",
-  "Hotels",
-  "Transport",
-  "Food",
-  "Beaches",
-  "Private Charters",
-];
+import { displayNameFromProfile } from "@/lib/user-profile";
 
 const travelerPersonaPresets = getTravelerPersonaPresets();
-
-const tripTypes = [
-  {
-    title: "Cruise day",
-    text: "Port-friendly tours, transfer timing, and short island routes.",
-    href: "/map",
-  },
-  {
-    title: "Airport pickup",
-    text: "Arrivals, luggage, first stop timing, and transfer confidence.",
-    href: "/map?category=Transport",
-  },
-  {
-    title: "Beach day",
-    text: "West Bay, West End, Sandy Bay, food stops, and sunset plans.",
-    href: "/map",
-  },
-  {
-    title: "Family day",
-    text: "Easy pickups, clear capacity, gentle routes, and flexible timing.",
-    href: "/tours",
-  },
-  {
-    title: "Private day",
-    text: "Charters, custom drivers, private add-ons, and VIP pacing.",
-    href: "/map",
-  },
-];
-
-const guestConfidenceSignals = [
-  {
-    label: "Verified local operators",
-    text: "Profiles, photos, times, map context, and listing quality are shaped around guest confidence.",
-  },
-  {
-    label: "Secure request flow",
-    text: "Guests can request, message, review payments, and keep support in one signed-in account.",
-  },
-  {
-    label: "Cruise and airport aware",
-    text: "Planning highlights pickup areas, cruise timing, airport transfers, beaches, and nearby stops.",
-  },
-  {
-    label: "Concierge safety net",
-    text: "When a guest is not sure what fits, the planning request gives them a clear path forward.",
-  },
-];
 
 const smoothEase = [0.22, 1, 0.36, 1] as const;
 
@@ -157,32 +88,6 @@ const sectionRevealVariants: Variants = {
   },
 };
 
-const listingCardVariants: Variants = {
-  hidden: { opacity: 0, y: 34 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.55, ease: smoothEase },
-  },
-};
-
-function formatPrice(price: number | null) {
-  if (!price) {
-    return "Ask";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
-function listingBadge(listing: Listing, homepageControls: HomepageControls) {
-  if (listing.is_featured) return homepageControls.featuredBadgeLabel;
-  if ((listing.rating || 0) >= 4.8) return homepageControls.topRatedBadgeLabel;
-  return listing.category || "Listing";
-}
 
 export default function Home() {
   const reduceMotion = useReducedMotion();
@@ -190,7 +95,7 @@ export default function Home() {
     once: true,
     amount: reduceMotion ? 0.05 : 0.18,
   };
-  const [listings, setListings] = useState<Listing[]>([]);
+  const [listings, setListings] = useState<HomePageListing[]>([]);
   const [homepageControls, setHomepageControls] = useState(
     defaultHomepageControls,
   );
@@ -215,7 +120,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchListings() {
       const { data } = await supabase.from("listings").select("*");
-      const rows = ((data as Listing[]) || []).filter(
+      const rows = ((data as HomePageListing[]) || []).filter(
         (listing) => listing.is_active !== false,
       );
 
@@ -387,8 +292,7 @@ export default function Home() {
     travelTime !== "" ||
     guestCount !== "" ||
     availableOnly ||
-    selectedPersonaId !== "luxury-private" ||
-    showAdvancedFilters;
+    selectedPersonaId !== "luxury-private";
   const mapUrl = buildDateAwareMapUrl({
     category,
     location: locationFilter,
@@ -399,12 +303,10 @@ export default function Home() {
   });
   const featuredHomeListings = (
     hasActiveFilters ? filteredListings : spotlightListings
-  ).slice(0, 6);
+  ).slice(0, 3);
   const activeTripStyle =
     travelerPersonaPresets.find((preset) => preset.id === selectedPersonaId) ||
     travelerPersonaPresets[0];
-
-  const simpleTrustSignals = guestConfidenceSignals.slice(0, 3);
 
   const navListingCount = Math.max(
     filteredListings.length,
@@ -468,76 +370,18 @@ export default function Home() {
         <div className="absolute inset-x-0 bottom-0 h-72 bg-[linear-gradient(180deg,rgba(247,243,234,0)_0%,#F7F3EA_88%)]" />
 
         <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col px-5 py-6 sm:px-6">
-          <header className="flex flex-wrap items-center justify-between gap-3">
-            <SiteLogo variant="light" priority />
-            <nav className="flex flex-wrap items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.09] p-1 text-sm font-semibold text-white/90 shadow-2xl shadow-black/15 backdrop-blur-xl">
-              <a href="#marketplace" className="rounded-full px-3 py-2 hover:bg-white/10">
-                Listings
-              </a>
-              <Link href="/map" className="rounded-full px-3 py-2 hover:bg-white/10">
-                Map
-              </Link>
-              <Link href="/concierge" className="rounded-full px-3 py-2 hover:bg-white/10">
-                Concierge
-              </Link>
-              {homeAccountLoading ? null : homeAccount ? (
-                <div className="flex max-w-[300px] items-center gap-1 rounded-full border border-white/15 bg-white/12 p-1 text-white shadow-lg shadow-black/10 backdrop-blur">
-                  <Link
-                    href={homeAccount.href}
-                    className="flex min-w-0 items-center gap-2 rounded-full px-2 py-1.5 hover:bg-white/15"
-                  >
-                    <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
-                      {homeAccount.profileImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={homeAccount.profileImageUrl}
-                          alt=""
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        profileInitials(
-                          homeAccount.displayName,
-                          homeAccount.email,
-                        )
-                      )}
-                    </span>
-                    <span className="min-w-0 leading-tight">
-                      <span className="block truncate text-xs font-black">
-                        {homeAccount.displayName}
-                      </span>
-                      <span className="block truncate text-[10px] font-bold uppercase tracking-[0.08em] text-white/70">
-                        {homeAccount.label}
-                      </span>
-                    </span>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={signOutHomeAccount}
-                    disabled={homeSignOutLoading}
-                    className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#071F2F] disabled:opacity-60"
-                  >
-                    {homeSignOutLoading ? "Signing out..." : "Sign out"}
-                  </button>
-                </div>
-              ) : (
-                <Link href="/signin" className="rounded-full px-3 py-2 hover:bg-white/10">
-                  Sign in
-                </Link>
-              )}
-              <Link
-                href="/vendor/signup"
-                className="rounded-full bg-white px-4 py-2 text-[#071F2F] shadow-lg shadow-black/10"
-              >
-                List your business
-              </Link>
-            </nav>
-          </header>
+          <HomeHeroHeader
+            account={homeAccount}
+            accountLoading={homeAccountLoading}
+            signOutLoading={homeSignOutLoading}
+            onSignOut={signOutHomeAccount}
+          />
 
           <motion.div
             variants={reduceMotion ? reducedMotionVariants : heroContainerVariants}
-            className="grid flex-1 items-center gap-10 py-14 lg:grid-cols-[minmax(0,1fr)_390px] lg:py-20"
+            className="flex flex-1 items-center py-14 lg:py-20"
           >
-            <div>
+            <div className="max-w-6xl">
               <motion.p
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="text-sm font-black uppercase tracking-[0.26em] text-[#D6B56D]"
@@ -590,62 +434,6 @@ export default function Home() {
                 </span>
               </motion.div>
             </div>
-
-            <motion.div
-              variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-              className="rounded-[2rem] border border-white/16 bg-white/[0.12] p-5 text-white shadow-2xl shadow-black/30 backdrop-blur-2xl sm:p-6"
-            >
-              <div className="relative overflow-hidden rounded-[1.5rem]">
-                <Image
-                  src="/images/roatan.jpeg"
-                  alt="Roatan turquoise coast"
-                  width={720}
-                  height={520}
-                  priority
-                  className="h-64 w-full object-cover"
-                />
-                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0)_0%,rgba(7,31,47,0.8)_100%)]" />
-                <div className="absolute bottom-4 left-4 right-4">
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#D6B56D]">
-                    Trip planner
-                  </p>
-                  <h2 className="mt-2 text-3xl font-black leading-tight">
-                    Start with the day you want.
-                  </h2>
-                </div>
-              </div>
-              <p className="mt-5 text-sm leading-6 text-white/76">
-                Pick a style, date, and guest count. The marketplace narrows
-                the best options without making the page feel crowded.
-              </p>
-              <div className="mt-6 grid gap-3">
-                <div className="rounded-[1.1rem] border border-white/12 bg-[#071F2F]/52 p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
-                    Current style
-                  </p>
-                  <h3 className="mt-2 text-xl font-black">
-                    {activeTripStyle.label}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-white/68">
-                    {activeTripStyle.description}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href="#marketplace"
-                    className="rounded-xl bg-white px-4 py-3 text-center text-sm font-black text-[#071F2F]"
-                  >
-                    Search
-                  </Link>
-                  <Link
-                    href="/concierge"
-                    className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-black text-white"
-                  >
-                    Concierge
-                  </Link>
-                </div>
-              </div>
-            </motion.div>
           </motion.div>
         </div>
       </section>
@@ -657,18 +445,15 @@ export default function Home() {
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
         className="relative z-20 -mt-10 px-5 pb-12 sm:px-6"
       >
-        <div className="mx-auto grid max-w-6xl gap-3 rounded-[1.5rem] border border-[#D6B56D]/20 bg-white p-4 shadow-xl shadow-[#071F2F]/8 md:grid-cols-3">
-          {simpleTrustSignals.map((signal) => (
-            <div key={signal.label} className="p-4">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
-                Guest confidence
-              </p>
-              <h2 className="mt-2 text-base font-black text-[#0B3C5D]">
+        <div className="mx-auto grid max-w-5xl gap-2 rounded-[1.25rem] border border-[#D6B56D]/20 bg-white p-3 shadow-xl shadow-[#071F2F]/8 md:grid-cols-3">
+          {homepageTrustSignals.map((signal) => (
+            <div key={signal.label} className="flex items-center gap-3 p-3">
+              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#EEF7F6] text-xs font-black text-[#007B7B]">
+                OK
+              </span>
+              <h2 className="text-sm font-black text-[#0B3C5D]">
                 {signal.label}
               </h2>
-              <p className="mt-2 text-xs leading-5 text-gray-600">
-                {signal.text}
-              </p>
             </div>
           ))}
         </div>
@@ -718,7 +503,7 @@ export default function Home() {
             }
             className="brand-card p-4 sm:p-5"
           >
-            <div className="grid gap-3 lg:grid-cols-[1.4fr_0.9fr_0.8fr_0.7fr]">
+            <div className="grid gap-3 lg:grid-cols-[1.5fr_0.85fr_0.95fr_0.8fr_0.65fr]">
               <input
                 type="text"
                 placeholder="Search by tour, stay, transport, or location"
@@ -726,6 +511,17 @@ export default function Home() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="brand-input min-h-12"
               />
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="brand-input min-h-12"
+              >
+                {homepageCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat === "All" ? "All categories" : cat}
+                  </option>
+                ))}
+              </select>
               <select
                 value={selectedPersonaId}
                 onChange={(e) => applyTravelerPersona(e.target.value)}
@@ -753,18 +549,35 @@ export default function Home() {
               />
             </div>
 
-            <div className="mt-3 grid gap-3 border-t border-[#D6B56D]/20 pt-3 md:grid-cols-[1fr_1fr_auto_auto]">
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="brand-input min-h-12"
+            <div className="mt-3 flex flex-col justify-between gap-3 border-t border-[#D6B56D]/20 pt-3 sm:flex-row sm:items-center">
+              <p className="text-sm leading-6 text-gray-700">
+                <span className="font-black text-[#0B3C5D]">
+                  {activeTripStyle.label}:
+                </span>{" "}
+                {activeTripStyle.description}
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters((current) => !current)}
+                className="brand-button-secondary min-h-12 px-4 py-2 text-sm"
               >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat === "All" ? "All categories" : cat}
-                  </option>
-                ))}
-              </select>
+                {showAdvancedFilters ? "Hide filters" : "More filters"}
+              </button>
+            </div>
+
+            {showAdvancedFilters ? (
+              <div className="mt-3 grid gap-3 border-t border-[#D6B56D]/20 pt-3 md:grid-cols-3">
+                <select
+                  value={locationFilter}
+                  onChange={(e) => setLocationFilter(e.target.value)}
+                  className="brand-input min-h-12"
+                >
+                  {locations.map((location) => (
+                    <option key={location} value={location}>
+                      {location === "All" ? "All locations" : location}
+                    </option>
+                  ))}
+                </select>
               <input
                 value={travelTime}
                 onChange={(e) => setTravelTime(e.target.value)}
@@ -779,28 +592,6 @@ export default function Home() {
                 />
                 Available only
               </label>
-              <button
-                type="button"
-                onClick={() => setShowAdvancedFilters((current) => !current)}
-                className="brand-button-secondary min-h-12 px-4 py-2 text-sm"
-              >
-                {showAdvancedFilters ? "Hide filters" : "More filters"}
-              </button>
-            </div>
-
-            {showAdvancedFilters ? (
-              <div className="mt-3 grid gap-3 border-t border-[#D6B56D]/20 pt-3 md:grid-cols-4">
-                <select
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                  className="brand-input min-h-12"
-                >
-                  {locations.map((location) => (
-                    <option key={location} value={location}>
-                      {location === "All" ? "All locations" : location}
-                    </option>
-                  ))}
-                </select>
                 <input
                   type="number"
                   min="0"
@@ -834,11 +625,8 @@ export default function Home() {
             ) : null}
 
             <div className="mt-4 flex flex-col justify-between gap-3 rounded-[1rem] bg-[#EEF7F6] p-4 sm:flex-row sm:items-center">
-              <p className="text-sm leading-6 text-gray-700">
-                <span className="font-black text-[#0B3C5D]">
-                  {activeTripStyle.label}:
-                </span>{" "}
-                {activeTripStyle.description}
+              <p className="text-sm font-bold text-[#0B3C5D]">
+                {featuredHomeListings.length} curated matches ready.
               </p>
               <div className="flex flex-wrap gap-2">
                 {hasActiveFilters ? (
@@ -879,13 +667,10 @@ export default function Home() {
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {featuredHomeListings.map((listing) => (
-                  <ListingCard
+                  <HomeListingCard
                     key={listing.id}
                     listing={listing}
                     homepageControls={homepageControls}
-                    travelDate={travelDate}
-                    guestCount={guestCount}
-                    selectedPersonaId={selectedPersonaId}
                     featured={!hasActiveFilters}
                   />
                 ))}
@@ -904,60 +689,6 @@ export default function Home() {
           </div>
         </div>
       </section>
-
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportOnce}
-        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="mx-auto max-w-7xl px-5 py-20 sm:px-6"
-      >
-        <div className="mb-9 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="brand-eyebrow">
-              Choose your Roatan style
-            </p>
-            <h2 className="brand-display mt-2 max-w-3xl text-4xl sm:text-6xl">
-              Start with the day you want.
-            </h2>
-            <p className="brand-subtitle mt-3 max-w-2xl">
-              A luxury platform should feel effortless: pick the rhythm of the
-              trip first, then let the marketplace handle the details.
-            </p>
-          </div>
-          <Link href="/map" className="text-sm font-black text-[#007B7B]">
-            Open the map
-          </Link>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {tripTypes.map((item, index) => (
-            <motion.div
-              key={item.title}
-              variants={reduceMotion ? reducedMotionVariants : listingCardVariants}
-              whileHover={reduceMotion ? undefined : { y: -6 }}
-              transition={{ duration: 0.28, ease: smoothEase }}
-              className="h-full"
-            >
-              <Link
-                href={item.href}
-                className="brand-card-lift group block h-full rounded-[1.25rem] p-6 focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
-              >
-                <p className="brand-eyebrow-gold">
-                  Route {index + 1}
-                </p>
-                <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
-                  {item.title}
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
-                <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
-                  Explore
-                </span>
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-      </motion.section>
 
       <motion.section
         initial="hidden"
@@ -996,153 +727,5 @@ export default function Home() {
       </motion.section>
       <SiteFooter />
     </motion.main>
-  );
-}
-
-function ListingCard({
-  listing,
-  homepageControls,
-  travelDate,
-  guestCount,
-  selectedPersonaId,
-  featured = false,
-}: {
-  listing: Listing;
-  homepageControls: HomepageControls;
-  travelDate: string;
-  guestCount: string;
-  selectedPersonaId: string;
-  featured?: boolean;
-}) {
-  const reduceMotion = useReducedMotion();
-  const trustBadges = getListingTrustBadges(listing);
-  const conversionTags = getListingConversionTags(listing, {
-    date: travelDate,
-    guests: guestCount,
-  });
-  const luxuryMatch = getLuxuryMarketplaceMatch(listing, selectedPersonaId, {
-    date: travelDate,
-    guests: guestCount,
-  });
-
-  return (
-    <motion.div
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: reduceMotion ? 0.05 : 0.22 }}
-      variants={reduceMotion ? reducedMotionVariants : listingCardVariants}
-      whileHover={reduceMotion ? undefined : { y: -7 }}
-      transition={{ duration: 0.28, ease: smoothEase }}
-      className="h-full"
-    >
-      <Link
-        href={`/listings/${listing.id}`}
-        className="brand-card-lift group block h-full overflow-hidden focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
-      >
-        <div className={featured ? "relative h-60 bg-[#D8EFEC]" : "relative h-52 bg-[#D8EFEC]"}>
-          {listing.image_url ? (
-            <Image
-              src={listing.image_url}
-              alt={listing.title}
-              fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-              unoptimized
-              className="object-cover transition duration-700 group-hover:scale-105"
-            />
-          ) : (
-            <>
-              <Image
-                src="/images/roatan.jpeg"
-                alt=""
-                fill
-                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                className="object-cover opacity-80 transition duration-700 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-[#071F2F]/28" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="rounded-full border border-white/25 bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D] shadow-lg">
-                  Image coming soon
-                </span>
-              </div>
-            </>
-          )}
-          <span className="brand-badge absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs uppercase shadow">
-            {listingBadge(listing, homepageControls)}
-          </span>
-          <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
-            {formatPrice(listing.price)}
-          </span>
-        </div>
-
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="brand-eyebrow">
-                {listing.location || "Roatan"}
-              </p>
-              <h3 className="mt-2 text-lg font-black leading-snug text-[#0B3C5D]">
-                {listing.title}
-              </h3>
-            </div>
-            <span className="brand-badge brand-badge-teal shrink-0">
-              {listing.rating ?? 5}/5
-            </span>
-          </div>
-          <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
-            {listing.description || "Details coming soon."}
-          </p>
-          <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
-            <span className="font-bold text-gray-500">
-              {listing.category || "Listing"}
-            </span>
-            <span className="font-black text-[#007B7B]">
-              Quick view
-            </span>
-          </div>
-          {trustBadges.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {trustBadges.slice(0, 2).map((badge) => (
-                <span
-                  key={badge}
-                  className="brand-badge brand-badge-teal"
-                >
-                  {badge}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          {conversionTags.length > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {conversionTags.slice(0, 1).map((tag) => (
-                <span
-                  key={tag}
-                  className="brand-badge"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          <div className="mt-4 rounded-[1rem] border border-[#00A8A8]/15 bg-[#EEF7F6] p-3">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
-                Smart match
-              </p>
-              <span className="rounded-full bg-white px-2 py-1 text-xs font-black text-[#0B3C5D]">
-                {luxuryMatch.score}%
-              </span>
-            </div>
-            <p className="mt-1 text-sm font-black text-[#0B3C5D]">
-              {luxuryMatch.label}
-            </p>
-            {luxuryMatch.reasons.length > 0 ? (
-              <p className="mt-1 text-xs leading-5 text-gray-600">
-                {luxuryMatch.reasons.slice(0, 2).join(" - ")}
-              </p>
-            ) : null}
-          </div>
-        </div>
-      </Link>
-    </motion.div>
   );
 }
