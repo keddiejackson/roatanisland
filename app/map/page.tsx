@@ -35,26 +35,26 @@ export default async function MapPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#F7F3EA] px-5 py-10 text-[#17324D] sm:px-6">
+    <main className="brand-page min-h-screen overflow-x-hidden px-5 py-10 sm:px-6">
       <div className="mx-auto max-w-7xl min-w-0">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <SiteLogo />
           <div className="flex flex-wrap gap-2">
             <Link
               href="/"
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
+              className="brand-button-secondary"
             >
               Home
             </Link>
             <Link
               href="/tours"
-              className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
+              className="brand-button-secondary"
             >
               Tours
             </Link>
             <Link
               href="/vendor/signup"
-              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white shadow"
+              className="brand-button-primary"
             >
               List your business
             </Link>
@@ -62,13 +62,13 @@ export default async function MapPage() {
         </header>
 
         <section className="mb-6">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="brand-eyebrow">
             Explore by area
           </p>
-          <h1 className="mt-2 text-4xl font-bold text-[#0B3C5D] sm:text-5xl">
+          <h1 className="brand-display mt-2 text-4xl sm:text-5xl">
             Roatan map
           </h1>
-          <p className="mt-3 max-w-2xl leading-7 text-gray-600">
+          <p className="brand-subtitle mt-3 max-w-2xl">
             Browse tours, stays, and transport by island area. Exact coordinates
             show as precise pins; area-only listings are grouped near their
             listed town or beach.
@@ -78,7 +78,7 @@ export default async function MapPage() {
               (item) => (
                 <span
                   key={item}
-                  className="rounded-full border border-[#D6B56D]/30 bg-white px-4 py-2 text-[#0B3C5D] shadow-sm"
+                  className="brand-badge"
                 >
                   {item}
                 </span>

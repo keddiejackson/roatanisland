@@ -49,31 +49,33 @@ export default async function CategoryPage({
   const listings = (data as Listing[]) || [];
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="bg-[#0B3C5D] px-6 py-10 text-white">
+    <main className="brand-page min-h-screen">
+      <section className="px-6 py-10 text-white">
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <SiteLogo variant="light" />
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/"
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
+                className="brand-button-secondary"
               >
                 Home
               </Link>
               <Link
                 href="/map"
-                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/20"
+                className="brand-button-ghost"
               >
                 Map
               </Link>
             </div>
           </header>
-          <div className="py-16">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
+          <div className="brand-hero-panel mt-8 px-6 py-14 sm:px-10 sm:py-16">
+            <p className="brand-eyebrow-gold">
               {category}
             </p>
-            <h1 className="mt-3 text-4xl font-bold sm:text-6xl">{title}</h1>
+            <h1 className="mt-3 text-4xl font-black leading-tight sm:text-6xl">
+              {title}
+            </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">
               {description}
             </p>
@@ -98,14 +100,14 @@ export default async function CategoryPage({
       <section className="mx-auto max-w-7xl px-6 py-14">
         <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+            <p className="brand-eyebrow">
               Browse
             </p>
-            <h2 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
+            <h2 className="brand-display mt-2 text-3xl">
               {category} listings
             </h2>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="brand-badge">
             {listings.length} result{listings.length === 1 ? "" : "s"}
           </p>
         </div>
@@ -121,7 +123,7 @@ export default async function CategoryPage({
               <Link
                 key={listing.id}
                 href={`/listings/${listing.id}`}
-                className="group overflow-hidden rounded-2xl bg-white shadow transition hover:-translate-y-1 hover:shadow-xl"
+                className="brand-card-lift group overflow-hidden"
               >
                 <div className="relative h-56 bg-[#D8EFEC]">
                   {listing.image_url ? (
@@ -134,7 +136,7 @@ export default async function CategoryPage({
                       className="object-cover transition duration-500 group-hover:scale-105"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
+                    <div className="brand-skeleton flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
                       No image yet
                     </div>
                   )}
@@ -153,7 +155,7 @@ export default async function CategoryPage({
                     <span className="text-gray-500">
                       {listing.location || "Roatan"}
                     </span>
-                    <span className="font-semibold text-[#0B3C5D]">
+                    <span className="brand-badge brand-badge-teal">
                       {listing.rating ?? 5}/5
                     </span>
                   </div>

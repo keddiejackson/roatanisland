@@ -32,31 +32,31 @@ export default async function VendorsPage() {
   const vendors = (data as Vendor[]) || [];
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="bg-[#0B3C5D] px-6 py-10 text-white">
+    <main className="brand-page min-h-screen">
+      <section className="px-6 py-10 text-white">
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <SiteLogo variant="light" />
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/"
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
+                className="brand-button-secondary"
               >
                 Home
               </Link>
               <Link
                 href="/vendor/signup"
-                className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white"
+                className="brand-button-primary"
               >
                 List your business
               </Link>
             </div>
           </header>
-          <div className="py-16">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
+          <div className="brand-hero-panel mt-8 px-6 py-14 sm:px-10 sm:py-16">
+            <p className="brand-eyebrow-gold">
               Local operators
             </p>
-            <h1 className="mt-3 text-4xl font-bold sm:text-6xl">
+            <h1 className="mt-3 text-4xl font-black leading-tight sm:text-6xl">
               Browse Roatan vendors
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">
@@ -95,7 +95,7 @@ export default async function VendorsPage() {
               <Link
                 key={vendor.id}
                 href={`/vendors/${vendor.id}`}
-                className="rounded-2xl bg-white p-6 shadow transition hover:-translate-y-1 hover:shadow-xl"
+                className="brand-card-lift p-6"
               >
                 <div className="flex items-center gap-4">
                   <div className="relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D8EFEC] text-2xl font-bold text-[#0B3C5D]">

@@ -3,6 +3,22 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --brand-ink: #08283b;
+  --brand-navy: #071f2f;
+  --brand-blue: #0b3c5d;
+  --brand-teal: #00a8a8;
+  --brand-teal-soft: #eef9f7;
+  --brand-sand: #f7f3ea;
+  --brand-cream: #fffaf0;
+  --brand-gold: #d6b56d;
+  --brand-border: #eadfca;
+  --brand-muted: #5d6f7d;
+  --brand-radius-sm: 10px;
+  --brand-radius: 16px;
+  --brand-radius-lg: 24px;
+  --brand-shadow-sm: 0 10px 24px rgba(7, 31, 47, 0.08);
+  --brand-shadow: 0 18px 50px rgba(7, 31, 47, 0.12);
+  --brand-shadow-lg: 0 28px 80px rgba(7, 31, 47, 0.18);
 }
 
 @theme inline {
@@ -23,6 +39,195 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer components {
+  .brand-page {
+    background:
+      radial-gradient(circle at top left, rgba(0, 168, 168, 0.08), transparent 34rem),
+      linear-gradient(180deg, #fffdfa 0%, var(--brand-sand) 54%, #fffdfa 100%);
+    color: var(--brand-ink);
+    letter-spacing: 0;
+  }
+
+  .brand-container {
+    width: min(100% - 2.5rem, 80rem);
+    margin-inline: auto;
+  }
+
+  .brand-hero-panel {
+    border: 1px solid rgba(214, 181, 109, 0.28);
+    border-radius: var(--brand-radius-lg);
+    background:
+      linear-gradient(135deg, rgba(7, 31, 47, 0.98), rgba(11, 60, 93, 0.9)),
+      var(--brand-navy);
+    box-shadow: var(--brand-shadow-lg);
+  }
+
+  .brand-eyebrow {
+    color: var(--brand-teal);
+    font-size: 0.76rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .brand-eyebrow-gold {
+    color: var(--brand-gold);
+    font-size: 0.76rem;
+    font-weight: 900;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  .brand-display {
+    color: var(--brand-blue);
+    font-weight: 950;
+    line-height: 0.96;
+    letter-spacing: 0;
+  }
+
+  .brand-subtitle {
+    color: var(--brand-muted);
+    line-height: 1.75;
+  }
+
+  .brand-card {
+    border: 1px solid var(--brand-border);
+    border-radius: var(--brand-radius);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: var(--brand-shadow-sm);
+  }
+
+  .brand-card-lift {
+    border: 1px solid var(--brand-border);
+    border-radius: var(--brand-radius);
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: var(--brand-shadow-sm);
+    transition:
+      transform 220ms ease,
+      box-shadow 220ms ease,
+      border-color 220ms ease;
+  }
+
+  .brand-card-lift:hover {
+    transform: translateY(-4px);
+    border-color: rgba(214, 181, 109, 0.48);
+    box-shadow: var(--brand-shadow);
+  }
+
+  .brand-button-primary,
+  .brand-button-secondary,
+  .brand-button-ghost {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--brand-radius-sm);
+    padding: 0.75rem 1.1rem;
+    font-size: 0.9rem;
+    font-weight: 900;
+    line-height: 1;
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease,
+      border-color 180ms ease;
+  }
+
+  .brand-button-primary {
+    background: linear-gradient(135deg, var(--brand-teal), #079193);
+    color: white;
+    box-shadow: 0 12px 26px rgba(0, 168, 168, 0.22);
+  }
+
+  .brand-button-secondary {
+    border: 1px solid rgba(214, 181, 109, 0.36);
+    background: white;
+    color: var(--brand-blue);
+    box-shadow: var(--brand-shadow-sm);
+  }
+
+  .brand-button-ghost {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+  }
+
+  .brand-button-primary:hover,
+  .brand-button-secondary:hover,
+  .brand-button-ghost:hover {
+    transform: translateY(-2px);
+  }
+
+  .brand-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(214, 181, 109, 0.32);
+    border-radius: 999px;
+    background: var(--brand-cream);
+    padding: 0.45rem 0.78rem;
+    color: var(--brand-blue);
+    font-size: 0.78rem;
+    font-weight: 900;
+  }
+
+  .brand-badge-teal {
+    border-color: rgba(0, 168, 168, 0.2);
+    background: var(--brand-teal-soft);
+    color: #066b70;
+  }
+
+  .brand-input {
+    width: 100%;
+    border: 1px solid #ded8ce;
+    border-radius: var(--brand-radius-sm);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 0.85rem 1rem;
+    color: var(--brand-ink);
+    outline: none;
+    transition:
+      border-color 180ms ease,
+      box-shadow 180ms ease,
+      background-color 180ms ease;
+  }
+
+  .brand-input:focus {
+    border-color: var(--brand-teal);
+    box-shadow: 0 0 0 4px rgba(0, 168, 168, 0.16);
+  }
+
+  .brand-empty-state {
+    border: 1px dashed rgba(0, 168, 168, 0.35);
+    border-radius: var(--brand-radius-lg);
+    background:
+      linear-gradient(135deg, rgba(238, 249, 247, 0.92), rgba(255, 250, 240, 0.96)),
+      white;
+    box-shadow: var(--brand-shadow-sm);
+  }
+
+  .brand-skeleton {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--brand-radius-sm);
+    background: #dcefed;
+  }
+
+  .brand-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.62), transparent);
+    animation: brand-skeleton-shimmer 1.35s infinite;
+  }
+}
+
+@keyframes brand-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @keyframes motion-rise {
@@ -57,6 +262,24 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .brand-button-primary,
+  .brand-button-secondary,
+  .brand-button-ghost,
+  .brand-card-lift {
+    transition: none;
+  }
+
+  .brand-card-lift:hover,
+  .brand-button-primary:hover,
+  .brand-button-secondary:hover,
+  .brand-button-ghost:hover {
+    transform: none;
+  }
+
+  .brand-skeleton::after {
+    animation: none;
+  }
+
   .motion-rise,
   .motion-float {
     animation: none;
