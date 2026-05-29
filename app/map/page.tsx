@@ -66,7 +66,7 @@ export default async function MapPage() {
             Explore by area
           </p>
           <h1 className="brand-display mt-2 text-4xl sm:text-5xl">
-            Roatan trip map
+            Roatan Day Map
           </h1>
           <p className="brand-subtitle mt-3 max-w-2xl">
             Plan around the airport, cruise ports, beaches, and private island

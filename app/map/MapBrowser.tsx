@@ -561,6 +561,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [browserStateLoaded, setBrowserStateLoaded] = useState(false);
   const [hoveredId, setHoveredId] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -671,23 +672,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       .filter((item) => item !== "All")
       .slice(0, 6);
   }, [listings, locations, search]);
-
-  const areaCounts = useMemo(() => {
-    return Object.fromEntries(
-      areaButtons.map((area) => {
-        if (area === "All") {
-          return [area, listings.length];
-        }
-
-        const normalizedArea = area.toLowerCase();
-        const count = listings.filter((listing) =>
-          (listing.location || "").toLowerCase().includes(normalizedArea),
-        ).length;
-
-        return [area, count];
-      }),
-    ) as Record<string, number>;
-  }, [listings]);
 
   const activeCollection =
     mapCollections.find((collection) => collection.id === activeCollectionId) ||
@@ -1123,14 +1107,14 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         <div className="mb-4 flex min-w-0 flex-col justify-between gap-4 rounded-2xl bg-[#071F2F] p-4 text-white sm:flex-row sm:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
-              Map Concierge Pro
+              Roatan Day Map
             </p>
             <h2 className="mt-1 text-2xl font-bold leading-tight">
-              Build the right island day from the map
+              Pick a start, choose a day, save your stops
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
-              Choose a mode, set pickup, save stops, and compare the route
-              before you request a booking.
+              A simpler map for cruise guests, airport arrivals, beach days, and
+              private island plans.
             </p>
           </div>
           <button
@@ -1146,18 +1130,15 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
-                Concierge map modes
+                Step 1
               </p>
-              <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
-                Start with the situation most guests arrive with, then fine-tune
-                the map.
-              </p>
+              <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                Where are you starting?
+              </h3>
             </div>
-            {activeConciergeMode ? (
-              <p className="rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D]">
-                {activeConciergeMode.label} active
-              </p>
-            ) : null}
+            <p className="rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D]">
+              {selectedPickup?.label || activeConciergeMode?.label || "Choose one"}
+            </p>
           </div>
           <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {mapConciergeModes.map((mode) => (
@@ -1179,209 +1160,39 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                   {mode.eyebrow}
                 </span>
                 <span className="mt-1 block text-sm font-black">{mode.label}</span>
-                <span
-                  className={`mt-1 block text-xs leading-5 ${
-                    activeModeId === mode.id ? "text-white/70" : "text-gray-600"
-                  }`}
-                >
-                  {mode.description}
-                </span>
               </button>
             ))}
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-[1fr_150px_190px_auto]">
-          <div className="relative">
-            <input
-              value={search}
-              onChange={(e) => {
-                setActiveModeId("");
-                setActiveCollectionId("");
-                setSearch(e.target.value);
-              }}
-              placeholder="Search map"
-              className="min-h-12 w-full rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
-            />
-            {suggestions.length > 0 ? (
-              <div className="absolute left-0 right-0 top-14 z-40 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5">
-                {suggestions.map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    type="button"
-                    onClick={() => {
-                      setSearch(suggestion);
-                      if (areaButtons.includes(suggestion)) {
-                        focusArea(suggestion);
-                      }
-                    }}
-                    className="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#0B3C5D] hover:bg-[#F7F3EA]"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <select
-            value={category}
-            onChange={(e) => {
-              setActiveModeId("");
-              setActiveCollectionId("");
-              setCategory(e.target.value);
-            }}
-            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
-          >
-            {luxuryLayers.map((item) => (
-              <option key={item} value={item}>
-                {item === "All" ? "All categories" : item}
-              </option>
-            ))}
-          </select>
-          <select
-            value={location}
-            onChange={(e) => focusArea(e.target.value)}
-            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
-          >
-            {locations.map((item) => (
-              <option key={item} value={item}>
-                {item === "All" ? "All locations" : item}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={useNearMe}
-            className="min-h-12 rounded-xl bg-[#0B3C5D] px-4 text-sm font-semibold text-white shadow-lg shadow-[#0B3C5D]/15"
-          >
-            Near me
-          </button>
-        </div>
-
-        <div className="mt-3 grid gap-3 md:grid-cols-[1fr_1fr_120px_auto]">
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(event) => setDateFilter(event.target.value)}
-            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
-          />
-          <input
-            value={timeFilter}
-            onChange={(event) => setTimeFilter(event.target.value)}
-            placeholder="Preferred time"
-            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
-          />
-          <input
-            type="number"
-            min="1"
-            value={guestFilter}
-            onChange={(event) => setGuestFilter(event.target.value)}
-            placeholder="Guests"
-            className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
-          />
-          <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#00A8A8]/20 bg-white px-4 text-sm font-bold text-[#0B3C5D]">
-            <input
-              type="checkbox"
-              checked={availableOnly}
-              onChange={(event) => setAvailableOnly(event.target.checked)}
-            />
-            Available only
-          </label>
-        </div>
-        {locationMessage ? (
-          <p className="mt-3 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
-            {locationMessage}
-          </p>
-        ) : null}
-
-        <div className="mt-4 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3">
-          <div className="grid gap-3 md:grid-cols-[1fr_240px_auto] md:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
-                Pickup checker
-              </p>
-              <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
-                Sort the map by distance from a cruise port, hotel area, or the airport.
-              </p>
-            </div>
-            <select
-              value={pickupId}
-              onChange={(event) => {
-                const nextPickup =
-                  pickupPoints.find((point) => point.id === event.target.value) ||
-                  null;
-                setActiveModeId("");
-                setPickupId(event.target.value);
-                if (nextPickup) {
-                  setCenter({
-                    latitude: nextPickup.latitude,
-                    longitude: nextPickup.longitude,
-                  });
-                  setZoom(13);
-                }
-              }}
-              className="min-h-12 rounded-xl border border-[#00A8A8]/25 bg-white px-4 outline-none focus:border-[#00A8A8]"
-            >
-              <option value="">Choose pickup point</option>
-              {pickupPoints.map((point) => (
-                <option key={point.id} value={point.id}>
-                  {point.label}
-                </option>
-              ))}
-            </select>
-            {selectedPickup ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModeId("");
-                  setPickupId("");
-                }}
-                className="min-h-12 rounded-xl bg-white px-4 text-sm font-semibold text-[#0B3C5D] shadow-sm"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-          {selectedPickup ? (
-            <div className="mt-3 rounded-xl bg-white p-4 text-sm text-[#0B3C5D]">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-bold">
-                  {selectedPickup.label}{" "}
-                  <span className="font-medium text-gray-500">
-                    {selectedPickup.kind}
-                  </span>
-                </p>
-                <p className="font-semibold text-[#007B7B]">
-                  Closest listings shown first
-                </p>
-              </div>
-              <p className="mt-2 leading-6 text-gray-600">
-                {selectedPickup.note}
-              </p>
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-4 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3">
+        <div className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9C7A2F]">
                 Suggested routes
               </p>
-              <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
-                Tap a route for a guided island view, then save the stops that
-                fit your day.
-              </p>
+              <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                Choose your day style
+              </h3>
             </div>
-            {activeCollection ? (
+            <div className="flex flex-wrap gap-2">
+              {activeCollection ? (
+                <button
+                  type="button"
+                  onClick={clearCollection}
+                  className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm"
+                >
+                  Clear style
+                </button>
+              ) : null}
               <button
                 type="button"
-                onClick={clearCollection}
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow-sm"
+                onClick={() => setShowAdvancedFilters((current) => !current)}
+                className="rounded-xl bg-[#071F2F] px-4 py-2 text-sm font-semibold text-white"
               >
-                Clear collection
+                {showAdvancedFilters ? "Hide filters" : "More filters"}
               </button>
-            ) : null}
+            </div>
           </div>
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
             {mapCollections.map((collection) => (
@@ -1409,53 +1220,168 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               </button>
             ))}
           </div>
-          {activeCollection ? (
-            <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-[#0B3C5D]">
-              {activeCollection.blurb}
-            </p>
+          <div className="mt-3 rounded-xl bg-white px-4 py-3 text-sm leading-6 text-[#0B3C5D]">
+            {activeCollection
+              ? activeCollection.blurb
+              : "Start with a route style, then use More filters only when you need details."}
+          </div>
+
+          {showAdvancedFilters ? (
+            <div className="mt-3 grid gap-3 rounded-2xl border border-[#D6B56D]/25 bg-white p-3">
+              <div className="grid gap-3 md:grid-cols-[1fr_150px_190px_auto]">
+                <div className="relative">
+                  <input
+                    value={search}
+                    onChange={(e) => {
+                      setActiveModeId("");
+                      setActiveCollectionId("");
+                      setSearch(e.target.value);
+                    }}
+                    placeholder="Search map"
+                    className="min-h-12 w-full rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+                  />
+                  {suggestions.length > 0 ? (
+                    <div className="absolute left-0 right-0 top-14 z-40 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5">
+                      {suggestions.map((suggestion) => (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => {
+                            setSearch(suggestion);
+                            if (areaButtons.includes(suggestion)) {
+                              focusArea(suggestion);
+                            }
+                          }}
+                          className="block w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#0B3C5D] hover:bg-[#F7F3EA]"
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    setActiveModeId("");
+                    setActiveCollectionId("");
+                    setCategory(e.target.value);
+                  }}
+                  className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+                >
+                  {luxuryLayers.map((item) => (
+                    <option key={item} value={item}>
+                      {item === "All" ? "All categories" : item}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={location}
+                  onChange={(e) => focusArea(e.target.value)}
+                  className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+                >
+                  {locations.map((item) => (
+                    <option key={item} value={item}>
+                      {item === "All" ? "All locations" : item}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={useNearMe}
+                  className="min-h-12 rounded-xl bg-[#0B3C5D] px-4 text-sm font-semibold text-white shadow-lg shadow-[#0B3C5D]/15"
+                >
+                  Near me
+                </button>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_120px_auto]">
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(event) => setDateFilter(event.target.value)}
+                  className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+                />
+                <input
+                  value={timeFilter}
+                  onChange={(event) => setTimeFilter(event.target.value)}
+                  placeholder="Preferred time"
+                  className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+                />
+                <input
+                  type="number"
+                  min="1"
+                  value={guestFilter}
+                  onChange={(event) => setGuestFilter(event.target.value)}
+                  placeholder="Guests"
+                  className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
+                />
+                <label className="flex min-h-12 items-center gap-3 rounded-xl border border-[#00A8A8]/20 bg-white px-4 text-sm font-bold text-[#0B3C5D]">
+                  <input
+                    type="checkbox"
+                    checked={availableOnly}
+                    onChange={(event) => setAvailableOnly(event.target.checked)}
+                  />
+                  Available only
+                </label>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-[1fr_240px_auto] md:items-end">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
+                    Pickup
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
+                    Optional sorting by cruise port, hotel area, or airport.
+                  </p>
+                </div>
+                <select
+                  value={pickupId}
+                  onChange={(event) => {
+                    const nextPickup =
+                      pickupPoints.find((point) => point.id === event.target.value) ||
+                      null;
+                    setActiveModeId("");
+                    setPickupId(event.target.value);
+                    if (nextPickup) {
+                      setCenter({
+                        latitude: nextPickup.latitude,
+                        longitude: nextPickup.longitude,
+                      });
+                      setZoom(13);
+                    }
+                  }}
+                  className="min-h-12 rounded-xl border border-[#00A8A8]/25 bg-white px-4 outline-none focus:border-[#00A8A8]"
+                >
+                  <option value="">Choose pickup point</option>
+                  {pickupPoints.map((point) => (
+                    <option key={point.id} value={point.id}>
+                      {point.label}
+                    </option>
+                  ))}
+                </select>
+                {selectedPickup ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveModeId("");
+                      setPickupId("");
+                    }}
+                    className="min-h-12 rounded-xl bg-[#EEF7F6] px-4 text-sm font-semibold text-[#0B3C5D] shadow-sm"
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+            </div>
           ) : null}
         </div>
 
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-          {luxuryLayers.map((layer) => (
-            <button
-              key={layer}
-              type="button"
-              onClick={() => {
-                setActiveModeId("");
-                setActiveCollectionId("");
-                setCategory(layer);
-              }}
-              className={`shrink-0 rounded-xl px-4 py-2 text-sm font-semibold transition ${
-                category === layer
-                  ? "bg-[#071F2F] text-[#FFF6DA] ring-1 ring-[#D6B56D]/60"
-                  : "border border-[#071F2F]/10 bg-white text-[#0B3C5D] hover:border-[#D6B56D]/60"
-              }`}
-            >
-              {layer === "All" ? "All layers" : layer}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
-          {areaButtons.map((area) => (
-            <button
-              key={area}
-              type="button"
-              onClick={() => focusArea(area)}
-              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold ${
-                location === area || (area === "All" && location === "All")
-                  ? "bg-[#0B3C5D] text-white shadow-lg shadow-[#0B3C5D]/15"
-                  : "border border-[#D6B56D]/25 bg-[#FFF8E8] text-[#0B3C5D]"
-              }`}
-            >
-              {area}
-              <span className="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-xs text-[#0B3C5D]">
-                {areaCounts[area] || 0}
-              </span>
-            </button>
-          ))}
-        </div>
+        {locationMessage ? (
+          <p className="mt-3 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+            {locationMessage}
+          </p>
+        ) : null}
 
         <div
           className={`relative mt-5 cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner ring-1 ring-[#071F2F]/10 active:cursor-grabbing ${
@@ -1719,55 +1645,28 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             ) : null}
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-xl bg-white/10 p-3">
-              <p className="text-white/60">Route distance</p>
-              <p className="mt-1 font-bold text-[#FFF6DA]">
-                {savedTripPins.length > 1
-                  ? `${tripDistanceMiles.toFixed(1)} mi`
-                  : "Add stops"}
-              </p>
-            </div>
-            <div className="rounded-xl bg-white/10 p-3">
-              <p className="text-white/60">Drive estimate</p>
-              <p className="mt-1 font-bold text-[#FFF6DA]">
-                {savedTripPins.length > 1
-                  ? `${Math.max(5, Math.round((tripDistanceMiles / 20) * 60))} min`
-                  : "Pending"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-xl bg-white/10 p-4">
+          <div className="mt-4 rounded-xl bg-white/10 p-3">
             <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
-                  Route readiness
-                </p>
-                <p className="mt-1 text-sm text-white/70">
-                  {routeReadyCount} of {routeReadinessItems.length} planning
-                  details ready
-                </p>
-              </div>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
+                Route readiness
+              </p>
               <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#071F2F]">
-                {Math.round((routeReadyCount / routeReadinessItems.length) * 100)}%
+                {routeReadyCount}/{routeReadinessItems.length}
               </span>
             </div>
-            <div className="mt-3 grid gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               {routeReadinessItems.map((item) => (
-                <div
+                <span
                   key={item.label}
-                  className="flex items-center justify-between gap-3 rounded-xl bg-white/10 px-3 py-2 text-sm"
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    item.done
+                      ? "bg-[#9EE8E3] text-[#071F2F]"
+                      : "bg-white/10 text-white/62"
+                  }`}
+                  title={item.detail}
                 >
-                  <span className="font-bold text-white">{item.label}</span>
-                  <span
-                    className={`text-right text-xs font-semibold ${
-                      item.done ? "text-[#9EE8E3]" : "text-white/55"
-                    }`}
-                  >
-                    {item.detail}
-                  </span>
-                </div>
+                  {item.label}
+                </span>
               ))}
             </div>
           </div>
@@ -1778,9 +1677,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             </p>
             <p className="mt-1 text-lg font-black">{bestNextStep}</p>
             <p className="mt-1 text-sm leading-6 text-[#0B3C5D]/75">
-              {activeConciergeMode
-                ? `${activeConciergeMode.label} is shaping the map.`
-                : "Use a concierge mode if you want the map to make the first planning decision."}
+              {savedTripPins.length > 1
+                ? `${tripDistanceMiles.toFixed(1)} mi route estimate.`
+                : activeConciergeMode
+                  ? `${activeConciergeMode.label} is shaping the map.`
+                  : "Choose a start point to let the map guide you."}
             </p>
           </div>
 
