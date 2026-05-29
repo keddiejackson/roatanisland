@@ -34,6 +34,7 @@ export async function POST(request: Request) {
   const isConciergeLead =
     body.leadType === "concierge_plan" ||
     (body.interest || "").toLowerCase().includes("concierge");
+  const isSupportLead = body.leadType === "support_request";
   let conciergeLeadId: string | null = null;
 
   if (isConciergeLead) {
@@ -59,10 +60,12 @@ export async function POST(request: Request) {
   }
 
   await sendAdminNotification({
-    subject: `New planning lead: ${body.name}`,
+    subject: isSupportLead
+      ? `Support request: ${body.name}`
+      : `New planning lead: ${body.name}`,
     replyTo: body.email,
     html: `
-      <h2>New planning lead</h2>
+      <h2>${isSupportLead ? "New support request" : "New planning lead"}</h2>
       <p><strong>Name:</strong> ${escapeHtml(body.name)}</p>
       <p><strong>Email:</strong> ${escapeHtml(body.email)}</p>
       <p><strong>Phone:</strong> ${escapeHtml(body.phone)}</p>
@@ -71,7 +74,7 @@ export async function POST(request: Request) {
       <p>${escapeHtml(body.message)}</p>
     `,
     text: [
-      "New planning lead",
+      isSupportLead ? "New support request" : "New planning lead",
       `Name: ${body.name}`,
       `Email: ${body.email}`,
       `Phone: ${body.phone || ""}`,
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
 
   const { error: analyticsError } = await supabaseServer.from("analytics_events").insert([
     {
-      event_type: "planning_lead",
+      event_type: isSupportLead ? "support_request" : "planning_lead",
       path: body.sourcePath || "/",
       metadata: {
         interest: body.interest || "",

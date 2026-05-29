@@ -7,6 +7,7 @@ const footerLinks = [
   { href: "/hotels", label: "Hotels" },
   { href: "/transport", label: "Transport" },
   { href: "/vendors", label: "Vendors" },
+  { href: "/support", label: "Support" },
   { href: "/signin", label: "Sign in" },
   { href: "/vendor/signup", label: "List your business" },
 ];

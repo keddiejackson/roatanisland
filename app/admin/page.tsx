@@ -16,6 +16,7 @@ import {
   getAdminCommandDigest,
   getMarketplaceCommandCenter,
 } from "@/lib/marketplace-upgrade";
+import { getPlatformV2OperatingSignals } from "@/lib/platform-v2";
 import { supabase } from "@/lib/supabase";
 
 type Booking = {
@@ -44,6 +45,7 @@ type Listing = {
   image_url: string | null;
   latitude: number | null;
   longitude: number | null;
+  tour_times: string[] | null;
   is_featured: boolean | null;
   rating: number | null;
   reviews_count: number | null;
@@ -123,7 +125,7 @@ export default function AdminDashboardPage() {
             .limit(200),
           supabase
             .from("listings")
-            .select("id, title, is_active, approval_status, vendor_id, image_url, latitude, longitude, is_featured, rating, reviews_count"),
+            .select("id, title, is_active, approval_status, vendor_id, image_url, latitude, longitude, tour_times, is_featured, rating, reviews_count"),
           supabase.from("vendors").select("id, business_name, is_active"),
           supabase.from("listing_reviews").select("id, is_approved"),
           supabase
@@ -180,6 +182,13 @@ export default function AdminDashboardPage() {
       reviews,
       conciergeLeadCount: concierge.activeCount,
     });
+    const platformV2 = getPlatformV2OperatingSignals({
+      listings,
+      bookings,
+      vendors,
+      reviews,
+      conciergeLeads,
+    });
 
     return {
       newBookings: bookings.filter((booking) => (booking.status || "new") === "new")
@@ -212,6 +221,7 @@ export default function AdminDashboardPage() {
       nextBookings: upcomingBookings.slice(0, 8),
       commandCenter,
       commandDigest,
+      platformV2,
       revenue,
       vendorRevenue,
       highValueBookings: bookingMoneyRows
@@ -533,6 +543,125 @@ export default function AdminDashboardPage() {
                       </p>
                     </Link>
                   ))}
+                </div>
+              </section>
+
+              <section className="mt-6 rounded-2xl bg-[#071F2F] p-6 text-white shadow-xl shadow-[#071F2F]/10">
+                <div className="grid gap-5 lg:grid-cols-[1fr_220px] lg:items-center">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                      Platform V2 operations
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black">
+                      Support, quality control, notifications, and growth.
+                    </h2>
+                    <p className="mt-2 max-w-3xl text-sm leading-6 text-white/70">
+                      Use this release dashboard to keep the public site useful,
+                      support-ready, and easier to trust before guests book.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-white/10 p-4 text-center">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9EE8E3]">
+                      Platform readiness
+                    </p>
+                    <p className="mt-2 text-4xl font-black">
+                      {summary.platformV2.platformReadinessScore}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_0.82fr]">
+                  <div className="rounded-2xl bg-white p-5 text-[#17324D]">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                      <div>
+                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                          Quality control queue
+                        </p>
+                        <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
+                          Fix these first for better conversion.
+                        </h3>
+                      </div>
+                      <Link
+                        href="/support"
+                        className="rounded-xl bg-[#EEF7F6] px-4 py-3 text-sm font-black text-[#0B3C5D]"
+                      >
+                        View support center
+                      </Link>
+                    </div>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {summary.platformV2.qualityQueue.map((item) => (
+                        <Link
+                          key={item.label}
+                          href={item.href}
+                          className="rounded-xl border border-gray-100 bg-[#F7F3EA] p-4 transition hover:-translate-y-0.5 hover:shadow"
+                        >
+                          <p className="text-sm font-bold text-[#0B3C5D]">
+                            {item.label}
+                          </p>
+                          <p className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                            {item.value}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-gray-600">
+                            {item.text}
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4">
+                    <div className="rounded-2xl bg-white p-5 text-[#17324D]">
+                      <p className="text-sm font-black uppercase tracking-[0.14em] text-[#D6B56D]">
+                        Notification center
+                      </p>
+                      <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
+                        {summary.platformV2.notificationDigest.headline}
+                      </h3>
+                      <div className="mt-4 grid gap-3">
+                        {summary.platformV2.notificationDigest.items.map((item) => (
+                          <Link
+                            key={item.label}
+                            href={item.href}
+                            className="rounded-xl bg-[#F7F3EA] p-4"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="font-black text-[#0B3C5D]">
+                                {item.label}
+                              </p>
+                              <span className="rounded-full bg-white px-3 py-1 text-sm font-black text-[#0B3C5D]">
+                                {item.value}
+                              </span>
+                            </div>
+                            <p className="mt-1 text-xs leading-5 text-gray-600">
+                              {item.text}
+                            </p>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-white p-5 text-[#17324D]">
+                      <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                        Growth layer
+                      </p>
+                      <div className="mt-4 grid gap-3">
+                        {summary.platformV2.growthOpportunities.map((item) => (
+                          <Link
+                            key={item.label}
+                            href={item.href}
+                            className="rounded-xl bg-[#EEF7F6] p-4"
+                          >
+                            <p className="font-black text-[#0B3C5D]">
+                              {item.label}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-gray-600">
+                              {item.text}
+                            </p>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
 
