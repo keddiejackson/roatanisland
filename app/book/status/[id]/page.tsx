@@ -126,36 +126,38 @@ export default async function BookingStatusPage({
   });
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
-      <div className="mx-auto max-w-5xl">
+    <main className="brand-page min-h-screen overflow-hidden px-6 py-10 text-[#17324D]">
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-96 bg-[radial-gradient(circle_at_18%_18%,rgba(0,168,168,0.16),transparent_34%),radial-gradient(circle_at_82%_10%,rgba(214,181,109,0.2),transparent_30%)]" />
+      <div className="relative mx-auto max-w-6xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <SiteLogo />
           <Link
             href="/"
-            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
+            className="brand-button-secondary"
           >
             Home
           </Link>
         </div>
-        <section className="rounded-2xl bg-white p-8 shadow">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
-            Booking status
+        <section className="rounded-[2rem] bg-white p-6 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+            Trip command center
           </p>
           <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
             <div>
-              <h1 className="text-3xl font-black text-[#0B3C5D] sm:text-5xl">
+              <h1 className="text-4xl font-black leading-tight text-[#0B3C5D] sm:text-6xl">
                 {listing?.title || "Roatan booking"}
               </h1>
-              <p className="mt-3 max-w-2xl leading-7 text-gray-600">
-                Keep this page for your records. The operator will still confirm
-                availability before plans are final.
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600">
+                Keep this polished status page for the full request story:
+                confirmation stage, payment records, pickup notes, guest
+                messages, and trip packet actions.
               </p>
             </div>
-            <div className="rounded-xl bg-[#F7F3EA] px-4 py-3">
-              <p className="text-xs font-semibold uppercase text-gray-500">
+            <div className="rounded-2xl bg-[#071F2F] px-5 py-4 text-white shadow-xl shadow-[#071F2F]/10">
+              <p className="text-xs font-semibold uppercase text-white/55">
                 Current status
               </p>
-              <p className="mt-1 text-lg font-black text-[#0B3C5D]">
+              <p className="mt-1 text-lg font-black">
                 {formatBookingStatus(booking.status)}
               </p>
             </div>

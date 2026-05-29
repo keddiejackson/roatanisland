@@ -42,6 +42,18 @@ export type BookingRecoveryPrompt = {
   shouldShow: boolean;
 };
 
+export type LuxuryBookingFlowStep = {
+  number: string;
+  label: string;
+  text: string;
+};
+
+export type BookingPaymentClarityCard = {
+  label: string;
+  value: string;
+  text: string;
+};
+
 const bookingStatusLabels: Record<string, string> = {
   new: "Request received",
   confirmed: "Confirmed",
@@ -211,6 +223,64 @@ export function getBookingTrustSteps(): BookingTrustStep[] {
     {
       label: "Track everything",
       text: "Use your status page and guest dashboard for updates.",
+    },
+  ];
+}
+
+export function getLuxuryBookingFlowSteps(): LuxuryBookingFlowStep[] {
+  return [
+    {
+      number: "01",
+      label: "Trip details",
+      text: "Choose the experience, guest count, pickup style, and any special notes.",
+    },
+    {
+      number: "02",
+      label: "Date and time",
+      text: "Pick an available day and request the time that works for your group.",
+    },
+    {
+      number: "03",
+      label: "Guest notes",
+      text: "Share cruise timing, hotel pickup, kids, mobility needs, or food preferences.",
+    },
+    {
+      number: "04",
+      label: "Review request",
+      text: "Check the trip summary, estimated total, and payment expectations before sending.",
+    },
+    {
+      number: "05",
+      label: "Send",
+      text: "The local operator confirms availability, payment timing, and final pickup details.",
+    },
+  ];
+}
+
+export function getBookingPaymentClarityCards({
+  estimatedTotalLabel,
+  depositsEnabled,
+}: {
+  estimatedTotalLabel: string;
+  depositsEnabled: boolean;
+}): BookingPaymentClarityCard[] {
+  return [
+    {
+      label: "Estimated total",
+      value: estimatedTotalLabel,
+      text: "Shown before you send the request so the group can plan with confidence.",
+    },
+    {
+      label: "Deposit",
+      value: depositsEnabled ? "Available after request" : "Not required now",
+      text: depositsEnabled
+        ? "Deposit or full payment checkout appears after the request is created."
+        : "No card is charged on this screen. Payment timing is shared after review.",
+    },
+    {
+      label: "Confirmation",
+      value: "Operator reviewed",
+      text: "Nothing is final until the operator confirms availability and next steps.",
     },
   ];
 }

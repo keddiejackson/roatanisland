@@ -7,9 +7,11 @@ import {
   composeBookingGuestMessage,
   estimateBookingTotalCents,
   formatBookingCents,
+  getBookingPaymentClarityCards,
   getBookingCheckoutReadiness,
   getBookingRecoveryPrompt,
   getBookingTrustSteps,
+  getLuxuryBookingFlowSteps,
 } from "@/lib/booking-flow";
 import {
   checkBookingAvailability,
@@ -375,6 +377,15 @@ export default function BookingForm({
     selectedAddons,
   });
   const showEstimatedTotal = Boolean(listing?.price || selectedAddons.length > 0);
+  const estimatedTotalLabel = showEstimatedTotal
+    ? formatBookingCents(estimatedTotalCents)
+    : "Pending";
+  const depositsEnabled =
+    process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true";
+  const paymentClarityCards = getBookingPaymentClarityCards({
+    estimatedTotalLabel,
+    depositsEnabled,
+  });
   const guestWarning =
     localAvailabilityCheck.reasons.find((reason) =>
       reason.includes("guests per tour"),
@@ -410,6 +421,7 @@ export default function BookingForm({
     hasEstimatedTotal: showEstimatedTotal,
   });
   const trustSteps = getBookingTrustSteps();
+  const luxurySteps = getLuxuryBookingFlowSteps();
   const recoveryPrompt = getBookingRecoveryPrompt({
     fullName: recoveredDraft?.fullName || fullName,
     email: recoveredDraft?.email || email,
@@ -524,36 +536,35 @@ export default function BookingForm({
   }
 
   return (
-    <div className="mx-auto max-w-4xl rounded-2xl bg-white p-8 shadow ring-1 ring-black/5">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
-        Booking request
-      </p>
-      <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
-        {listing ? `Book ${listing.title}` : "Request a Booking"}
-      </h1>
+    <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_390px]">
+      <section className="rounded-[2rem] bg-white p-5 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
+        <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          Private booking request desk
+        </p>
+        <h1 className="mt-2 text-3xl font-black leading-tight text-[#0B3C5D] sm:text-5xl">
+          {listing ? `Request ${listing.title}` : "Request a Roatan experience"}
+        </h1>
 
-      <p className="mt-3 text-gray-600">
-        Choose your date, time, and number of guests. We will confirm
-        availability after your request is received.
-      </p>
+        <p className="mt-3 max-w-3xl leading-7 text-gray-600">
+          A guided booking flow with availability, pickup notes, payment
+          expectations, and guest messaging all connected before the operator
+          confirms your plans.
+        </p>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        {[
-          ["1", "Request sent"],
-          ["2", "Operator reviews"],
-          ["3", "Plans confirmed"],
-        ].map(([number, text]) => (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {luxurySteps.map((step) => (
           <div
-            key={number}
-            className="rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4"
+            key={step.label}
+            className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4"
           >
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
-              Step {number}
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Step {step.number}
             </p>
-            <p className="mt-1 font-bold text-[#0B3C5D]">{text}</p>
+            <p className="mt-1 font-black text-[#0B3C5D]">{step.label}</p>
+            <p className="mt-2 text-xs leading-5 text-gray-600">{step.text}</p>
           </div>
         ))}
-      </div>
+        </div>
 
       {recoveryPrompt.shouldShow ? (
         <div className="mt-6 rounded-xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-4">
@@ -644,9 +655,7 @@ export default function BookingForm({
               Estimated total
             </p>
             <p className="mt-1 text-2xl font-black text-[#0B3C5D]">
-              {showEstimatedTotal
-                ? formatBookingCents(estimatedTotalCents)
-                : "Pending"}
+              {estimatedTotalLabel}
             </p>
           </div>
         </div>
@@ -806,6 +815,16 @@ export default function BookingForm({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="mt-8 grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+              Guest details
+            </p>
+            <p className="mt-1 text-sm leading-6 text-gray-600">
+              Start with the traveler who should receive booking updates,
+              payment links, and messages from the operator.
+            </p>
+          </div>
+
           <div>
             <label className="mb-2 block font-medium">Full Name</label>
             <input
@@ -828,6 +847,16 @@ export default function BookingForm({
               className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
               required
             />
+          </div>
+
+          <div className="rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+              Date and availability
+            </p>
+            <p className="mt-1 text-sm leading-6 text-gray-600">
+              Pick the day, time, and group size you want. We check listing
+              limits before the request can be sent.
+            </p>
           </div>
 
           <div>
@@ -1109,6 +1138,85 @@ export default function BookingForm({
           </button>
         </form>
       )}
+      </section>
+
+      <aside className="h-fit rounded-[2rem] border border-white/70 bg-white p-5 shadow-2xl shadow-[#071F2F]/10 lg:sticky lg:top-6">
+        <div className="rounded-[1.5rem] bg-[#071F2F] p-5 text-white">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#9EE8E3]">
+            Trip summary
+          </p>
+          <h2 className="mt-2 text-2xl font-black">
+            {listing?.title || "Roatan experience"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-white/70">
+            {listing?.location || "Roatan"}
+            {tourDate ? ` - ${tourDate}` : ""}
+            {tourTime ? ` at ${tourTime}` : ""}
+          </p>
+          <div className="mt-5 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-white/10 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-white/55">
+                Guests
+              </p>
+              <p className="mt-1 text-xl font-black">
+                {guests || "Add"}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/10 p-4">
+              <p className="text-xs uppercase tracking-[0.14em] text-white/55">
+                Total
+              </p>
+              <p className="mt-1 text-xl font-black">{estimatedTotalLabel}</p>
+            </div>
+          </div>
+          <div className="mt-5 rounded-2xl border border-white/15 bg-white/10 p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
+              Request readiness
+            </p>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/15">
+              <span
+                className="block h-full rounded-full bg-[#00A8A8]"
+                style={{ width: `${bookingReadiness.score}%` }}
+              />
+            </div>
+            <p className="mt-3 text-sm font-semibold text-white/75">
+              {bookingReadiness.label} - {bookingReadiness.score}%
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FBF7EC] p-5">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#9C7A2F]">
+            Payment clarity
+          </p>
+          <div className="mt-4 grid gap-3">
+            {paymentClarityCards.map((card) => (
+              <div key={card.label} className="rounded-2xl bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="font-black text-[#0B3C5D]">{card.label}</p>
+                  <p className="text-right text-sm font-black text-[#007B7B]">
+                    {card.value}
+                  </p>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  {card.text}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-[1.5rem] border border-[#00A8A8]/20 bg-[#EEF7F6] p-5">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
+            After you send
+          </p>
+          <div className="mt-4 grid gap-3 text-sm leading-6 text-[#0B3C5D]">
+            <p>The request appears on your status page and guest dashboard.</p>
+            <p>Messages stay attached to this booking, so pickup and payment notes are easy to find.</p>
+            <p>Deposit or full payment is offered only when the booking is ready for the next step.</p>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
