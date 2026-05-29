@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity-log";
+import {
+  draftSiteSettingsKey,
+  publishedSiteSettingsKey,
+} from "@/lib/homepage-settings";
 import { supabaseServer } from "@/lib/supabase-server";
 
 async function verifyAdmin(request: Request) {
@@ -23,11 +27,38 @@ export async function PATCH(request: Request) {
   }
 
   const body = (await request.json()) as Record<string, unknown>;
-  const { error } = await supabaseServer.from("site_settings").upsert({
-    key: "site",
-    value: body,
-    updated_at: new Date().toISOString(),
-  });
+  const action =
+    body.action === "save_draft" || body.action === "publish"
+      ? body.action
+      : "publish";
+  const settings =
+    body.settings && typeof body.settings === "object" && !Array.isArray(body.settings)
+      ? (body.settings as Record<string, unknown>)
+      : body;
+  const updatedAt = new Date().toISOString();
+  const rows =
+    action === "save_draft"
+      ? [
+          {
+            key: draftSiteSettingsKey,
+            value: settings,
+            updated_at: updatedAt,
+          },
+        ]
+      : [
+          {
+            key: publishedSiteSettingsKey,
+            value: settings,
+            updated_at: updatedAt,
+          },
+          {
+            key: draftSiteSettingsKey,
+            value: settings,
+            updated_at: updatedAt,
+          },
+        ];
+
+  const { error } = await supabaseServer.from("site_settings").upsert(rows);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -36,11 +67,15 @@ export async function PATCH(request: Request) {
   await logActivity({
     actorEmail: adminEmail,
     actorRole: "admin",
-    action: "site_settings_updated",
+    action:
+      action === "save_draft"
+        ? "site_settings_draft_saved"
+        : "site_settings_updated",
     targetType: "settings",
-    targetId: "site",
+    targetId:
+      action === "save_draft" ? draftSiteSettingsKey : publishedSiteSettingsKey,
     targetLabel: "Site settings",
   });
 
-  return NextResponse.json({ saved: true });
+  return NextResponse.json({ saved: true, action });
 }

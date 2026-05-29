@@ -20,6 +20,7 @@ import {
 import { homepageCategories } from "@/lib/homepage-content";
 import {
   defaultHomepageControls,
+  getHomepageSettingsKey,
   getVisibleHomepageSections,
   normalizeHomepageControls,
   type HomepageSectionKey,
@@ -119,9 +120,16 @@ export default function Home() {
   );
   const [homeAccountLoading, setHomeAccountLoading] = useState(true);
   const [homeSignOutLoading, setHomeSignOutLoading] = useState(false);
+  const [homepagePreviewingDraft, setHomepagePreviewingDraft] = useState(false);
 
   useEffect(() => {
     async function fetchListings() {
+      const isDraftPreview =
+        new URLSearchParams(window.location.search).get("homepagePreview") ===
+        "draft";
+      const homepageSettingsKey = getHomepageSettingsKey(isDraftPreview);
+      setHomepagePreviewingDraft(isDraftPreview);
+
       const { data } = await supabase.from("listings").select("*");
       const rows = ((data as HomePageListing[]) || []).filter(
         (listing) => listing.is_active !== false,
@@ -129,11 +137,21 @@ export default function Home() {
 
       setListings(rows);
 
-      const { data: settingsData } = await supabase
+      let { data: settingsData } = await supabase
         .from("site_settings")
         .select("value")
-        .eq("key", "site")
+        .eq("key", homepageSettingsKey)
         .maybeSingle();
+
+      if (isDraftPreview && !settingsData?.value) {
+        const { data: publishedSettings } = await supabase
+          .from("site_settings")
+          .select("value")
+          .eq("key", getHomepageSettingsKey(false))
+          .maybeSingle();
+
+        settingsData = publishedSettings;
+      }
 
       if (settingsData?.value && typeof settingsData.value === "object") {
         setHomepageControls(normalizeHomepageControls(settingsData.value));
@@ -388,6 +406,11 @@ export default function Home() {
       variants={reduceMotion ? reducedMotionVariants : pageTransitionVariants}
       className="brand-page min-h-screen overflow-x-hidden"
     >
+      {homepagePreviewingDraft ? (
+        <div className="fixed inset-x-0 top-0 z-50 bg-[#D6B56D] px-4 py-2 text-center text-xs font-black uppercase tracking-[0.18em] text-[#061D2C] shadow">
+          Draft preview - not live yet
+        </div>
+      ) : null}
       <section className="relative min-h-[760px] overflow-hidden bg-[#061D2C] text-white">
         <Image
           src={homepageControls.heroImageUrl}

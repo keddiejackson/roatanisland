@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import { isAdminUser } from "@/lib/admin";
+import type { BrandingMediaItem } from "@/lib/branding-logo-upload";
 import {
   defaultHomepageControls,
+  draftSiteSettingsKey,
+  getHomepageQualityChecklist,
   homepageSectionOptions,
   normalizeHomepageControls,
+  publishedSiteSettingsKey,
   type HomepageSectionKey,
   type HomepageTrustPoint,
 } from "@/lib/homepage-settings";
@@ -211,6 +215,35 @@ export default function AdminSettingsPage() {
   const [homepageImageUploadTarget, setHomepageImageUploadTarget] =
     useState<HomepageImageUploadTarget>("heroImageUrl");
   const [listingOptions, setListingOptions] = useState<SettingsListing[]>([]);
+  const [mediaItems, setMediaItems] = useState<BrandingMediaItem[]>([]);
+  const [mediaLoading, setMediaLoading] = useState(false);
+  const [settingsMode, setSettingsMode] = useState<"draft" | "published">(
+    "published",
+  );
+  const [statusMessage, setStatusMessage] = useState("");
+
+  const getAdminHeaders = useCallback(async (includeJson = false) => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    return {
+      ...(includeJson ? { "Content-Type": "application/json" } : {}),
+      ...(sessionData.session?.access_token
+        ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+        : {}),
+    };
+  }, []);
+
+  const loadMediaLibrary = useCallback(async () => {
+    setMediaLoading(true);
+    const response = await fetch("/api/admin/branding-logo", {
+      headers: await getAdminHeaders(),
+    });
+    setMediaLoading(false);
+
+    if (!response.ok) return;
+
+    const result = (await response.json()) as { media?: BrandingMediaItem[] };
+    setMediaItems(result.media || []);
+  }, [getAdminHeaders]);
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -230,12 +263,27 @@ export default function AdminSettingsPage() {
     async function fetchSettings() {
       const { data } = await supabase
         .from("site_settings")
-        .select("value")
-        .eq("key", "site")
-        .maybeSingle();
+        .select("key,value")
+        .in("key", [publishedSiteSettingsKey, draftSiteSettingsKey]);
+      const rows = (data || []) as {
+        key: string;
+        value: Partial<typeof defaultSettings> | null;
+      }[];
+      const draftSettings = rows.find((row) => row.key === draftSiteSettingsKey);
+      const publishedSettings = rows.find(
+        (row) => row.key === publishedSiteSettingsKey,
+      );
+      const selectedSettings =
+        draftSettings?.value && typeof draftSettings.value === "object"
+          ? draftSettings.value
+          : publishedSettings?.value && typeof publishedSettings.value === "object"
+            ? publishedSettings.value
+            : null;
 
-      if (data?.value && typeof data.value === "object") {
-        const savedSettings = data.value as Partial<typeof defaultSettings>;
+      setSettingsMode(draftSettings?.value ? "draft" : "published");
+
+      if (selectedSettings) {
+        const savedSettings = selectedSettings as Partial<typeof defaultSettings>;
 
         setSettings({
           ...defaultSettings,
@@ -256,10 +304,12 @@ export default function AdminSettingsPage() {
           (listing) => listing.is_active !== false,
         ),
       );
+
+      await loadMediaLibrary();
     }
 
     if (authorized) fetchSettings();
-  }, [authorized]);
+  }, [authorized, loadMediaLibrary]);
 
   if (checkingAuth || !authorized) return null;
 
@@ -361,31 +411,74 @@ export default function AdminSettingsPage() {
     });
   }
 
-  async function saveSettings(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    const { data: sessionData } = await supabase.auth.getSession();
+  async function persistSettings(action: "save_draft" | "publish") {
     setSaving(true);
+    setStatusMessage("");
     const response = await fetch("/api/admin/settings", {
       method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        ...(sessionData.session?.access_token
-          ? { Authorization: `Bearer ${sessionData.session.access_token}` }
-          : {}),
-      },
-      body: JSON.stringify(settings),
+      headers: await getAdminHeaders(true),
+      body: JSON.stringify({ action, settings }),
     });
     const result = await response.json();
     setSaving(false);
     if (!response.ok) {
-      alert(result.error || "Unable to save settings.");
+      const message = result.error || "Unable to save settings.";
+      setStatusMessage(message);
+      alert(message);
+      return false;
+    }
+
+    setSettingsMode(action === "save_draft" ? "draft" : "published");
+    setStatusMessage(
+      action === "save_draft"
+        ? "Draft saved. Your live homepage has not changed yet."
+        : "Published live. Visitors now see these homepage settings.",
+    );
+    return true;
+  }
+
+  async function saveSettings(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await persistSettings("publish");
+  }
+
+  async function previewDraft() {
+    const saved = await persistSettings("save_draft");
+    if (saved) {
+      window.open("/?homepagePreview=draft", "_blank", "noopener,noreferrer");
+    }
+  }
+
+  function restoreHomepageDefaults() {
+    setSettings((current) => ({
+      ...current,
+      ...defaultHomepageControls,
+    }));
+    setSettingsMode("draft");
+    setStatusMessage("Homepage defaults restored in draft. Publish when ready.");
+  }
+
+  async function deleteMediaItem(item: BrandingMediaItem) {
+    if (!confirm("Delete this image from the media library?")) return;
+
+    const response = await fetch("/api/admin/branding-logo", {
+      method: "DELETE",
+      headers: await getAdminHeaders(true),
+      body: JSON.stringify({ path: item.path }),
+    });
+
+    if (!response.ok) {
+      const result = await response.json();
+      alert(result.error || "Unable to delete image.");
       return;
     }
-    alert("Settings saved.");
+
+    setMediaItems((current) =>
+      current.filter((mediaItem) => mediaItem.path !== item.path),
+    );
   }
 
   async function uploadLogo(file: File) {
-    const { data: sessionData } = await supabase.auth.getSession();
     const formData = new FormData();
     formData.append("logo", file);
 
@@ -394,9 +487,7 @@ export default function AdminSettingsPage() {
 
     const response = await fetch("/api/admin/branding-logo", {
       method: "POST",
-      headers: sessionData.session?.access_token
-        ? { Authorization: `Bearer ${sessionData.session.access_token}` }
-        : {},
+      headers: await getAdminHeaders(),
       body: formData,
     });
     const result = await response.json();
@@ -408,10 +499,10 @@ export default function AdminSettingsPage() {
     }
 
     updateSetting(logoUploadTarget, result.logoUrl);
+    await loadMediaLibrary();
   }
 
   async function uploadHomepageImage(file: File) {
-    const { data: sessionData } = await supabase.auth.getSession();
     const formData = new FormData();
     formData.append("logo", file);
 
@@ -420,9 +511,7 @@ export default function AdminSettingsPage() {
 
     const response = await fetch("/api/admin/branding-logo", {
       method: "POST",
-      headers: sessionData.session?.access_token
-        ? { Authorization: `Bearer ${sessionData.session.access_token}` }
-        : {},
+      headers: await getAdminHeaders(),
       body: formData,
     });
     const result = await response.json();
@@ -434,6 +523,7 @@ export default function AdminSettingsPage() {
     }
 
     updateSetting(homepageImageUploadTarget, result.logoUrl);
+    await loadMediaLibrary();
   }
 
   const displayedTrustPoints = [
@@ -448,6 +538,13 @@ export default function AdminSettingsPage() {
       (section): section is (typeof homepageSectionOptions)[number] =>
         Boolean(section),
     );
+  const homepageQualityChecklist = getHomepageQualityChecklist(
+    normalizeHomepageControls(settings),
+    {
+      availableListingCount: listingOptions.length,
+      selectedListingCount: settings.homepageFeaturedListingIds.length,
+    },
+  );
   const previewBranding = normalizeSiteBranding(settings);
   const sitePreviewBranding = brandingForPlacement(previewBranding, "site");
   const faviconPreviewBranding = brandingForPlacement(
@@ -464,6 +561,47 @@ export default function AdminSettingsPage() {
           <p className="mt-2 text-gray-600">
             Manage public copy and business rules without changing code.
           </p>
+          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-4">
+            <span className="rounded-full bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] shadow-sm">
+              {settingsMode === "draft" ? "Draft loaded" : "Published loaded"}
+            </span>
+            <button
+              type="button"
+              onClick={() => persistSettings("save_draft")}
+              disabled={saving}
+              className="rounded-xl border border-[#0B3C5D]/15 bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] disabled:opacity-50"
+            >
+              Save Draft
+            </button>
+            <button
+              type="button"
+              onClick={previewDraft}
+              disabled={saving}
+              className="rounded-xl border border-[#0fa9b6]/20 bg-[#EAF7F7] px-4 py-2 text-sm font-black text-[#007B7B] disabled:opacity-50"
+            >
+              Preview Draft
+            </button>
+            <button
+              type="button"
+              onClick={() => persistSettings("publish")}
+              disabled={saving}
+              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+            >
+              Publish Live
+            </button>
+            <button
+              type="button"
+              onClick={restoreHomepageDefaults}
+              className="rounded-xl border border-red-100 bg-white px-4 py-2 text-sm font-black text-red-700"
+            >
+              Restore Homepage Defaults
+            </button>
+            {statusMessage ? (
+              <p className="basis-full text-sm font-semibold text-[#0B3C5D]">
+                {statusMessage}
+              </p>
+            ) : null}
+          </div>
           <form onSubmit={saveSettings} className="mt-8 grid gap-5">
             <section className="grid gap-6 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-5">
               <div>
@@ -868,6 +1006,85 @@ export default function AdminSettingsPage() {
                 </div>
               </div>
             </section>
+            <section className="grid gap-5 rounded-2xl border border-[#D6B56D]/25 bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0fa9b6]">
+                    Media Library
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold text-[#053c5e]">
+                    Reuse uploaded images
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Apply any uploaded image to the hero, fallback listing image,
+                    final callout, or logo locations.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={loadMediaLibrary}
+                  disabled={mediaLoading}
+                  className="rounded-xl border border-[#0B3C5D]/15 bg-[#FFF9EC] px-4 py-2 text-sm font-black text-[#0B3C5D] disabled:opacity-50"
+                >
+                  {mediaLoading ? "Refreshing..." : "Refresh Library"}
+                </button>
+              </div>
+              {mediaItems.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[#d7e6ea] bg-[#f6fbfc] p-5 text-sm text-slate-600">
+                  No uploaded media found yet. Upload a logo or homepage image
+                  above and it will appear here.
+                </p>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {mediaItems.map((item) => (
+                    <article
+                      key={item.path}
+                      className="overflow-hidden rounded-2xl border border-[#d7e6ea] bg-[#f6fbfc]"
+                    >
+                      <div className="relative flex h-40 items-center justify-center bg-[#061D2C]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.url}
+                          alt={item.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                      <div className="grid gap-3 p-4">
+                        <p className="truncate text-sm font-black text-[#053c5e]">
+                          {item.name}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {homepageImageFields.map(({ field, label }) => (
+                            <button
+                              key={field}
+                              type="button"
+                              onClick={() => updateSetting(field, item.url)}
+                              className="rounded-lg border border-[#d7e6ea] bg-white px-3 py-2 text-xs font-black text-[#053c5e]"
+                            >
+                              {label.replace(" Image", "")}
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => updateSetting("logoUrl", item.url)}
+                            className="rounded-lg border border-[#d7e6ea] bg-white px-3 py-2 text-xs font-black text-[#053c5e]"
+                          >
+                            Main logo
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => deleteMediaItem(item)}
+                          className="rounded-lg border border-red-100 bg-white px-3 py-2 text-xs font-black text-red-700"
+                        >
+                          Delete image
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
             <section className="space-y-5 rounded-lg border border-[#d7e6ea] bg-white p-6 shadow-sm">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0fa9b6]">
@@ -966,6 +1183,51 @@ export default function AdminSettingsPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0fa9b6]">
+                      Homepage Quality Checklist
+                    </p>
+                    <h3 className="mt-1 text-lg font-bold text-[#053c5e]">
+                      Publish confidence
+                    </h3>
+                  </div>
+                  <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#053c5e]">
+                    {
+                      homepageQualityChecklist.filter(
+                        (item) => item.status === "ok",
+                      ).length
+                    }
+                    /{homepageQualityChecklist.length} ready
+                  </span>
+                </div>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {homepageQualityChecklist.map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-[#d7e6ea] bg-white p-3"
+                    >
+                      <p className="flex items-center gap-2 text-sm font-black text-[#053c5e]">
+                        <span
+                          className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                            item.status === "ok"
+                              ? "bg-[#EAF7F7] text-[#007B7B]"
+                              : "bg-[#FFF3CD] text-[#8A5A00]"
+                          }`}
+                        >
+                          {item.status === "ok" ? "OK" : "!"}
+                        </span>
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-slate-600">
+                        {item.detail}
+                      </p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -1232,7 +1494,7 @@ export default function AdminSettingsPage() {
               disabled={saving}
               className="rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Settings"}
+              {saving ? "Saving..." : "Publish Live"}
             </button>
           </form>
         </section>

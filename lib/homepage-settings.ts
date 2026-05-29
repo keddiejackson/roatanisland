@@ -3,6 +3,13 @@ export type HomepageTrustPoint = {
   text: string;
 };
 
+export const publishedSiteSettingsKey = "site";
+export const draftSiteSettingsKey = "site_draft";
+
+export function getHomepageSettingsKey(previewDraft: boolean) {
+  return previewDraft ? draftSiteSettingsKey : publishedSiteSettingsKey;
+}
+
 export const homepageSectionKeys = [
   "trustBar",
   "marketplace",
@@ -451,4 +458,97 @@ export function getVisibleHomepageSections(controls: HomepageControls) {
     if (section === "finalCta") return controls.showFinalCta;
     return false;
   });
+}
+
+export type HomepageQualityContext = {
+  availableListingCount: number;
+  selectedListingCount: number;
+};
+
+export type HomepageQualityChecklistItem = {
+  id: string;
+  label: string;
+  status: "ok" | "warning";
+  detail: string;
+};
+
+export function getHomepageQualityChecklist(
+  controls: HomepageControls,
+  context: HomepageQualityContext,
+): HomepageQualityChecklistItem[] {
+  const items: HomepageQualityChecklistItem[] = [];
+
+  items.push({
+    id: "hero-image",
+    label: "Hero image",
+    status:
+      controls.heroImageUrl &&
+      controls.heroImageUrl !== defaultHomepageControls.heroImageUrl
+        ? "ok"
+        : "warning",
+    detail:
+      controls.heroImageUrl &&
+      controls.heroImageUrl !== defaultHomepageControls.heroImageUrl
+        ? "Custom hero image is ready."
+        : "The homepage is using the default hero image.",
+  });
+
+  items.push({
+    id: "button-links",
+    label: "Button links",
+    status:
+      controls.primaryCtaHref &&
+      controls.secondaryCtaHref &&
+      controls.finalCtaPrimaryHref
+        ? "ok"
+        : "warning",
+    detail:
+      controls.primaryCtaHref &&
+      controls.secondaryCtaHref &&
+      controls.finalCtaPrimaryHref
+        ? "Main homepage buttons have destinations."
+        : "Add destinations for the main homepage buttons.",
+  });
+
+  const hasEnoughFeaturedListings =
+    context.selectedListingCount > 0 || context.availableListingCount > 0;
+
+  items.push({
+    id: "featured-listings",
+    label: "Featured listings",
+    status: hasEnoughFeaturedListings ? "ok" : "warning",
+    detail: hasEnoughFeaturedListings
+      ? `${Math.max(
+          context.selectedListingCount,
+          context.availableListingCount,
+        )} homepage listing option${
+          Math.max(context.selectedListingCount, context.availableListingCount) ===
+          1
+            ? ""
+            : "s"
+        } ready.`
+      : "Choose featured listings or add polished active listings.",
+  });
+
+  items.push({
+    id: "trust-points",
+    label: "Trust proof",
+    status: controls.trustPoints.length >= 3 ? "ok" : "warning",
+    detail:
+      controls.trustPoints.length >= 3
+        ? "Three confidence points are ready."
+        : "Add three trust proof points before publishing.",
+  });
+
+  items.push({
+    id: "section-flow",
+    label: "Section flow",
+    status: getVisibleHomepageSections(controls).length >= 2 ? "ok" : "warning",
+    detail:
+      getVisibleHomepageSections(controls).length >= 2
+        ? "Homepage has enough visible sections."
+        : "Turn on at least two homepage sections for a complete guest path.",
+  });
+
+  return items;
 }
