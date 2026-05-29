@@ -16,8 +16,10 @@ import {
   googleMapsUrl,
 } from "@/lib/map";
 import {
+  buildBookingConfidenceNotes,
   buildGoodToKnow,
   buildListingHighlights,
+  buildTripPreparationSections,
   getTourTimeLabels,
 } from "@/lib/listing-detail";
 import { getAvailabilityPreviewDays } from "@/lib/booking-availability";
@@ -255,6 +257,16 @@ export default async function ListingPage({
     maxGuests: listing.max_guests,
     minimumNoticeHours: listing.minimum_notice_hours,
   });
+  const bookingConfidenceNotes = buildBookingConfidenceNotes({
+    priceLabel,
+    autoConfirmBookings: listing.auto_confirm_bookings,
+    privateBookingMode: listing.private_booking_mode,
+  });
+  const tripPreparationSections = buildTripPreparationSections({
+    location: listing.location,
+    availabilityNote: listing.availability_note,
+    minimumNoticeHours: listing.minimum_notice_hours,
+  });
   const readiness = getListingReadinessSummary(listing);
   const conversionScore = getListingConversionScore(listing);
   const trustBadges = getListingTrustBadges({ listing, vendor });
@@ -282,8 +294,8 @@ export default async function ListingPage({
   }));
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="relative min-h-[620px] overflow-hidden">
+    <main className="min-h-screen bg-[#F8F3EA] text-[#17324D]">
+      <section className="relative min-h-[760px] overflow-hidden">
         {listing.image_url ? (
           <Image
             src={listing.image_url}
@@ -297,21 +309,23 @@ export default async function ListingPage({
         ) : (
           <div className="absolute inset-0 bg-[#D8EFEC]" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-[#F7F3EA]" />
+        <div className="absolute inset-0 bg-[#061D2C]/42" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(8,170,168,0.24),transparent_32%),linear-gradient(90deg,rgba(6,29,44,0.94)_0%,rgba(6,29,44,0.55)_48%,rgba(6,29,44,0.16)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-80 bg-[linear-gradient(180deg,rgba(248,243,234,0)_0%,#F8F3EA_92%)]" />
 
-        <div className="relative mx-auto flex min-h-[620px] max-w-7xl flex-col justify-between px-5 py-6 sm:px-6 sm:py-8">
+        <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col justify-between px-5 py-6 sm:px-6 sm:py-8">
           <header className="flex flex-wrap items-center justify-between gap-4 text-white">
             <SiteLogo variant="light" />
-            <div className="flex flex-wrap items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.1] p-1 shadow-2xl shadow-black/15 backdrop-blur-xl">
               <Link
                 href="/"
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+                className="rounded-full px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/15"
               >
                 All listings
               </Link>
               <Link
                 href={`/map?selected=${listing.id}`}
-                className="rounded-full bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/25"
+                className="rounded-full px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/15"
               >
                 Map
               </Link>
@@ -324,33 +338,36 @@ export default async function ListingPage({
             </div>
           </header>
 
-          <div className="max-w-5xl pb-16 text-white">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
+          <div className="max-w-5xl pb-24 text-white">
+            <p className="text-sm font-black uppercase tracking-[0.26em] text-[#D6B56D]">
+              Luxury booking page
+            </p>
+            <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
               {listing.category || "Roatan experience"}
             </p>
-            <h1 className="mt-4 max-w-4xl text-5xl font-black leading-[1.02] sm:text-7xl">
+            <h1 className="mt-4 max-w-5xl text-5xl font-black leading-[0.94] sm:text-7xl lg:text-8xl">
               {listing.title}
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-white/82">
+            <p className="mt-6 max-w-3xl text-lg leading-8 text-white/84 sm:text-xl">
               {listing.description ||
                 "A local Roatan experience with booking requests reviewed before confirmation."}
             </p>
-            <div className="mt-5 flex flex-wrap gap-3 text-sm font-semibold">
-              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+            <div className="mt-7 flex flex-wrap gap-3 text-sm font-semibold">
+              <span className="rounded-full border border-white/15 bg-white/15 px-4 py-2 backdrop-blur">
                 {listing.location || "Roatan"}
               </span>
-              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+              <span className="rounded-full border border-white/15 bg-white/15 px-4 py-2 backdrop-blur">
                 {listing.rating ?? 5}/5 rating
               </span>
-              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+              <span className="rounded-full border border-white/15 bg-white/15 px-4 py-2 backdrop-blur">
                 {priceLabel} starting price
               </span>
               {vendor ? (
-                <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+                <span className="rounded-full border border-white/15 bg-white/15 px-4 py-2 backdrop-blur">
                   By {vendor.business_name}
                 </span>
               ) : null}
-              <span className="rounded-full bg-white/15 px-4 py-2 backdrop-blur">
+              <span className="rounded-full border border-white/15 bg-white/15 px-4 py-2 backdrop-blur">
                 Request reviewed before confirmation
               </span>
               {readiness.score >= 90 ? (
@@ -363,21 +380,21 @@ export default async function ListingPage({
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-8 px-5 py-12 sm:px-6 lg:grid-cols-[minmax(0,1fr)_400px]">
+      <section className="relative z-10 mx-auto -mt-24 grid max-w-7xl gap-8 px-5 pb-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_420px]">
         <article className="space-y-8">
-          <section className="rounded-lg bg-white p-6 shadow-sm sm:p-8">
+          <section className="rounded-[1.75rem] border border-white/70 bg-white p-6 shadow-2xl shadow-[#071F2F]/10 sm:p-8">
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-sm font-black uppercase tracking-[0.22em] text-[#00A8A8]">
                   Experience overview
                 </p>
-                <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
-                  What to expect
+                <h2 className="mt-2 text-4xl font-black text-[#0B3C5D] sm:text-5xl">
+                  A polished look at the day.
                 </h2>
               </div>
               <Link
                 href={`/book?listing=${listing.id}`}
-                className="rounded-lg bg-[#00A8A8] px-5 py-3 text-center font-bold text-white transition hover:bg-[#078F8F]"
+                className="rounded-full bg-[#00A8A8] px-5 py-3 text-center font-bold text-white transition hover:bg-[#078F8F]"
               >
                 Request this listing
               </Link>
@@ -388,6 +405,22 @@ export default async function ListingPage({
             </p>
 
             <ListingGallery title={listing.title} images={galleryImages} />
+
+            <div className="mt-8 rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FBF7EC] p-5 sm:p-6">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#9C7A2F]">
+                Price, deposit, and payment clarity
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {bookingConfidenceNotes.map((note) => (
+                  <div
+                    key={note}
+                    className="rounded-[1rem] border border-white bg-white/80 p-4 text-sm font-semibold leading-6 text-[#0B3C5D]"
+                  >
+                    {note}
+                  </div>
+                ))}
+              </div>
+            </div>
           </section>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -460,6 +493,46 @@ export default async function ListingPage({
                   <p className="mt-2 font-black text-[#0B3C5D]">
                     {fact.value}
                   </p>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section
+            aria-label="What&apos;s included"
+            className="rounded-[1.75rem] bg-white p-6 shadow-sm ring-1 ring-[#D6B56D]/25 sm:p-8"
+          >
+            <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#D6B56D]">
+                  Preparation
+                </p>
+                <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                  What&apos;s included, what to bring, and what to know.
+                </h2>
+              </div>
+              <p className="max-w-sm text-sm leading-6 text-gray-600">
+                Practical details presented clearly so guests know what happens
+                before they request.
+              </p>
+            </div>
+            <div className="mt-6 grid gap-4 lg:grid-cols-3">
+              {tripPreparationSections.map((section) => (
+                <div
+                  key={section.title}
+                  className="rounded-[1.25rem] border border-[#D6B56D]/20 bg-[#F8F3EA] p-5"
+                >
+                  <h3 className="text-xl font-black text-[#0B3C5D]">
+                    {section.title}
+                  </h3>
+                  <ul className="mt-4 grid gap-3 text-sm leading-6 text-gray-700">
+                    {section.items.map((item) => (
+                      <li key={item} className="flex gap-3">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#00A8A8]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
@@ -555,11 +628,11 @@ export default async function ListingPage({
           </section>
 
           {nearbyListings.length > 0 ? (
-            <section className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
-                Nearby
+            <section className="rounded-[1.75rem] bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                Related island experiences
               </p>
-              <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
+              <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
                 More experiences in this area
               </h2>
               <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -567,7 +640,7 @@ export default async function ListingPage({
                   <Link
                     key={nearby.id}
                     href={`/listings/${nearby.id}`}
-                    className="overflow-hidden rounded-lg bg-[#F7F3EA] transition hover:-translate-y-0.5 hover:shadow"
+                    className="overflow-hidden rounded-[1.25rem] bg-[#F7F3EA] transition hover:-translate-y-0.5 hover:shadow-xl"
                   >
                     <div className="relative h-36 bg-[#D8EFEC]">
                       {nearby.image_url ? (
@@ -598,8 +671,36 @@ export default async function ListingPage({
             </section>
           ) : null}
 
-          <section className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-[#D6B56D]/20">
-            <h2 className="text-xl font-bold text-[#0B3C5D]">
+          <section className="rounded-[1.75rem] bg-[#071F2F] p-6 text-white shadow-xl shadow-[#071F2F]/10 sm:p-8">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+              Guest messages
+            </p>
+            <h2 className="mt-2 text-3xl font-black">
+              Keep the conversation with the trip.
+            </h2>
+            <p className="mt-3 max-w-2xl leading-7 text-white/72">
+              After a booking request is sent, guests can sign in to see
+              messages, booking status, payment notes, and next steps from
+              their trip dashboard.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/account"
+                className="rounded-full bg-white px-5 py-3 text-sm font-black text-[#071F2F]"
+              >
+                Open guest dashboard
+              </Link>
+              <Link
+                href={`/book?listing=${listing.id}`}
+                className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-black text-white"
+              >
+                Start request
+              </Link>
+            </div>
+          </section>
+
+          <section className="rounded-[1.75rem] bg-white p-6 shadow-sm ring-1 ring-[#D6B56D]/20 sm:p-8">
+            <h2 className="text-2xl font-black text-[#0B3C5D]">
               How booking works
             </h2>
             <div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -706,10 +807,10 @@ export default async function ListingPage({
           </section>
         </article>
 
-        <aside className="h-fit rounded-lg bg-white p-5 shadow-xl shadow-[#071F2F]/10 lg:sticky lg:top-6">
-          <div className="rounded-lg bg-[#071F2F] p-5 text-white">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#9EE8E3]">
-              Request booking
+        <aside className="h-fit rounded-[1.75rem] border border-white/70 bg-white p-5 shadow-2xl shadow-[#071F2F]/12 lg:sticky lg:top-6">
+          <div className="rounded-[1.5rem] bg-[#071F2F] p-5 text-white">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#9EE8E3]">
+              Private island booking desk
             </p>
             <div className="mt-4 flex items-end justify-between gap-4">
               <div>
@@ -722,7 +823,7 @@ export default async function ListingPage({
             </div>
             <Link
               href={`/book?listing=${listing.id}`}
-              className="mt-6 block w-full rounded-lg bg-[#00A8A8] px-6 py-4 text-center text-lg font-bold text-white transition hover:bg-[#078F8F]"
+              className="mt-6 block w-full rounded-full bg-[#00A8A8] px-6 py-4 text-center text-lg font-bold text-white transition hover:bg-[#078F8F]"
             >
               Request booking
             </Link>
@@ -730,6 +831,20 @@ export default async function ListingPage({
               Submit your preferred date and group size. The operator confirms
               availability before your plans are final.
             </p>
+          </div>
+
+          <div className="mt-5 rounded-[1.25rem] border border-[#D6B56D]/25 bg-[#FBF7EC] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Payment clarity
+            </p>
+            <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#0B3C5D]">
+              {bookingConfidenceNotes.slice(0, 3).map((note) => (
+                <li key={note} className="flex gap-2">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D6B56D]" />
+                  <span>{note}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <div className="mt-5 border-t border-gray-100 pt-5">
