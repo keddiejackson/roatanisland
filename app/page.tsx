@@ -20,7 +20,9 @@ import {
 import { homepageCategories } from "@/lib/homepage-content";
 import {
   defaultHomepageControls,
+  getVisibleHomepageSections,
   normalizeHomepageControls,
+  type HomepageSectionKey,
 } from "@/lib/homepage-settings";
 import {
   applyTravelerPersonaToFilters,
@@ -269,8 +271,22 @@ export default function Home() {
   );
 
   const spotlightListings = useMemo(
-    () => selectHomeSpotlightListings(showcaseListings, filteredListings),
-    [filteredListings, showcaseListings],
+    () => {
+      const selectedListings = homepageControls.homepageFeaturedListingIds
+        .map((listingId) =>
+          showcaseListings.find((listing) => listing.id === listingId),
+        )
+        .filter((listing): listing is HomePageListing => Boolean(listing));
+
+      return selectedListings.length > 0
+        ? selectedListings
+        : selectHomeSpotlightListings(showcaseListings, filteredListings);
+    },
+    [
+      filteredListings,
+      homepageControls.homepageFeaturedListingIds,
+      showcaseListings,
+    ],
   );
 
   const locations = useMemo(
@@ -307,6 +323,7 @@ export default function Home() {
     guests: guestCount,
     availableOnly,
   });
+  const visibleHomepageSections = getVisibleHomepageSections(homepageControls);
   const featuredHomeListings = (
     hasActiveFilters ? filteredListings : spotlightListings
   ).slice(0, 3);
@@ -356,6 +373,14 @@ export default function Home() {
     setHomeSignOutLoading(false);
   }
 
+  function renderHomepageSection(section: HomepageSectionKey) {
+    return visibleHomepageSections.includes(section);
+  }
+
+  function homepageSectionStyle(section: HomepageSectionKey) {
+    return { order: visibleHomepageSections.indexOf(section) };
+  }
+
   return (
     <motion.main
       initial="hidden"
@@ -365,11 +390,12 @@ export default function Home() {
     >
       <section className="relative min-h-[760px] overflow-hidden bg-[#061D2C] text-white">
         <Image
-          src="/images/roatan.jpeg"
+          src={homepageControls.heroImageUrl}
           alt="Roatan coastline"
           fill
           priority
           sizes="100vw"
+          unoptimized
           className="object-cover"
         />
         <div className="absolute inset-0 bg-[#061D2C]/56" />
@@ -411,18 +437,12 @@ export default function Home() {
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-10 flex flex-wrap gap-3"
               >
-                <a
-                  href="#marketplace"
-                  className="brand-button-primary"
-                >
+                <a href={homepageControls.primaryCtaHref} className="brand-button-primary">
                   {homepageControls.primaryCtaLabel}
                 </a>
-                <Link
-                  href="/map"
-                  className="brand-button-ghost"
-                >
+                <a href={homepageControls.secondaryCtaHref} className="brand-button-ghost">
                   {homepageControls.secondaryCtaLabel}
-                </Link>
+                </a>
               </motion.div>
 
               <motion.div
@@ -444,11 +464,14 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="flex flex-col">
+      {renderHomepageSection("trustBar") ? (
       <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        style={homepageSectionStyle("trustBar")}
         className="relative z-20 -mt-10 px-5 pb-12 sm:px-6"
       >
         <div className="mx-auto grid max-w-5xl gap-2 rounded-[1.25rem] border border-[#D6B56D]/20 bg-white p-3 shadow-xl shadow-[#071F2F]/8 md:grid-cols-3">
@@ -462,8 +485,14 @@ export default function Home() {
           ))}
         </div>
       </motion.section>
+      ) : null}
 
-      <section id="marketplace" className="relative z-10 bg-[#FBF8F1] px-5 py-20 sm:px-6">
+      {renderHomepageSection("marketplace") ? (
+      <section
+        id="marketplace"
+        style={homepageSectionStyle("marketplace")}
+        className="relative z-10 bg-[#FBF8F1] px-5 py-20 sm:px-6"
+      >
         <div className="mx-auto max-w-7xl">
           <motion.div
             initial="hidden"
@@ -692,16 +721,32 @@ export default function Home() {
           </div>
         </div>
       </section>
+      ) : null}
 
+      {renderHomepageSection("finalCta") ? (
       <motion.section
         initial="hidden"
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        style={homepageSectionStyle("finalCta")}
         className="px-5 pb-20 sm:px-6"
       >
-        <div className="brand-hero-panel mx-auto max-w-7xl overflow-hidden p-6 text-white sm:p-10">
-          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="brand-hero-panel relative mx-auto max-w-7xl overflow-hidden p-6 text-white sm:p-10">
+          {homepageControls.finalCtaImageUrl ? (
+            <>
+              <Image
+                src={homepageControls.finalCtaImageUrl}
+                alt=""
+                fill
+                sizes="100vw"
+                unoptimized
+                className="object-cover opacity-30"
+              />
+              <div className="absolute inset-0 bg-[#061D2C]/72" />
+            </>
+          ) : null}
+          <div className="relative grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <p className="brand-eyebrow-gold">
                 {homepageControls.finalCtaEyebrow}
@@ -714,21 +759,32 @@ export default function Home() {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:min-w-72">
-              <Link href="/map" className="brand-button-primary justify-center px-8 py-4">
+              <a
+                href={homepageControls.finalCtaPrimaryHref}
+                className="brand-button-primary justify-center px-8 py-4"
+              >
                 {homepageControls.finalCtaPrimaryLabel}
-              </Link>
+              </a>
               <div className="flex justify-center gap-4 text-sm font-black text-white/72">
-                <Link href="/concierge" className="hover:text-white">
+                <a
+                  href={homepageControls.finalCtaSecondaryHref}
+                  className="hover:text-white"
+                >
                   {homepageControls.finalCtaSecondaryLabel}
-                </Link>
-                <Link href="/account" className="hover:text-white">
+                </a>
+                <a
+                  href={homepageControls.finalCtaTertiaryHref}
+                  className="hover:text-white"
+                >
                   {homepageControls.finalCtaTertiaryLabel}
-                </Link>
+                </a>
               </div>
             </div>
           </div>
         </div>
       </motion.section>
+      ) : null}
+      </div>
       <SiteFooter />
     </motion.main>
   );

@@ -3,12 +3,47 @@ export type HomepageTrustPoint = {
   text: string;
 };
 
+export const homepageSectionKeys = [
+  "trustBar",
+  "marketplace",
+  "finalCta",
+] as const;
+
+export type HomepageSectionKey = (typeof homepageSectionKeys)[number];
+
+export const homepageSectionOptions: {
+  key: HomepageSectionKey;
+  label: string;
+  description: string;
+}[] = [
+  {
+    key: "trustBar",
+    label: "Trust proof strip",
+    description: "The small confidence bar below the hero.",
+  },
+  {
+    key: "marketplace",
+    label: "Featured marketplace",
+    description: "Search, filters, and selected homepage listings.",
+  },
+  {
+    key: "finalCta",
+    label: "Final planning panel",
+    description: "The closing call to action near the footer.",
+  },
+];
+
 export type HomepageControls = {
+  heroImageUrl: string;
+  listingFallbackImageUrl: string;
+  finalCtaImageUrl: string;
   heroEyebrow: string;
   homepageHeadline: string;
   homepageSubhead: string;
   primaryCtaLabel: string;
   secondaryCtaLabel: string;
+  primaryCtaHref: string;
+  secondaryCtaHref: string;
   heroCountLabel: string;
   heroMapLabel: string;
   heroSupportLabel: string;
@@ -17,6 +52,9 @@ export type HomepageControls = {
   showMapCallout: boolean;
   showTrustSection: boolean;
   showPlanningHelp: boolean;
+  showFinalCta: boolean;
+  sectionOrder: HomepageSectionKey[];
+  homepageFeaturedListingIds: string[];
   listingsEyebrow: string;
   listingsTitle: string;
   listingsIntro: string;
@@ -39,17 +77,25 @@ export type HomepageControls = {
   finalCtaPrimaryLabel: string;
   finalCtaSecondaryLabel: string;
   finalCtaTertiaryLabel: string;
+  finalCtaPrimaryHref: string;
+  finalCtaSecondaryHref: string;
+  finalCtaTertiaryHref: string;
   featuredBadgeLabel: string;
   topRatedBadgeLabel: string;
 };
 
 export const defaultHomepageControls: HomepageControls = {
+  heroImageUrl: "/images/roatan.jpeg",
+  listingFallbackImageUrl: "/images/roatan.jpeg",
+  finalCtaImageUrl: "",
   heroEyebrow: "Private Roatan days",
   homepageHeadline: "The island, arranged beautifully.",
   homepageSubhead:
     "Plan your Roatan day with vetted local experiences, map context, and concierge help in one calm place.",
   primaryCtaLabel: "Plan your Roatan day",
   secondaryCtaLabel: "Explore experiences",
+  primaryCtaHref: "#marketplace",
+  secondaryCtaHref: "/map",
   heroCountLabel: "curated options",
   heroMapLabel: "Map-first planning",
   heroSupportLabel: "Concierge support",
@@ -58,6 +104,9 @@ export const defaultHomepageControls: HomepageControls = {
   showMapCallout: true,
   showTrustSection: true,
   showPlanningHelp: true,
+  showFinalCta: true,
+  sectionOrder: ["trustBar", "marketplace", "finalCta"],
+  homepageFeaturedListingIds: [],
   listingsEyebrow: "Curated trip planner",
   listingsTitle: "Featured Roatan picks.",
   listingsIntro:
@@ -98,6 +147,9 @@ export const defaultHomepageControls: HomepageControls = {
   finalCtaPrimaryLabel: "Browse the map",
   finalCtaSecondaryLabel: "Concierge",
   finalCtaTertiaryLabel: "My trips",
+  finalCtaPrimaryHref: "/map",
+  finalCtaSecondaryHref: "/concierge",
+  finalCtaTertiaryHref: "/account",
   featuredBadgeLabel: "Featured",
   topRatedBadgeLabel: "Top rated",
 };
@@ -140,6 +192,19 @@ function cleanBoolean(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function cleanHomepageUrl(value: unknown, fallback: string, allowBlank = false) {
+  if (typeof value !== "string") return fallback;
+
+  const trimmed = value.trim();
+  if (!trimmed) return allowBlank ? "" : fallback;
+
+  const lowered = trimmed.toLowerCase();
+  const safePrefixes = ["/", "#", "http://", "https://", "mailto:", "tel:"];
+  const isSafe = safePrefixes.some((prefix) => lowered.startsWith(prefix));
+
+  return isSafe ? trimmed : fallback;
+}
+
 function cleanTextList(value: unknown, fallback: string[]) {
   if (!Array.isArray(value)) return fallback;
 
@@ -149,6 +214,37 @@ function cleanTextList(value: unknown, fallback: string[]) {
     .filter(Boolean);
 
   return rows.length > 0 ? rows : fallback;
+}
+
+function cleanListingIds(value: unknown) {
+  if (!Array.isArray(value)) return [];
+
+  return Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+function cleanSectionOrder(value: unknown) {
+  if (!Array.isArray(value)) return defaultHomepageControls.sectionOrder;
+
+  const knownSections = new Set(homepageSectionKeys);
+  const sections = value.filter(
+    (item): item is HomepageSectionKey =>
+      typeof item === "string" && knownSections.has(item as HomepageSectionKey),
+  );
+  const uniqueSections = Array.from(new Set(sections));
+  const missingSections = defaultHomepageControls.sectionOrder.filter(
+    (section) => !uniqueSections.includes(section),
+  );
+
+  return uniqueSections.length > 0
+    ? [...uniqueSections, ...missingSections]
+    : defaultHomepageControls.sectionOrder;
 }
 
 function cleanTrustPoints(value: unknown, fallback: HomepageTrustPoint[]) {
@@ -172,6 +268,19 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
   const settings = asRecord(value);
 
   return {
+    heroImageUrl: cleanHomepageUrl(
+      settings.heroImageUrl,
+      defaultHomepageControls.heroImageUrl,
+    ),
+    listingFallbackImageUrl: cleanHomepageUrl(
+      settings.listingFallbackImageUrl,
+      defaultHomepageControls.listingFallbackImageUrl,
+    ),
+    finalCtaImageUrl: cleanHomepageUrl(
+      settings.finalCtaImageUrl,
+      defaultHomepageControls.finalCtaImageUrl,
+      true,
+    ),
     heroEyebrow: cleanHomepageText(
       settings.heroEyebrow,
       defaultHomepageControls.heroEyebrow,
@@ -196,6 +305,14 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
       settings.secondaryCtaLabel,
       defaultHomepageControls.secondaryCtaLabel,
       legacyHomepageTextDefaults.secondaryCtaLabel,
+    ),
+    primaryCtaHref: cleanHomepageUrl(
+      settings.primaryCtaHref,
+      defaultHomepageControls.primaryCtaHref,
+    ),
+    secondaryCtaHref: cleanHomepageUrl(
+      settings.secondaryCtaHref,
+      defaultHomepageControls.secondaryCtaHref,
     ),
     heroCountLabel: cleanText(
       settings.heroCountLabel,
@@ -225,6 +342,14 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
     showPlanningHelp: cleanBoolean(
       settings.showPlanningHelp,
       defaultHomepageControls.showPlanningHelp,
+    ),
+    showFinalCta: cleanBoolean(
+      settings.showFinalCta,
+      defaultHomepageControls.showFinalCta,
+    ),
+    sectionOrder: cleanSectionOrder(settings.sectionOrder),
+    homepageFeaturedListingIds: cleanListingIds(
+      settings.homepageFeaturedListingIds,
     ),
     listingsEyebrow: cleanHomepageText(
       settings.listingsEyebrow,
@@ -296,6 +421,18 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
       settings.finalCtaTertiaryLabel,
       defaultHomepageControls.finalCtaTertiaryLabel,
     ),
+    finalCtaPrimaryHref: cleanHomepageUrl(
+      settings.finalCtaPrimaryHref,
+      defaultHomepageControls.finalCtaPrimaryHref,
+    ),
+    finalCtaSecondaryHref: cleanHomepageUrl(
+      settings.finalCtaSecondaryHref,
+      defaultHomepageControls.finalCtaSecondaryHref,
+    ),
+    finalCtaTertiaryHref: cleanHomepageUrl(
+      settings.finalCtaTertiaryHref,
+      defaultHomepageControls.finalCtaTertiaryHref,
+    ),
     featuredBadgeLabel: cleanText(
       settings.featuredBadgeLabel,
       defaultHomepageControls.featuredBadgeLabel,
@@ -305,4 +442,13 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
       defaultHomepageControls.topRatedBadgeLabel,
     ),
   };
+}
+
+export function getVisibleHomepageSections(controls: HomepageControls) {
+  return controls.sectionOrder.filter((section) => {
+    if (section === "trustBar") return controls.showTrustSection;
+    if (section === "marketplace") return controls.showFeaturedListings;
+    if (section === "finalCta") return controls.showFinalCta;
+    return false;
+  });
 }

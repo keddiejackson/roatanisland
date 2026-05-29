@@ -94,10 +94,11 @@ export default function HomeListingCard({
           ) : (
             <>
               <Image
-                src="/images/roatan.jpeg"
+                src={homepageControls.listingFallbackImageUrl}
                 alt="Roatan preview"
                 fill
                 sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                unoptimized
                 className="object-cover transition duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.04)_0%,rgba(7,31,47,0.24)_100%)]" />

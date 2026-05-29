@@ -6,7 +6,9 @@ import AdminNav from "@/app/admin/AdminNav";
 import { isAdminUser } from "@/lib/admin";
 import {
   defaultHomepageControls,
+  homepageSectionOptions,
   normalizeHomepageControls,
+  type HomepageSectionKey,
   type HomepageTrustPoint,
 } from "@/lib/homepage-settings";
 import {
@@ -117,6 +119,14 @@ type LogoUploadTarget =
   | "logoUrl"
   | (typeof logoLocationFields)[number]["urlField"];
 
+type SettingsListing = {
+  id: string;
+  title: string;
+  category: string | null;
+  is_active: boolean | null;
+  image_url: string | null;
+};
+
 const logoUploadTargets: { field: LogoUploadTarget; label: string }[] = [
   { field: "logoUrl", label: "Main fallback logo" },
   ...logoLocationFields.map(({ urlField, label }) => ({
@@ -133,11 +143,25 @@ const businessSettingFields = [
 ] as const;
 
 const homepageToggleFields = [
-  { field: "showFeaturedListings", label: "Featured listings" },
-  { field: "showExploreRoutes", label: "Explore routes" },
-  { field: "showMapCallout", label: "Map callout" },
-  { field: "showTrustSection", label: "Trust section" },
-  { field: "showPlanningHelp", label: "Planning help" },
+  { field: "showTrustSection", label: "Trust proof strip" },
+  { field: "showFeaturedListings", label: "Featured marketplace" },
+  { field: "showFinalCta", label: "Final planning panel" },
+] as const;
+
+const homepageImageFields = [
+  { field: "heroImageUrl", label: "Hero Background Image" },
+  { field: "listingFallbackImageUrl", label: "Listing Fallback Image" },
+  { field: "finalCtaImageUrl", label: "Final CTA Background Image" },
+] as const;
+
+type HomepageImageUploadTarget = (typeof homepageImageFields)[number]["field"];
+
+const homepageLinkFields = [
+  { field: "primaryCtaHref", label: "Primary Button Link" },
+  { field: "secondaryCtaHref", label: "Secondary Button Link" },
+  { field: "finalCtaPrimaryHref", label: "Final Main Button Link" },
+  { field: "finalCtaSecondaryHref", label: "Final Text Link 1 URL" },
+  { field: "finalCtaTertiaryHref", label: "Final Text Link 2 URL" },
 ] as const;
 
 const homepageTextFields = [
@@ -182,6 +206,11 @@ export default function AdminSettingsPage() {
   const [logoUploadError, setLogoUploadError] = useState("");
   const [logoUploadTarget, setLogoUploadTarget] =
     useState<LogoUploadTarget>("logoUrl");
+  const [homepageImageUploading, setHomepageImageUploading] = useState(false);
+  const [homepageImageUploadError, setHomepageImageUploadError] = useState("");
+  const [homepageImageUploadTarget, setHomepageImageUploadTarget] =
+    useState<HomepageImageUploadTarget>("heroImageUrl");
+  const [listingOptions, setListingOptions] = useState<SettingsListing[]>([]);
 
   useEffect(() => {
     async function verifyAdminSession() {
@@ -215,6 +244,18 @@ export default function AdminSettingsPage() {
           ...normalizeSiteBranding(savedSettings),
         });
       }
+
+      const { data: listingData } = await supabase
+        .from("listings")
+        .select("id,title,category,is_active,image_url")
+        .order("created_at", { ascending: false })
+        .limit(80);
+
+      setListingOptions(
+        ((listingData as SettingsListing[]) || []).filter(
+          (listing) => listing.is_active !== false,
+        ),
+      );
     }
 
     if (authorized) fetchSettings();
@@ -280,6 +321,46 @@ export default function AdminSettingsPage() {
     });
   }
 
+  function isHomepageSectionEnabled(section: HomepageSectionKey) {
+    if (section === "trustBar") return settings.showTrustSection;
+    if (section === "marketplace") return settings.showFeaturedListings;
+    if (section === "finalCta") return settings.showFinalCta;
+    return false;
+  }
+
+  function toggleHomepageSection(section: HomepageSectionKey, enabled: boolean) {
+    if (section === "trustBar") updateSetting("showTrustSection", enabled);
+    if (section === "marketplace") updateSetting("showFeaturedListings", enabled);
+    if (section === "finalCta") updateSetting("showFinalCta", enabled);
+  }
+
+  function moveHomepageSection(index: number, direction: -1 | 1) {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= settings.sectionOrder.length) return;
+
+    const nextOrder = [...settings.sectionOrder];
+    const [section] = nextOrder.splice(index, 1);
+    nextOrder.splice(nextIndex, 0, section);
+    updateSetting("sectionOrder", nextOrder);
+  }
+
+  function toggleHomepageFeaturedListing(listingId: string, enabled: boolean) {
+    setSettings((current) => {
+      const currentIds = new Set(current.homepageFeaturedListingIds);
+
+      if (enabled) {
+        currentIds.add(listingId);
+      } else {
+        currentIds.delete(listingId);
+      }
+
+      return {
+        ...current,
+        homepageFeaturedListingIds: Array.from(currentIds).slice(0, 12),
+      };
+    });
+  }
+
   async function saveSettings(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const { data: sessionData } = await supabase.auth.getSession();
@@ -329,10 +410,44 @@ export default function AdminSettingsPage() {
     updateSetting(logoUploadTarget, result.logoUrl);
   }
 
+  async function uploadHomepageImage(file: File) {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const formData = new FormData();
+    formData.append("logo", file);
+
+    setHomepageImageUploading(true);
+    setHomepageImageUploadError("");
+
+    const response = await fetch("/api/admin/branding-logo", {
+      method: "POST",
+      headers: sessionData.session?.access_token
+        ? { Authorization: `Bearer ${sessionData.session.access_token}` }
+        : {},
+      body: formData,
+    });
+    const result = await response.json();
+    setHomepageImageUploading(false);
+
+    if (!response.ok) {
+      setHomepageImageUploadError(result.error || "Unable to upload image.");
+      return;
+    }
+
+    updateSetting(homepageImageUploadTarget, result.logoUrl);
+  }
+
   const displayedTrustPoints = [
     ...settings.trustPoints,
     ...defaultHomepageControls.trustPoints.slice(settings.trustPoints.length),
   ].slice(0, 3);
+  const orderedHomepageSections = settings.sectionOrder
+    .map((sectionKey) =>
+      homepageSectionOptions.find((section) => section.key === sectionKey),
+    )
+    .filter(
+      (section): section is (typeof homepageSectionOptions)[number] =>
+        Boolean(section),
+    );
   const previewBranding = normalizeSiteBranding(settings);
   const sitePreviewBranding = brandingForPlacement(previewBranding, "site");
   const faviconPreviewBranding = brandingForPlacement(
@@ -767,6 +882,93 @@ export default function AdminSettingsPage() {
                 </p>
               </div>
 
+              <div className="grid gap-4 rounded-2xl border border-[#0fa9b6]/20 bg-[#f6fbfc] p-4 lg:grid-cols-[1fr_0.9fr]">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-[#0fa9b6]">
+                    Homepage Preview
+                  </p>
+                  <div
+                    className="mt-3 overflow-hidden rounded-2xl bg-[#061D2C] p-5 text-white shadow-inner"
+                    style={{
+                      backgroundImage: `linear-gradient(90deg, rgba(6,29,44,0.92), rgba(6,29,44,0.42)), url(${settings.heroImageUrl})`,
+                      backgroundPosition: "center",
+                      backgroundSize: "cover",
+                    }}
+                  >
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-[#D6B56D]">
+                      {settings.heroEyebrow}
+                    </p>
+                    <h3 className="mt-3 max-w-lg text-3xl font-black leading-tight">
+                      {settings.homepageHeadline}
+                    </h3>
+                    <p className="mt-3 max-w-xl text-sm leading-6 text-white/78">
+                      {settings.homepageSubhead}
+                    </p>
+                    <div className="mt-5 flex flex-wrap gap-2 text-xs font-black">
+                      <span className="rounded-full bg-[#00A8A8] px-3 py-2 text-white">
+                        {settings.primaryCtaLabel}
+                      </span>
+                      <span className="rounded-full border border-white/25 bg-white/10 px-3 py-2">
+                        {settings.secondaryCtaLabel}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-[#d7e6ea] bg-white p-4">
+                  <p className="text-sm font-black text-[#053c5e]">
+                    Section Order
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    {orderedHomepageSections.map((section, index) => (
+                      <div
+                        key={section.key}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#d7e6ea] bg-[#fffaf0] p-3"
+                      >
+                        <label className="flex min-w-0 flex-1 items-start gap-3">
+                          <input
+                            type="checkbox"
+                            checked={isHomepageSectionEnabled(section.key)}
+                            onChange={(e) =>
+                              toggleHomepageSection(
+                                section.key,
+                                e.target.checked,
+                              )
+                            }
+                            className="mt-1 h-4 w-4 accent-[#0fa9b6]"
+                          />
+                          <span>
+                            <span className="block text-sm font-black text-[#053c5e]">
+                              {section.label}
+                            </span>
+                            <span className="block text-xs leading-5 text-slate-500">
+                              {section.description}
+                            </span>
+                          </span>
+                        </label>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => moveHomepageSection(index, -1)}
+                            disabled={index === 0}
+                            className="rounded-lg border border-[#d7e6ea] bg-white px-3 py-2 text-xs font-black text-[#053c5e] disabled:opacity-35"
+                          >
+                            Up
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => moveHomepageSection(index, 1)}
+                            disabled={index === orderedHomepageSections.length - 1}
+                            className="rounded-lg border border-[#d7e6ea] bg-white px-3 py-2 text-xs font-black text-[#053c5e] disabled:opacity-35"
+                          >
+                            Down
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {homepageToggleFields.map(({ field, label }) => (
                   <label
@@ -780,6 +982,93 @@ export default function AdminSettingsPage() {
                       className="h-4 w-4 accent-[#0fa9b6]"
                     />
                     {label}
+                  </label>
+                ))}
+              </div>
+
+              <div className="grid gap-4 rounded-2xl border border-[#d7e6ea] bg-[#fffaf0] p-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[#053c5e]">
+                    Homepage Images
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Upload or paste image URLs for the hero, listing fallback,
+                    and final callout.
+                  </p>
+                </div>
+                <div className="grid gap-3 lg:grid-cols-[0.85fr_1fr]">
+                  <label className="grid gap-2 text-sm font-semibold text-[#053c5e]">
+                    Upload image to
+                    <select
+                      value={homepageImageUploadTarget}
+                      onChange={(e) =>
+                        setHomepageImageUploadTarget(
+                          e.target.value as HomepageImageUploadTarget,
+                        )
+                      }
+                      disabled={homepageImageUploading}
+                      className="rounded-lg border border-[#d7e6ea] bg-white px-4 py-3"
+                    >
+                      {homepageImageFields.map(({ field, label }) => (
+                        <option key={field} value={field}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-2 text-sm font-semibold text-[#053c5e]">
+                    Image file
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      disabled={homepageImageUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) uploadHomepageImage(file);
+                      }}
+                      className="rounded-lg border border-[#d7e6ea] bg-white px-4 py-3 disabled:opacity-60"
+                    />
+                  </label>
+                </div>
+                {homepageImageUploading ? (
+                  <p className="text-sm font-semibold text-[#053c5e]">
+                    Uploading homepage image...
+                  </p>
+                ) : null}
+                {homepageImageUploadError ? (
+                  <p className="text-sm font-semibold text-red-600">
+                    {homepageImageUploadError}
+                  </p>
+                ) : null}
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {homepageImageFields.map(({ field, label }) => (
+                    <label key={field}>
+                      <span className="text-sm font-semibold text-[#053c5e]">
+                        {label}
+                      </span>
+                      <input
+                        value={settings[field]}
+                        onChange={(e) => updateSetting(field, e.target.value)}
+                        placeholder="/images/roatan.jpeg or https://..."
+                        className="mt-2 w-full rounded-lg border border-[#d7e6ea] px-4 py-3 text-[#082f49] outline-none transition focus:border-[#0fa9b6] focus:ring-2 focus:ring-[#0fa9b6]/20"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                {homepageLinkFields.map(({ field, label }) => (
+                  <label key={field}>
+                    <span className="text-sm font-semibold text-[#053c5e]">
+                      {label}
+                    </span>
+                    <input
+                      value={settings[field]}
+                      onChange={(e) => updateSetting(field, e.target.value)}
+                      placeholder="/map, /concierge, #marketplace, or https://..."
+                      className="mt-2 w-full rounded-lg border border-[#d7e6ea] px-4 py-3 text-[#082f49] outline-none transition focus:border-[#0fa9b6] focus:ring-2 focus:ring-[#0fa9b6]/20"
+                    />
                   </label>
                 ))}
               </div>
@@ -830,6 +1119,64 @@ export default function AdminSettingsPage() {
                     className="mt-2 w-full resize-y rounded-lg border border-[#d7e6ea] px-4 py-3 text-[#082f49] outline-none transition focus:border-[#0fa9b6] focus:ring-2 focus:ring-[#0fa9b6]/20"
                   />
                 </label>
+              </div>
+
+              <div className="grid gap-4 rounded-2xl border border-[#d7e6ea] bg-[#f6fbfc] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#053c5e]">
+                      Homepage Featured Listings
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      Pick the listings you want the homepage to show first.
+                      Leave empty to use the normal featured/rating order.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateSetting("homepageFeaturedListingIds", [])}
+                    className="rounded-lg border border-[#d7e6ea] bg-white px-4 py-2 text-sm font-black text-[#053c5e]"
+                  >
+                    Clear picks
+                  </button>
+                </div>
+                {listingOptions.length === 0 ? (
+                  <p className="rounded-xl border border-dashed border-[#d7e6ea] bg-white p-4 text-sm text-slate-500">
+                    No active listings found yet.
+                  </p>
+                ) : (
+                  <div className="grid max-h-80 gap-2 overflow-y-auto pr-1 md:grid-cols-2">
+                    {listingOptions.map((listing) => (
+                      <label
+                        key={listing.id}
+                        className="flex items-start gap-3 rounded-xl border border-[#d7e6ea] bg-white p-3 text-sm"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={settings.homepageFeaturedListingIds.includes(
+                            listing.id,
+                          )}
+                          onChange={(e) =>
+                            toggleHomepageFeaturedListing(
+                              listing.id,
+                              e.target.checked,
+                            )
+                          }
+                          className="mt-1 h-4 w-4 accent-[#0fa9b6]"
+                        />
+                        <span>
+                          <span className="block font-black text-[#053c5e]">
+                            {listing.title}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {listing.category || "Listing"}
+                            {listing.image_url ? " with image" : " no image yet"}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="space-y-3">
