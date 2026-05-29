@@ -16,6 +16,17 @@ export type TripPacketBooking = {
   balance_due_cents?: number | null;
 };
 
+export type TripPacketReadiness = {
+  label: string;
+  text: string;
+  tone: "ready" | "review" | "cancelled" | "complete";
+};
+
+export type TripPacketDayOfSection = {
+  label: string;
+  items: string[];
+};
+
 function normalize(value?: string | null) {
   return (value || "").toLowerCase();
 }
@@ -62,6 +73,78 @@ function moneySnapshot(booking: TripPacketBooking) {
   return { balanceDueCents, paymentLabel };
 }
 
+function tripReadiness(booking: TripPacketBooking): TripPacketReadiness {
+  const status = normalize(booking.status);
+
+  if (status === "cancelled") {
+    return {
+      label: "Cancelled",
+      text: "This request is not moving forward. Check messages or contact support if this looks wrong.",
+      tone: "cancelled",
+    };
+  }
+
+  if (status === "completed") {
+    return {
+      label: "Trip complete",
+      text: "Keep this packet for receipts, notes, and post-trip records.",
+      tone: "complete",
+    };
+  }
+
+  if (status === "confirmed") {
+    return {
+      label: "Confirmed plan",
+      text: "Review pickup, payment, and comfort details before travel day.",
+      tone: "ready",
+    };
+  }
+
+  return {
+    label: "Operator review",
+    text: "The operator is reviewing availability and will share the next step.",
+    tone: "review",
+  };
+}
+
+function buildDayOfSections(
+  booking: TripPacketBooking,
+  balanceDueCents: number,
+): TripPacketDayOfSection[] {
+  const guestCount = booking.guests || 1;
+
+  return [
+    {
+      label: "Pickup check",
+      items: [
+        booking.vendor_note || "Confirm the exact pickup or meeting point in chat.",
+        booking.tour_time
+          ? `Be ready before ${booking.tour_time}.`
+          : "Confirm the final departure time before travel day.",
+        "Keep your phone available for operator updates.",
+      ],
+    },
+    {
+      label: "Payment check",
+      items: [
+        balanceDueCents > 0
+          ? `Balance still due: ${formatMoneyCents(balanceDueCents)}.`
+          : "Payment is recorded or not currently due.",
+        "Save invoice and receipt links for your records.",
+        "Bring cash for optional tips or local extras.",
+      ],
+    },
+    {
+      label: "Guest comfort",
+      items: [
+        `${guestCount} guest${guestCount === 1 ? "" : "s"} on this request.`,
+        "Bring sun protection, water, and anything needed for kids or mobility.",
+        booking.guest_message || "Add dietary, mobility, or timing notes in chat if needed.",
+      ],
+    },
+  ];
+}
+
 export function buildTripPacket({
   booking,
   listingTitle = "Roatan booking",
@@ -75,10 +158,12 @@ export function buildTripPacket({
 }) {
   const money = moneySnapshot(booking);
   const listingId = booking.listing_id || "";
+  const readiness = tripReadiness(booking);
 
   return {
     title: `${listingTitle} trip packet`,
     guestName: booking.full_name || "Guest",
+    readiness,
     summary: [
       { label: "Date", value: booking.tour_date || "To confirm" },
       { label: "Time", value: booking.tour_time || "To confirm" },
@@ -120,5 +205,6 @@ export function buildTripPacket({
       "Confirm exact meeting point before departure",
       "Save this trip packet for the day of travel",
     ],
+    dayOfSections: buildDayOfSections(booking, money.balanceDueCents),
   };
 }

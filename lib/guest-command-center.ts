@@ -2,6 +2,7 @@ export type GuestCommandBooking = {
   id: string;
   status?: string | null;
   tour_date?: string | null;
+  listing_id?: string | null;
   deposit_status?: string | null;
 };
 
@@ -67,6 +68,21 @@ export type GuestNextBestAction = {
   text: string;
   href: string;
   tone: "info" | "warning" | "success";
+};
+
+export type GuestTripHubHero = {
+  eyebrow: string;
+  title: string;
+  text: string;
+  actionLabel: string;
+  actionHref: string;
+};
+
+export type GuestTripPrimaryAction = {
+  label: string;
+  href: string;
+  tone: "primary" | "secondary" | "gold";
+  kind: "chat" | "link";
 };
 
 const paidStatuses = new Set(["paid", "full_paid"]);
@@ -346,6 +362,116 @@ export function getGuestNextBestAction({
     href: "/concierge",
     tone: "info",
   };
+}
+
+export function getGuestTripHubHero({
+  bookingCount,
+  confirmedCount,
+  tripScore,
+  nextDate,
+  walletLabel,
+}: {
+  bookingCount: number;
+  confirmedCount: number;
+  tripScore: number;
+  nextDate: string;
+  walletLabel: string;
+}): GuestTripHubHero {
+  if (confirmedCount > 0) {
+    return {
+      eyebrow: "Luxury guest trip hub",
+      title: "Your confirmed Roatan plans are ready.",
+      text: `Next trip date: ${nextDate}. ${walletLabel}. Review pickup notes, messages, payments, and your trip packet before travel day.`,
+      actionLabel: "Review trips",
+      actionHref: "/account?tab=bookings",
+    };
+  }
+
+  if (bookingCount > 0) {
+    return {
+      eyebrow: "Luxury guest trip hub",
+      title: "Your Roatan requests are being shaped.",
+      text: `Trip readiness is ${tripScore}%. Watch messages, payment status, and operator updates from this dashboard.`,
+      actionLabel: "Open messages",
+      actionHref: "/account?tab=bookings",
+    };
+  }
+
+  return {
+    eyebrow: "Luxury guest trip hub",
+    title: "Build your Roatan plans in one calm place.",
+    text: "Save stops, complete your traveler profile, and request bookings when the trip shape feels right.",
+    actionLabel: "Explore the map",
+    actionHref: "/map",
+  };
+}
+
+export function getGuestTripPrimaryActions({
+  id,
+  status,
+  listing_id,
+  deposit_status,
+}: Pick<
+  GuestCommandBooking,
+  "id" | "status" | "listing_id" | "deposit_status"
+>): GuestTripPrimaryAction[] {
+  const normalizedStatus = normalizeStatus(status);
+  const depositStatus = normalizeStatus(deposit_status);
+  const actions: GuestTripPrimaryAction[] = [
+    {
+      label: "Open chat",
+      href: `/account?booking=${id}`,
+      tone: "primary",
+      kind: "chat",
+    },
+    {
+      label: "Trip packet",
+      href: `/book/trip/${id}`,
+      tone: "gold",
+      kind: "link",
+    },
+    {
+      label: "Booking status",
+      href: `/book/status/${id}`,
+      tone: "secondary",
+      kind: "link",
+    },
+    {
+      label: "Invoice",
+      href: `/book/invoice/${id}`,
+      tone: "secondary",
+      kind: "link",
+    },
+    {
+      label: "Receipt",
+      href: `/book/receipt/${id}`,
+      tone: "secondary",
+      kind: "link",
+    },
+  ];
+
+  if (
+    normalizedStatus === "confirmed" &&
+    !paidStatuses.has(depositStatus)
+  ) {
+    actions.splice(2, 0, {
+      label: "Payment details",
+      href: `/book/status/${id}`,
+      tone: "gold",
+      kind: "link",
+    });
+  }
+
+  if (normalizedStatus === "completed" && listing_id) {
+    actions.push({
+      label: "Leave review",
+      href: `/listings/${listing_id}#review`,
+      tone: "gold",
+      kind: "link",
+    });
+  }
+
+  return actions;
 }
 
 export function buildGuestChecklist({

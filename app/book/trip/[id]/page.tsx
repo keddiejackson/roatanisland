@@ -103,7 +103,7 @@ export default async function TripPacketPage({
 
         <section className="rounded-2xl bg-[#071F2F] p-8 text-white shadow-xl">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-            Trip Packet
+            Travel-ready packet
           </p>
           <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
@@ -119,6 +119,14 @@ export default async function TripPacketPage({
               {packet.guestName}
             </span>
           </div>
+          <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9EE8E3]">
+              {packet.readiness.label}
+            </p>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-white/72">
+              {packet.readiness.text}
+            </p>
+          </div>
         </section>
 
         <section className="mt-6 grid gap-4 md:grid-cols-3">
@@ -132,6 +140,35 @@ export default async function TripPacketPage({
               </p>
             </div>
           ))}
+        </section>
+
+        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+            Day-of command sheet
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+            Pickup, payment, and comfort checks
+          </h2>
+          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+            {packet.dayOfSections.map((section) => (
+              <div
+                key={section.label}
+                className="rounded-2xl border border-[#D6B56D]/20 bg-[#FBF7EC] p-5"
+              >
+                <h3 className="font-black text-[#0B3C5D]">
+                  {section.label}
+                </h3>
+                <ul className="mt-4 grid gap-3 text-sm leading-6 text-gray-700">
+                  {section.items.map((item) => (
+                    <li key={item} className="flex gap-3">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#00A8A8]" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className="mt-6 rounded-2xl bg-white p-6 shadow">

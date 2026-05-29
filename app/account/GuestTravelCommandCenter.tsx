@@ -355,7 +355,7 @@ export default function GuestTravelCommandCenter({
             Guest command center
           </p>
           <h2 className="mt-2 text-3xl font-black">
-            Your trip board
+            Premium trip board
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-white/72">
             Saved details, bookings, trip plans, payments, and reminders for{" "}
@@ -492,7 +492,7 @@ export default function GuestTravelCommandCenter({
         <div className="grid gap-6 p-6">
           <section>
             <h3 className="text-xl font-black text-[#0B3C5D]">
-              Booking timeline
+              Trip timeline
             </h3>
             <div className="mt-4 grid gap-3">
               {bookings.length === 0 ? (
@@ -567,7 +567,7 @@ export default function GuestTravelCommandCenter({
             <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
-                  Trip board pro
+                  Premium trip board
                 </p>
                 <h3 className="mt-2 text-2xl font-black">
                   Saved, compared, and planned in one place.

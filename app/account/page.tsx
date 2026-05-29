@@ -26,6 +26,10 @@ import {
 } from "@/lib/booking-change-requests";
 import { bookingNextAction } from "@/lib/booking-flow";
 import {
+  getGuestTripHubHero,
+  getGuestTripPrimaryActions,
+} from "@/lib/guest-command-center";
+import {
   buildGuestPasswordResetRedirect,
   getGuestAuthSubmitLabel,
   getGuestSignOutLabel,
@@ -652,6 +656,23 @@ export default function AccountPage() {
     (booking) => booking.status === "confirmed",
   ).length;
   const guestBalanceSummary = getGuestBalanceSummary(bookings);
+  const nextTripDate =
+    bookings
+      .map((booking) => booking.tour_date || "")
+      .filter(Boolean)
+      .sort()[0] ||
+    latestBooking?.tour_date ||
+    "Flexible";
+  const tripHero = getGuestTripHubHero({
+    bookingCount: bookings.length,
+    confirmedCount,
+    tripScore: confirmedCount > 0 ? 86 : bookings.length > 0 ? 58 : 20,
+    nextDate: nextTripDate,
+    walletLabel: guestBalanceSummary.label,
+  });
+  const topTripActions = latestBooking
+    ? getGuestTripPrimaryActions(latestBooking).slice(0, 5)
+    : [];
   const chatThreads: BookingChatThread[] = bookings.map((booking) => ({
     id: booking.id,
     title: `${booking.tour_date} at ${booking.tour_time}`,
@@ -667,31 +688,45 @@ export default function AccountPage() {
       <div className="mx-auto max-w-4xl">
         <header className="mb-8 flex items-center justify-between">
           <SiteLogo />
-          <Link href="/" className="rounded-xl bg-white px-4 py-2 font-semibold shadow">
-            Home
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/" className="rounded-xl bg-white px-4 py-2 font-semibold shadow">
+              Home
+            </Link>
+            {hasSignedIn ? (
+              <button
+                type="button"
+                onClick={signOut}
+                disabled={signOutLoading}
+                className="rounded-xl bg-[#071F2F] px-4 py-2 text-sm font-black text-white shadow disabled:opacity-50"
+              >
+                {getGuestSignOutLabel(signOutLoading)}
+              </button>
+            ) : null}
+          </div>
         </header>
 
-        <section className="overflow-hidden rounded-2xl bg-[#071F2F] text-white shadow-xl">
+        <section
+          aria-label="Luxury guest trip hub"
+          className="overflow-hidden rounded-2xl bg-[#071F2F] text-white shadow-xl"
+        >
           <div className="p-8">
             <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
-              Trip dashboard
+              {tripHero.eyebrow}
             </p>
             <div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
                 <h1 className="text-3xl font-bold sm:text-5xl">
-                  Your Roatan plans
+                  {tripHero.title}
                 </h1>
                 <p className="mt-3 max-w-2xl leading-7 text-white/75">
-                  Sign in to check booking requests, payment status, and trip
-                  next steps in one place.
+                  {tripHero.text}
                 </p>
               </div>
               <Link
-                href="/map"
+                href={tripHero.actionHref}
                 className="rounded-xl bg-[#D6B56D] px-5 py-3 text-center font-bold text-[#071F2F]"
               >
-                Plan another trip
+                {tripHero.actionLabel}
               </Link>
             </div>
           </div>
@@ -715,6 +750,75 @@ export default function AccountPage() {
             </div>
           ) : null}
         </section>
+
+        {hasSignedIn ? (
+          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Top trip actions
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                  Everything important, one tap away.
+                </h2>
+              </div>
+              <Link
+                href="/map"
+                className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
+              >
+                Add more stops
+              </Link>
+            </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {topTripActions.length > 0 ? (
+                topTripActions.map((action) =>
+                  action.kind === "chat" ? (
+                    <button
+                      key={action.label}
+                      type="button"
+                      onClick={() => {
+                        if (latestBooking) {
+                          setSelectedBookingId(latestBooking.id);
+                        }
+                        setChatOpen(true);
+                      }}
+                      className="rounded-2xl bg-[#00A8A8] px-4 py-4 text-left text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5"
+                    >
+                      {action.label}
+                    </button>
+                  ) : (
+                    <Link
+                      key={action.label}
+                      href={action.href}
+                      className={`rounded-2xl px-4 py-4 text-sm font-black shadow-sm transition hover:-translate-y-0.5 ${
+                        action.tone === "gold"
+                          ? "bg-[#D6B56D] text-[#071F2F]"
+                          : "bg-[#EEF7F6] text-[#0B3C5D]"
+                      }`}
+                    >
+                      {action.label}
+                    </Link>
+                  ),
+                )
+              ) : (
+                <>
+                  <Link
+                    href="/map"
+                    className="rounded-2xl bg-[#00A8A8] px-4 py-4 text-sm font-black text-white"
+                  >
+                    Explore the map
+                  </Link>
+                  <Link
+                    href="/concierge"
+                    className="rounded-2xl bg-[#EEF7F6] px-4 py-4 text-sm font-black text-[#0B3C5D]"
+                  >
+                    Request concierge help
+                  </Link>
+                </>
+              )}
+            </div>
+          </section>
+        ) : null}
 
         {hasSignedIn ? (
           <section className="mt-6 rounded-2xl bg-white p-6 shadow">
