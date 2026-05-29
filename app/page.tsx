@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import BrandAbout from "@/app/BrandAbout";
@@ -80,38 +81,116 @@ const categoryHighlights = [
     category: "Tours",
     text: "Guided island days, wildlife stops, beach time, and water experiences.",
     href: "/tours",
+    imagePosition: "center 44%",
   },
   {
     title: "Hotels",
     category: "Hotels",
     text: "Places to stay by area, from beach zones to quieter island bases.",
     href: "/hotels",
+    imagePosition: "center 52%",
   },
   {
     title: "Transport",
     category: "Transport",
     text: "Airport rides, port transfers, private drivers, and easy pickup planning.",
     href: "/transport",
+    imagePosition: "42% center",
   },
   {
     title: "Food",
     category: "Food",
     text: "Restaurants, beach bars, and local stops to add around your plans.",
     href: "/map?category=Food",
+    imagePosition: "center 60%",
   },
   {
     title: "Beaches",
     category: "Beaches",
     text: "Beach areas and coastal stops to anchor an easy Roatan day.",
     href: "/map?category=Beaches",
+    imagePosition: "center 65%",
   },
   {
     title: "Private Charters",
     category: "Private Charters",
     text: "Custom boats, private days, and flexible high-touch island plans.",
     href: "/map?category=Private%20Charters",
+    imagePosition: "62% center",
   },
 ];
+
+const smoothEase = [0.22, 1, 0.36, 1] as const;
+
+const reducedMotionVariants: Variants = {
+  hidden: { opacity: 1 },
+  visible: { opacity: 1 },
+};
+
+const pageTransitionVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { duration: 0.45, ease: smoothEase },
+  },
+};
+
+const heroContainerVariants: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.12,
+    },
+  },
+};
+
+const heroTextVariants: Variants = {
+  hidden: { opacity: 0, y: 24, filter: "blur(8px)" },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: "blur(0px)",
+    transition: { duration: 0.78, ease: smoothEase },
+  },
+};
+
+const marketplaceSearchVariants: Variants = {
+  hidden: { opacity: 0, y: 28, scale: 0.985 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.62, ease: smoothEase },
+  },
+};
+
+const sectionRevealVariants: Variants = {
+  hidden: { opacity: 0, y: 34 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.62, ease: smoothEase },
+  },
+};
+
+const listingCardVariants: Variants = {
+  hidden: { opacity: 0, y: 34 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.55, ease: smoothEase },
+  },
+};
+
+const categoryCardVariants: Variants = {
+  hidden: { opacity: 0, y: 26 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.52, ease: smoothEase },
+  },
+};
 
 function formatPrice(price: number | null) {
   if (!price) {
@@ -132,6 +211,11 @@ function listingBadge(listing: Listing, homepageControls: HomepageControls) {
 }
 
 export default function Home() {
+  const reduceMotion = useReducedMotion();
+  const viewportOnce = {
+    once: true,
+    amount: reduceMotion ? 0.05 : 0.18,
+  };
   const [listings, setListings] = useState<Listing[]>([]);
   const [homepageControls, setHomepageControls] = useState(
     defaultHomepageControls,
@@ -375,7 +459,12 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#F7F3EA] text-[#102A43]">
+    <motion.main
+      initial="hidden"
+      animate="visible"
+      variants={reduceMotion ? reducedMotionVariants : pageTransitionVariants}
+      className="min-h-screen overflow-x-hidden bg-[#F7F3EA] text-[#102A43]"
+    >
       <section className="relative min-h-[720px] overflow-hidden bg-[#071F2F] text-white">
         <Image
           src="/images/roatan.jpeg"
@@ -460,17 +549,32 @@ export default function Home() {
             </nav>
           </header>
 
-          <div className="motion-rise flex flex-1 flex-col justify-center py-20">
-            <p className="text-sm font-bold uppercase text-[#9EE8E3]">
+          <motion.div
+            variants={reduceMotion ? reducedMotionVariants : heroContainerVariants}
+            className="flex flex-1 flex-col justify-center py-20"
+          >
+            <motion.p
+              variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
+              className="text-sm font-bold uppercase text-[#9EE8E3]"
+            >
               {homepageControls.heroEyebrow}
-            </p>
-            <h1 className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl">
+            </motion.p>
+            <motion.h1
+              variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
+              className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl"
+            >
               {homepageControls.homepageHeadline}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-white/84 sm:text-xl">
+            </motion.h1>
+            <motion.p
+              variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
+              className="mt-6 max-w-2xl text-lg leading-8 text-white/84 sm:text-xl"
+            >
               {homepageControls.homepageSubhead}
-            </p>
-            <div className="mt-9 flex flex-wrap gap-3">
+            </motion.p>
+            <motion.div
+              variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
+              className="mt-9 flex flex-wrap gap-3"
+            >
               <a
                 href="#marketplace"
                 className="rounded-lg bg-[#00A8A8] px-6 py-3 font-bold text-white shadow-2xl shadow-[#00A8A8]/25 transition hover:-translate-y-0.5 hover:bg-[#078F8F]"
@@ -483,14 +587,20 @@ export default function Home() {
               >
                 Build a trip plan
               </Link>
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
       <section id="marketplace" className="relative z-10 -mt-14 bg-white px-5 py-16 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportOnce}
+            variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+            className="mb-8 flex flex-col justify-between gap-4 lg:flex-row lg:items-end"
+          >
             <div>
               <p className="text-sm font-bold uppercase text-[#00A8A8]">
                 {homepageControls.listingsEyebrow}
@@ -521,9 +631,17 @@ export default function Home() {
                 {showAdvancedFilters ? "Hide filters" : "More filters"}
               </button>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="rounded-lg border border-[#D6B56D]/20 bg-[#F7F3EA] p-4">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportOnce}
+            variants={
+              reduceMotion ? reducedMotionVariants : marketplaceSearchVariants
+            }
+            className="rounded-lg border border-[#D6B56D]/20 bg-[#F7F3EA] p-4"
+          >
             <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
               <input
                 type="text"
@@ -624,9 +742,15 @@ export default function Home() {
                 </select>
               </div>
             ) : null}
-          </div>
+          </motion.div>
 
-          <div className="mt-5 rounded-lg border border-[#D6B56D]/25 bg-white p-4 shadow-sm">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={viewportOnce}
+            variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+            className="mt-5 rounded-lg border border-[#D6B56D]/25 bg-white p-4 shadow-sm"
+          >
             <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
@@ -660,7 +784,7 @@ export default function Home() {
                 </Link>
               </div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="mt-5">
             <TripPlannerDock />
@@ -739,7 +863,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="bg-[#F7F3EA] px-5 py-16 sm:px-6">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        className="bg-[#F7F3EA] px-5 py-16 sm:px-6"
+      >
         <div className="mx-auto max-w-7xl">
           <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
@@ -756,36 +886,69 @@ export default function Home() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {categoryCards.map((item) => (
-              <Link
+            {categoryCards.map((item, index) => (
+              <motion.div
                 key={item.title}
-                href={item.href}
-                className="group rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                custom={index}
+                variants={reduceMotion ? reducedMotionVariants : categoryCardVariants}
+                whileHover={reduceMotion ? undefined : { y: -8 }}
+                transition={{ duration: 0.28, ease: smoothEase }}
+                className="h-full"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-black uppercase text-[#D6B56D]">
-                      {item.count} live
-                    </p>
-                    <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                      {item.title}
-                    </h3>
+                <Link
+                  href={item.href}
+                  className="group block h-full overflow-hidden rounded-lg border border-[#D6B56D]/20 bg-white shadow-sm transition hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
+                >
+                  <div className="relative h-36 overflow-hidden bg-[#D8EFEC]">
+                    <motion.div
+                      className="absolute inset-0"
+                      whileHover={reduceMotion ? undefined : { scale: 1.06 }}
+                      transition={{ duration: 0.55, ease: smoothEase }}
+                    >
+                      <Image
+                        src="/images/roatan.jpeg"
+                        alt=""
+                        fill
+                        sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+                        className="object-cover"
+                        style={{ objectPosition: item.imagePosition }}
+                      />
+                    </motion.div>
+                    <div className="absolute inset-0 bg-[#071F2F]/25" />
                   </div>
-                  <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-black text-[#007B7B]">
-                    View
-                  </span>
-                </div>
-                <p className="mt-3 text-sm leading-6 text-gray-600">
-                  {item.text}
-                </p>
-              </Link>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs font-black uppercase text-[#D6B56D]">
+                          {item.count} live
+                        </p>
+                        <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                          {item.title}
+                        </h3>
+                      </div>
+                      <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-sm font-black text-[#007B7B]">
+                        View
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm leading-6 text-gray-600">
+                      {item.text}
+                    </p>
+                  </div>
+                </Link>
+              </motion.div>
             ))}
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {homepageControls.showExploreRoutes ? (
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-6">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        className="mx-auto max-w-7xl px-5 py-16 sm:px-6"
+      >
         <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-bold uppercase text-[#00A8A8]">
@@ -802,30 +965,42 @@ export default function Home() {
 
         <div className="grid gap-4 md:grid-cols-4">
           {tripTypes.map((item, index) => (
-            <Link
+            <motion.div
               key={item.title}
-              href={item.href}
-              className="motion-rise group rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
-              style={{ animationDelay: `${index * 70}ms` }}
+              variants={reduceMotion ? reducedMotionVariants : listingCardVariants}
+              whileHover={reduceMotion ? undefined : { y: -6 }}
+              transition={{ duration: 0.28, ease: smoothEase }}
+              className="h-full"
             >
-              <p className="text-xs font-black uppercase text-[#D6B56D]">
-                Route
-              </p>
-              <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
-                {item.title}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
-              <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
-                Explore
-              </span>
-            </Link>
+              <Link
+                href={item.href}
+                className="group block h-full rounded-lg border border-[#D6B56D]/20 bg-white p-5 shadow-sm transition hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
+              >
+                <p className="text-xs font-black uppercase text-[#D6B56D]">
+                  Route {index + 1}
+                </p>
+                <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
+                  {item.title}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-gray-600">{item.text}</p>
+                <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
+                  Explore
+                </span>
+              </Link>
+            </motion.div>
           ))}
         </div>
-      </section>
+      </motion.section>
       ) : null}
 
       {homepageControls.showMapCallout ? (
-      <section className="px-5 pb-16 sm:px-6">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        className="px-5 pb-16 sm:px-6"
+      >
         <div className="mx-auto grid max-w-7xl overflow-hidden rounded-lg bg-[#071F2F] text-white shadow-2xl shadow-[#071F2F]/15 lg:grid-cols-[1fr_0.9fr]">
           <div className="p-6 sm:p-10">
             <p className="text-sm font-bold uppercase text-[#D6B56D]">
@@ -866,7 +1041,7 @@ export default function Home() {
             />
           </div>
         </div>
-      </section>
+      </motion.section>
       ) : null}
 
       {homepageControls.showTrustSection ? (
@@ -879,7 +1054,13 @@ export default function Home() {
       ) : null}
 
       {homepageControls.showPlanningHelp ? (
-      <section className="px-5 pb-16 sm:px-6">
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        className="px-5 pb-16 sm:px-6"
+      >
         <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.82fr_1fr] lg:items-start">
           <div>
             <p className="text-sm font-bold uppercase text-[#00A8A8]">
@@ -990,10 +1171,10 @@ export default function Home() {
             )}
           </div>
         </div>
-      </section>
+      </motion.section>
       ) : null}
       <SiteFooter />
-    </main>
+    </motion.main>
   );
 }
 
@@ -1010,6 +1191,7 @@ function ListingCard({
   guestCount: string;
   featured?: boolean;
 }) {
+  const reduceMotion = useReducedMotion();
   const trustBadges = getListingTrustBadges(listing);
   const conversionTags = getListingConversionTags(listing, {
     date: travelDate,
@@ -1017,76 +1199,86 @@ function ListingCard({
   });
 
   return (
-    <Link
-      href={`/listings/${listing.id}`}
-      className="group overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: reduceMotion ? 0.05 : 0.22 }}
+      variants={reduceMotion ? reducedMotionVariants : listingCardVariants}
+      whileHover={reduceMotion ? undefined : { y: -7 }}
+      transition={{ duration: 0.28, ease: smoothEase }}
+      className="h-full"
     >
-      <div className={featured ? "relative h-64 bg-[#D8EFEC]" : "relative h-56 bg-[#D8EFEC]"}>
-        {listing.image_url ? (
-          <Image
-            src={listing.image_url}
-            alt={listing.title}
-            fill
-            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-            unoptimized
-            className="object-cover transition duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
-            No image yet
-          </div>
-        )}
-        <span className="absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs font-black uppercase text-[#0B3C5D] shadow">
-          {listingBadge(listing, homepageControls)}
-        </span>
-        <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
-          {formatPrice(listing.price)}
-        </span>
-      </div>
-
-      <div className="p-5">
-        <p className="text-xs font-black uppercase text-[#00A8A8]">
-          {listing.location || "Roatan"}
-        </p>
-        <h3 className="mt-2 text-lg font-black text-[#0B3C5D]">
-          {listing.title}
-        </h3>
-        <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
-          {listing.description || "Details coming soon."}
-        </p>
-        <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
-          <span className="font-bold text-gray-500">
-            {listing.category || "Listing"}
+      <Link
+        href={`/listings/${listing.id}`}
+        className="group block h-full overflow-hidden rounded-lg border border-gray-100 bg-white shadow-sm transition hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
+      >
+        <div className={featured ? "relative h-64 bg-[#D8EFEC]" : "relative h-56 bg-[#D8EFEC]"}>
+          {listing.image_url ? (
+            <Image
+              src={listing.image_url}
+              alt={listing.title}
+              fill
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              unoptimized
+              className="object-cover transition duration-700 group-hover:scale-105"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
+              No image yet
+            </div>
+          )}
+          <span className="absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs font-black uppercase text-[#0B3C5D] shadow">
+            {listingBadge(listing, homepageControls)}
           </span>
-          <span className="font-black text-[#0B3C5D]">
-            {listing.rating ?? 5}/5
+          <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
+            {formatPrice(listing.price)}
           </span>
         </div>
-        {trustBadges.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {trustBadges.slice(0, 3).map((badge) => (
-              <span
-                key={badge}
-                className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-bold text-[#0B3C5D]"
-              >
-                {badge}
-              </span>
-            ))}
+
+        <div className="p-5">
+          <p className="text-xs font-black uppercase text-[#00A8A8]">
+            {listing.location || "Roatan"}
+          </p>
+          <h3 className="mt-2 text-lg font-black text-[#0B3C5D]">
+            {listing.title}
+          </h3>
+          <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+            {listing.description || "Details coming soon."}
+          </p>
+          <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
+            <span className="font-bold text-gray-500">
+              {listing.category || "Listing"}
+            </span>
+            <span className="font-black text-[#0B3C5D]">
+              {listing.rating ?? 5}/5
+            </span>
           </div>
-        ) : null}
-        {conversionTags.length > 0 ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {conversionTags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-[#FFF8E8] px-3 py-1 text-xs font-bold text-[#7A5A00]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </Link>
+          {trustBadges.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {trustBadges.slice(0, 3).map((badge) => (
+                <span
+                  key={badge}
+                  className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-bold text-[#0B3C5D]"
+                >
+                  {badge}
+                </span>
+              ))}
+            </div>
+          ) : null}
+          {conversionTags.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {conversionTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-[#FFF8E8] px-3 py-1 text-xs font-bold text-[#7A5A00]"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </Link>
+    </motion.div>
   );
 }

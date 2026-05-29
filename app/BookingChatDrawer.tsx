@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import {
   bookingChatAccountPath,
   bookingChatSignInPath,
@@ -50,6 +51,27 @@ type ChatViewerProfile = {
   email: string;
   displayName: string;
   profileImageUrl: string | null;
+};
+
+const chatBackdropVariants: Variants = {
+  closed: { opacity: 0 },
+  open: { opacity: 1, transition: { duration: 0.18 } },
+};
+
+const chatDrawerVariants: Variants = {
+  closed: { opacity: 0, x: 28, y: 18, scale: 0.985 },
+  open: {
+    opacity: 1,
+    x: 0,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] },
+  },
+};
+
+const reducedChatDrawerVariants: Variants = {
+  closed: { opacity: 0 },
+  open: { opacity: 1, transition: { duration: 0.12 } },
 };
 
 function senderLabel(role: string) {
@@ -130,6 +152,7 @@ export default function BookingChatDrawer({
   selectedThreadId,
   onSelectedThreadIdChange,
 }: BookingChatDrawerProps) {
+  const reduceMotion = useReducedMotion();
   const [internalOpen, setInternalOpen] = useState(false);
   const [internalSelectedThreadId, setInternalSelectedThreadId] = useState("");
   const [messages, setMessages] = useState<BookingMessageLike[]>([]);
@@ -390,11 +413,15 @@ export default function BookingChatDrawer({
 
   return (
     <>
-      <button
+      <motion.button
         type="button"
         onClick={() => changeOpen(true)}
         className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#071F2F] px-4 py-3 text-left font-bold text-white shadow-2xl shadow-[#071F2F]/25 ring-1 ring-white/10 transition hover:-translate-y-1 sm:right-5 sm:px-5 sm:py-4"
         aria-label="Open booking messages"
+        initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
+        animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+        whileHover={reduceMotion ? undefined : { y: -4 }}
+        whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       >
         <span className="block text-sm leading-none">Messages</span>
         <span className="mt-1 block text-xs leading-tight text-white/70">
@@ -402,16 +429,25 @@ export default function BookingChatDrawer({
             ? `${stats.needsResponseCount} need response`
             : `${stats.threadCount} thread${stats.threadCount === 1 ? "" : "s"}`}
         </span>
-      </button>
+      </motion.button>
 
-      {drawerOpen ? (
-        <div
+      <AnimatePresence>
+        {drawerOpen ? (
+        <motion.div
+          key="booking-chat-backdrop"
           className="fixed inset-0 z-50 bg-[#071F2F]/35 backdrop-blur-sm"
           onClick={() => changeOpen(false)}
+          initial="closed"
+          animate="open"
+          exit="closed"
+          variants={chatBackdropVariants}
         >
-          <aside
+          <motion.aside
             className="fixed inset-x-0 bottom-0 flex h-[min(100dvh,720px)] max-h-[100dvh] flex-col overflow-hidden rounded-t-2xl bg-[#F7F3EA] shadow-2xl ring-1 ring-[#071F2F]/10 md:inset-y-4 md:left-auto md:right-4 md:h-auto md:w-[min(540px,calc(100vw-2rem))] md:rounded-2xl xl:w-[560px]"
             onClick={(event) => event.stopPropagation()}
+            variants={
+              reduceMotion ? reducedChatDrawerVariants : chatDrawerVariants
+            }
           >
             <div className="shrink-0 bg-[#071F2F] p-4 text-white sm:p-5">
               <div className="flex items-start justify-between gap-4">
@@ -692,9 +728,10 @@ export default function BookingChatDrawer({
                 </button>
               </form>
             </div>
-          </aside>
-        </div>
-      ) : null}
+          </motion.aside>
+        </motion.div>
+        ) : null}
+      </AnimatePresence>
     </>
   );
 }
