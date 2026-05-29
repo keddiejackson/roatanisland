@@ -144,24 +144,42 @@ const audiencePaths = [
   },
 ];
 
-const premiumTripStats = [
-  { label: "Live marketplace", value: "Local operators" },
-  { label: "Trip planning", value: "Map-first" },
-  { label: "Guest support", value: "Concierge-ready" },
+const luxuryProofPoints = [
+  {
+    label: "Trusted local operators",
+    value: "Curated marketplace",
+    text: "Browse active Roatan experiences with clearer photos, prices, times, and local context.",
+  },
+  {
+    label: "Concierge-ready planning",
+    value: "Map-first trips",
+    text: "Plan around beaches, pickup areas, cruise ports, the airport, and nearby stops before booking.",
+  },
+  {
+    label: "One elegant trip thread",
+    value: "Messages connected",
+    text: "Keep bookings, saved plans, payments, and conversations together in a guest account.",
+  },
 ];
 
-const homepageAssurancePoints = [
+const luxuryJourneyCards = [
   {
-    title: "Curated Roatan marketplace",
-    text: "Browse active local listings with clearer photos, times, prices, and booking paths.",
+    eyebrow: "Discover",
+    title: "Start with the feeling.",
+    text: "Private boat, beach day, wildlife stop, family route, or a polished transfer plan.",
+    href: "#marketplace",
   },
   {
-    title: "Plan by area first",
-    text: "Use map context before booking so pickups, beaches, ports, and stops make sense together.",
+    eyebrow: "Compare",
+    title: "Plan like a private client.",
+    text: "Use area context, availability, capacity, and local operator details before you request.",
+    href: "/map",
   },
   {
-    title: "One account, one trip thread",
-    text: "Guests can keep bookings, saved plans, and messages connected across the site.",
+    eyebrow: "Book",
+    title: "Reserve the day with confidence.",
+    text: "Send the request, keep messages in one place, and let the trip board organize the next step.",
+    href: "/account",
   },
 ];
 
@@ -536,7 +554,7 @@ export default function Home() {
       variants={reduceMotion ? reducedMotionVariants : pageTransitionVariants}
       className="brand-page min-h-screen overflow-x-hidden"
     >
-      <section className="relative min-h-[720px] overflow-hidden bg-[#071F2F] text-white">
+      <section className="relative min-h-[860px] overflow-hidden bg-[#061D2C] text-white">
         <Image
           src="/images/roatan.jpeg"
           alt="Roatan coastline"
@@ -545,33 +563,34 @@ export default function Home() {
           sizes="100vw"
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-[#071F2F]/65" />
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.06)_0%,rgba(7,31,47,0.82)_76%,#F7F3EA_100%)]" />
+        <div className="absolute inset-0 bg-[#061D2C]/56" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_28%,rgba(8,170,168,0.28),transparent_30%),linear-gradient(90deg,rgba(6,29,44,0.92)_0%,rgba(6,29,44,0.55)_48%,rgba(6,29,44,0.2)_100%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-72 bg-[linear-gradient(180deg,rgba(247,243,234,0)_0%,#F7F3EA_88%)]" />
 
-        <div className="relative mx-auto flex min-h-[720px] max-w-7xl flex-col px-5 py-5 sm:px-6">
+        <div className="relative mx-auto flex min-h-[860px] max-w-7xl flex-col px-5 py-6 sm:px-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <SiteLogo variant="light" priority />
-            <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-semibold text-white/90">
-              <a href="#marketplace" className="rounded-lg px-3 py-2 hover:bg-white/10">
+            <nav className="flex flex-wrap items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.09] p-1 text-sm font-semibold text-white/90 shadow-2xl shadow-black/15 backdrop-blur-xl">
+              <a href="#marketplace" className="rounded-full px-3 py-2 hover:bg-white/10">
                 Listings
               </a>
-              <Link href="/map" className="rounded-lg px-3 py-2 hover:bg-white/10">
+              <Link href="/map" className="rounded-full px-3 py-2 hover:bg-white/10">
                 Map
               </Link>
-              <Link href="/concierge" className="rounded-lg px-3 py-2 hover:bg-white/10">
+              <Link href="/concierge" className="rounded-full px-3 py-2 hover:bg-white/10">
                 Concierge
               </Link>
-              <Link href="/tours" className="rounded-lg px-3 py-2 hover:bg-white/10">
+              <Link href="/tours" className="rounded-full px-3 py-2 hover:bg-white/10">
                 Tours
               </Link>
-              <Link href="/vendors" className="rounded-lg px-3 py-2 hover:bg-white/10">
+              <Link href="/vendors" className="rounded-full px-3 py-2 hover:bg-white/10">
                 Vendors
               </Link>
               {homeAccountLoading ? null : homeAccount ? (
-                <div className="flex max-w-[300px] items-center gap-1 rounded-lg border border-white/15 bg-white/10 p-1 text-white shadow-lg shadow-black/10 backdrop-blur">
+                <div className="flex max-w-[300px] items-center gap-1 rounded-full border border-white/15 bg-white/12 p-1 text-white shadow-lg shadow-black/10 backdrop-blur">
                   <Link
                     href={homeAccount.href}
-                    className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/15"
+                    className="flex min-w-0 items-center gap-2 rounded-full px-2 py-1.5 hover:bg-white/15"
                   >
                     <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
                       {homeAccount.profileImageUrl ? (
@@ -601,19 +620,19 @@ export default function Home() {
                     type="button"
                     onClick={signOutHomeAccount}
                     disabled={homeSignOutLoading}
-                    className="rounded-md bg-white px-3 py-2 text-xs font-black text-[#071F2F] disabled:opacity-60"
+                    className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#071F2F] disabled:opacity-60"
                   >
                     {homeSignOutLoading ? "Signing out..." : "Sign out"}
                   </button>
                 </div>
               ) : (
-                <Link href="/signin" className="rounded-lg px-3 py-2 hover:bg-white/10">
+                <Link href="/signin" className="rounded-full px-3 py-2 hover:bg-white/10">
                   Sign in
                 </Link>
               )}
               <Link
                 href="/vendor/signup"
-                className="rounded-lg bg-white px-4 py-2 text-[#071F2F] shadow-lg shadow-black/10"
+                className="rounded-full bg-white px-4 py-2 text-[#071F2F] shadow-lg shadow-black/10"
               >
                 List your business
               </Link>
@@ -622,30 +641,32 @@ export default function Home() {
 
           <motion.div
             variants={reduceMotion ? reducedMotionVariants : heroContainerVariants}
-            className="grid flex-1 items-center gap-10 py-14 lg:grid-cols-[1fr_380px] lg:py-20"
+            className="grid flex-1 items-center gap-10 py-16 lg:grid-cols-[minmax(0,1fr)_430px] lg:py-24"
           >
             <div>
               <motion.p
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="text-sm font-bold uppercase tracking-[0.18em] text-[#9EE8E3]"
+                className="text-sm font-black uppercase tracking-[0.26em] text-[#D6B56D]"
               >
-                {homepageControls.heroEyebrow}
+                Private Roatan days
               </motion.p>
               <motion.h1
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-5 max-w-5xl text-5xl font-black leading-[1.02] sm:text-7xl"
+                className="mt-5 max-w-5xl text-6xl font-black leading-[0.9] tracking-[-0.06em] sm:text-8xl lg:text-[7.8rem]"
               >
-                {homepageControls.homepageHeadline}
+                The island, arranged beautifully.
               </motion.h1>
               <motion.p
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-6 max-w-2xl text-lg leading-8 text-white/84 sm:text-xl"
+                className="mt-7 max-w-3xl text-lg leading-8 text-white/84 sm:text-2xl sm:leading-10"
               >
-                {homepageControls.homepageSubhead}
+                {homepageControls.homepageHeadline} Browse vetted experiences,
+                compare local operators, and build a Roatan day with the polish
+                of a private travel desk.
               </motion.p>
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-9 flex flex-wrap gap-3"
+                className="mt-10 flex flex-wrap gap-3"
               >
                 <a
                   href="#marketplace"
@@ -663,13 +684,60 @@ export default function Home() {
 
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-12 grid max-w-5xl gap-3 md:grid-cols-3"
+                className="mt-14 grid max-w-5xl gap-3 md:grid-cols-3"
               >
+                {luxuryProofPoints.map((point) => (
+                  <div
+                    key={point.label}
+                    className="rounded-[1.25rem] border border-white/14 bg-white/[0.08] p-5 shadow-xl shadow-black/10 backdrop-blur"
+                  >
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                      {point.label}
+                    </p>
+                    <h2 className="mt-3 text-xl font-black leading-tight">
+                      {point.value}
+                    </h2>
+                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/72">
+                      {point.text}
+                    </p>
+                  </div>
+                ))}
+              </motion.div>
+            </div>
+
+            <motion.div
+              variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
+              className="rounded-[2rem] border border-white/16 bg-white/[0.12] p-5 text-white shadow-2xl shadow-black/30 backdrop-blur-2xl sm:p-6"
+            >
+              <div className="relative overflow-hidden rounded-[1.5rem]">
+                <Image
+                  src="/images/roatan.jpeg"
+                  alt="Roatan turquoise coast"
+                  width={720}
+                  height={520}
+                  priority
+                  className="h-64 w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0)_0%,rgba(7,31,47,0.8)_100%)]" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-[#D6B56D]">
+                    Hero trip planner
+                  </p>
+                  <h2 className="mt-2 text-3xl font-black leading-tight">
+                    Plan like a private client.
+                  </h2>
+                </div>
+              </div>
+              <p className="mt-5 text-sm leading-6 text-white/76">
+                Search by area, compare local operators, save a plan, and keep
+                booking messages connected to your account.
+              </p>
+              <div className="mt-6 grid gap-3">
                 {audiencePaths.map((path) => (
                   <Link
                     key={path.eyebrow}
                     href={path.href}
-                    className="group rounded-lg border border-white/15 bg-white/[0.08] p-4 text-white shadow-xl shadow-black/10 backdrop-blur transition hover:-translate-y-1 hover:bg-white/[0.14] focus:outline-none focus:ring-4 focus:ring-white/20"
+                    className="group rounded-[1.15rem] border border-white/12 bg-[#071F2F]/48 p-4 text-white transition hover:-translate-y-1 hover:bg-[#071F2F]/64 focus:outline-none focus:ring-4 focus:ring-white/20"
                   >
                     <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
                       {path.eyebrow}
@@ -685,41 +753,10 @@ export default function Home() {
                     </span>
                   </Link>
                 ))}
-              </motion.div>
-            </div>
-
-            <motion.div
-              variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-              className="rounded-[1.5rem] border border-white/15 bg-white/[0.11] p-5 text-white shadow-2xl shadow-black/20 backdrop-blur-xl"
-            >
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#D6B56D]">
-                Hero trip planner
-              </p>
-              <h2 className="mt-3 text-3xl font-black leading-tight">
-                Start with the island day, not another tab.
-              </h2>
-              <p className="mt-3 text-sm leading-6 text-white/74">
-                Search by area, compare local operators, save a plan, and keep
-                booking messages connected to your account.
-              </p>
-              <div className="mt-6 grid gap-3">
-                {premiumTripStats.map((item) => (
-                  <div
-                    key={item.label}
-                    className="rounded-2xl border border-white/12 bg-[#071F2F]/42 p-4"
-                  >
-                    <p className="text-xs font-black uppercase tracking-[0.14em] text-white/48">
-                      {item.label}
-                    </p>
-                    <p className="mt-1 text-lg font-black text-white">
-                      {item.value}
-                    </p>
-                  </div>
-                ))}
               </div>
               <Link
                 href="/map"
-                className="mt-5 inline-flex w-full justify-center rounded-lg bg-white px-5 py-3 text-sm font-black text-[#071F2F] shadow-lg shadow-black/10"
+                className="mt-5 inline-flex w-full justify-center rounded-full bg-white px-5 py-3 text-sm font-black text-[#071F2F] shadow-lg shadow-black/10"
               >
                 Open the trip map
               </Link>
@@ -733,16 +770,64 @@ export default function Home() {
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        className="bg-[#071F2F] px-5 py-20 text-white sm:px-6"
+      >
+        <div className="mx-auto max-w-7xl">
+          <div className="grid gap-8 lg:grid-cols-[0.82fr_1fr] lg:items-end">
+            <div>
+              <p className="brand-eyebrow-gold">
+                Concierge journey
+              </p>
+              <h2 className="mt-3 max-w-3xl text-4xl font-black leading-[0.96] tracking-[-0.045em] sm:text-6xl">
+                Adventure with the calm of a private travel desk.
+              </h2>
+            </div>
+            <p className="max-w-2xl text-lg leading-8 text-white/70">
+              The homepage now guides guests from inspiration to search to
+              booking confidence, without losing the quiet luxury feel.
+            </p>
+          </div>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-3">
+            {luxuryJourneyCards.map((item) => (
+              <Link
+                key={item.title}
+                href={item.href}
+                className="group rounded-[1.5rem] border border-white/12 bg-white/[0.07] p-6 shadow-2xl shadow-black/10 transition hover:-translate-y-1 hover:bg-white/[0.11] focus:outline-none focus:ring-4 focus:ring-white/20"
+              >
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                  {item.eyebrow}
+                </p>
+                <h3 className="mt-4 text-2xl font-black leading-tight">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-sm leading-6 text-white/68">
+                  {item.text}
+                </p>
+                <span className="mt-6 inline-flex text-sm font-black text-[#9EE8E3]">
+                  Continue
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
         className="relative z-20 -mt-12 px-5 sm:px-6"
       >
         <div className="brand-card mx-auto grid max-w-6xl gap-3 p-4 md:grid-cols-3">
-          {homepageAssurancePoints.map((point) => (
-            <div key={point.title} className="brand-card-lift p-5">
+          {luxuryProofPoints.map((point) => (
+            <div key={point.label} className="brand-card-lift p-5">
               <p className="brand-eyebrow-gold">
                 Marketplace confidence
               </p>
               <h2 className="mt-2 text-lg font-black text-[#0B3C5D]">
-                {point.title}
+                {point.label}
               </h2>
               <p className="mt-2 text-sm leading-6 text-gray-600">
                 {point.text}
@@ -752,8 +837,8 @@ export default function Home() {
         </div>
       </motion.section>
 
-      <section id="marketplace" className="relative z-10 bg-white/92 px-5 py-20 sm:px-6">
-        <div className="mx-auto max-w-6xl">
+      <section id="marketplace" className="relative z-10 bg-[#FBF8F1] px-5 py-24 sm:px-6">
+        <div className="mx-auto max-w-7xl">
           <motion.div
             initial="hidden"
             whileInView="visible"
@@ -765,11 +850,13 @@ export default function Home() {
               <p className="brand-eyebrow">
                 {homepageControls.listingsEyebrow}
               </p>
-              <h2 className="brand-display mt-2 text-3xl sm:text-5xl">
-                {homepageControls.listingsTitle}
+              <h2 className="brand-display mt-2 max-w-4xl text-4xl sm:text-6xl">
+                Signature Roatan experiences.
               </h2>
               <p className="brand-subtitle mt-3 max-w-2xl">
-                {homepageControls.listingsIntro}
+                {homepageControls.listingsIntro} Choose with the confidence of
+                a polished travel marketplace: search, compare, map, and save
+                the day that fits.
               </p>
               <p className="mt-4 text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
                 Search, compare, then plan
@@ -802,10 +889,10 @@ export default function Home() {
             <div className="mb-4 flex flex-col justify-between gap-3 border-b border-[#D6B56D]/15 pb-4 sm:flex-row sm:items-center">
               <div>
                 <p className="brand-eyebrow-gold">
-                  Find your fit
+                  Curated marketplace search
                 </p>
                 <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
-                  Keep it simple, then refine only if needed.
+                  Find the right stay, tour, ride, beach, or private charter.
                 </h3>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -1059,17 +1146,21 @@ export default function Home() {
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="bg-[#F7F3EA] px-5 py-16 sm:px-6"
+        className="bg-[#F7F3EA] px-5 py-24 sm:px-6"
       >
         <div className="mx-auto max-w-7xl">
-          <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+          <div className="mb-9 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-            <p className="brand-eyebrow">
-              Explore by category
-            </p>
-              <h2 className="brand-display mt-2 text-3xl sm:text-5xl">
+              <p className="brand-eyebrow">
+                Explore by category
+              </p>
+              <h2 className="brand-display mt-2 max-w-3xl text-4xl sm:text-6xl">
                 Choose the kind of trip first.
               </h2>
+              <p className="brand-subtitle mt-3 max-w-2xl">
+                A quieter, more premium way to browse: start by desire, then
+                narrow into the exact operator, area, and time.
+              </p>
             </div>
             <Link href="/map" className="text-sm font-black text-[#007B7B]">
               Open full map
@@ -1088,9 +1179,9 @@ export default function Home() {
               >
                 <Link
                   href={item.href}
-                  className="brand-card-lift group block h-full overflow-hidden focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
+                  className="brand-card-lift group block h-full overflow-hidden rounded-[1.35rem] focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
                 >
-                  <div className="relative h-36 overflow-hidden bg-[#D8EFEC]">
+                  <div className="relative h-52 overflow-hidden bg-[#D8EFEC]">
                     <motion.div
                       className="absolute inset-0"
                       whileHover={reduceMotion ? undefined : { scale: 1.06 }}
@@ -1105,14 +1196,14 @@ export default function Home() {
                         style={{ objectPosition: item.imagePosition }}
                       />
                     </motion.div>
-                    <div className="absolute inset-0 bg-[#071F2F]/25" />
+                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.06)_0%,rgba(7,31,47,0.58)_100%)]" />
+                    <p className="absolute bottom-4 left-5 text-xs font-black uppercase tracking-[0.2em] text-[#D6B56D]">
+                      {item.count} live
+                    </p>
                   </div>
-                  <div className="p-5">
+                  <div className="p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="brand-eyebrow-gold">
-                          {item.count} live
-                        </p>
                         <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
                           {item.title}
                         </h3>
@@ -1138,19 +1229,23 @@ export default function Home() {
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="mx-auto max-w-7xl px-5 py-16 sm:px-6"
+        className="mx-auto max-w-7xl px-5 py-24 sm:px-6"
       >
-        <div className="mb-7 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        <div className="mb-9 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="brand-eyebrow">
               Explore your way
             </p>
-            <h2 className="brand-display mt-2 text-3xl sm:text-5xl">
+            <h2 className="brand-display mt-2 max-w-3xl text-4xl sm:text-6xl">
               Start with the day you want.
             </h2>
+            <p className="brand-subtitle mt-3 max-w-2xl">
+              A luxury platform should feel effortless: pick the rhythm of the
+              trip first, then let the marketplace handle the details.
+            </p>
           </div>
-        <Link href="/map" className="text-sm font-black text-[#007B7B]">
-          See every area
+          <Link href="/map" className="text-sm font-black text-[#007B7B]">
+            See every area
           </Link>
         </div>
 
@@ -1165,7 +1260,7 @@ export default function Home() {
             >
               <Link
                 href={item.href}
-                className="brand-card-lift group block h-full p-5 focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
+                className="brand-card-lift group block h-full rounded-[1.25rem] p-6 focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
               >
                 <p className="brand-eyebrow-gold">
                   Route {index + 1}
