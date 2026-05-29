@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import BookingChatDrawer, {
   type BookingChatThread,
 } from "@/app/BookingChatDrawer";
+import GuestMasterpiecePanel from "@/app/account/GuestMasterpiecePanel";
 import GuestTravelCommandCenter from "@/app/account/GuestTravelCommandCenter";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
@@ -723,6 +724,9 @@ export default function AccountPage() {
     apiPath: `/api/bookings/${booking.id}/messages`,
     summary: threadSummaries[booking.id],
   }));
+  const unreadMessageCount = Object.values(threadSummaries).filter(
+    (summary) => summary.needsResponse,
+  ).length;
 
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
@@ -791,6 +795,12 @@ export default function AccountPage() {
             </div>
           ) : null}
         </section>
+
+        <GuestMasterpiecePanel
+          bookings={bookings}
+          supportTickets={supportTickets}
+          unreadMessageCount={unreadMessageCount}
+        />
 
         {hasSignedIn ? (
           <section className="mt-6 rounded-2xl bg-white p-6 shadow">

@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import BrandAbout from "@/app/BrandAbout";
 import EmptyState from "@/app/EmptyState";
+import GuestMasterpieceSection from "@/app/GuestMasterpieceSection";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import TripPlannerDock from "@/app/TripPlannerDock";
@@ -880,6 +881,8 @@ export default function Home() {
           ))}
         </div>
       </motion.section>
+
+      <GuestMasterpieceSection listings={listings} />
 
       <section id="marketplace" className="relative z-10 bg-[#FBF8F1] px-5 py-24 sm:px-6">
         <div className="mx-auto max-w-7xl">

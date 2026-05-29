@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
 import ExportCsvButton from "@/app/admin/ExportCsvButton";
+import PlatformProCommandCenter from "@/app/admin/PlatformProCommandCenter";
 import { isAdminUser } from "@/lib/admin";
 import {
   getAdminRevenueSummary,
@@ -69,6 +70,14 @@ type ConciergeLead = {
   created_at: string;
 };
 
+type SupportTicket = {
+  id: string;
+  status: string | null;
+  priority: string | null;
+  intent: string | null;
+  created_at: string;
+};
+
 function todayValue() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -90,6 +99,7 @@ export default function AdminDashboardPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [conciergeLeads, setConciergeLeads] = useState<ConciergeLead[]>([]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -117,6 +127,7 @@ export default function AdminDashboardPage() {
         vendorsResult,
         reviewsResult,
         conciergeResult,
+        supportResult,
       ] = await Promise.all([
           supabase
             .from("bookings")
@@ -133,6 +144,11 @@ export default function AdminDashboardPage() {
             .select("id, status, priority, created_at")
             .order("created_at", { ascending: false })
             .limit(200),
+          supabase
+            .from("support_tickets")
+            .select("id, status, priority, intent, created_at")
+            .order("created_at", { ascending: false })
+            .limit(200),
         ]);
 
       setBookings((bookingsResult.data as Booking[]) || []);
@@ -140,6 +156,7 @@ export default function AdminDashboardPage() {
       setVendors((vendorsResult.data as Vendor[]) || []);
       setReviews((reviewsResult.data as Review[]) || []);
       setConciergeLeads((conciergeResult.data as ConciergeLead[]) || []);
+      setSupportTickets((supportResult.data as SupportTicket[]) || []);
       setLoading(false);
     }
 
@@ -227,8 +244,9 @@ export default function AdminDashboardPage() {
       highValueBookings: bookingMoneyRows
         .filter((booking) => booking.highValue)
         .slice(0, 5),
+      supportTickets,
     };
-  }, [bookings, conciergeLeads, listings, reviews, vendors]);
+  }, [bookings, conciergeLeads, listings, reviews, supportTickets, vendors]);
 
   if (checkingAuth || !authorized) {
     return null;
@@ -261,6 +279,15 @@ export default function AdminDashboardPage() {
             <p className="mt-8">Loading dashboard...</p>
           ) : (
             <>
+              <PlatformProCommandCenter
+                bookings={bookings}
+                listings={listings}
+                vendors={vendors}
+                reviews={reviews}
+                supportTickets={supportTickets}
+                conciergeLeads={conciergeLeads}
+              />
+
               <div className="mt-8 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
                 {[
                   ["New bookings", summary.newBookings],

@@ -8,6 +8,7 @@ import BookingChatDrawer, {
 } from "@/app/BookingChatDrawer";
 import PinPicker from "@/app/map/PinPicker";
 import SiteLogo from "@/app/SiteLogo";
+import VendorProCommandCenter from "@/app/vendor/VendorProCommandCenter";
 import {
   groupBookingsByDate,
   normalizeDateLines,
@@ -1387,6 +1388,12 @@ export default function VendorDashboardPage() {
             </div>
           </div>
         </section>
+
+        <VendorProCommandCenter
+          listings={listings}
+          bookings={bookings}
+          documents={documents}
+        />
 
         <section className="mt-6 grid gap-4 md:grid-cols-4">
           {[
