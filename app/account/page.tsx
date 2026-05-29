@@ -31,6 +31,11 @@ import {
   getGuestTripPrimaryActions,
 } from "@/lib/guest-command-center";
 import {
+  buildGuestTripPlanMapUrl,
+  getGuestTripPlanSummary,
+  type GuestTripPlan,
+} from "@/lib/guest-trip-plans";
+import {
   buildGuestPasswordResetRedirect,
   getGuestAuthSubmitLabel,
   getGuestSignOutLabel,
@@ -89,6 +94,11 @@ type SupportTicket = {
   booking_reference: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type TripPlanApiResponse = {
+  tripPlans?: GuestTripPlan[];
+  error?: string;
 };
 
 type ChangeRequestForm = {
@@ -185,6 +195,9 @@ export default function AccountPage() {
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [tripPlans, setTripPlans] = useState<GuestTripPlan[]>([]);
+  const [tripPlanMessage, setTripPlanMessage] = useState("");
+  const [deletingTripPlanId, setDeletingTripPlanId] = useState("");
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [supportTicketMessage, setSupportTicketMessage] = useState("");
   const [changeRequestsByBooking, setChangeRequestsByBooking] = useState<
@@ -240,6 +253,25 @@ export default function AccountPage() {
             displayName: result.profile?.display_name || "",
             profileImageUrl: result.profile?.profile_image_url || "",
           });
+        }
+
+        const tripPlansResponse = await fetch("/api/account/trip-plans", {
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          },
+        });
+        const tripPlansResult =
+          (await tripPlansResponse.json()) as TripPlanApiResponse;
+
+        if (tripPlansResponse.ok) {
+          setTripPlans(tripPlansResult.tripPlans || []);
+          setTripPlanMessage("");
+        } else {
+          setTripPlans([]);
+          setTripPlanMessage(
+            tripPlansResult.error ||
+              "Saved map plans will appear after the guest trip plan SQL setup is enabled.",
+          );
         }
       }
 
@@ -473,6 +505,8 @@ export default function AccountPage() {
     setEmail("");
     setSignedInEmail("");
     setBookings([]);
+    setTripPlans([]);
+    setTripPlanMessage("");
     setSupportTickets([]);
     setAuthMode("signin");
     setAuthMessageTone("success");
@@ -504,6 +538,8 @@ export default function AccountPage() {
     setPassword("");
     setConfirmPassword("");
     setBookings([]);
+    setTripPlans([]);
+    setTripPlanMessage("");
     setSupportTickets([]);
     setSupportTicketMessage("");
     setProfileForm({ displayName: "", profileImageUrl: "" });
@@ -576,6 +612,37 @@ export default function AccountPage() {
       profileImageUrl: result.profile?.profile_image_url || "",
     });
     setProfileMessage("Profile saved.");
+  }
+
+  async function deleteTripPlan(planId: string) {
+    setDeletingTripPlanId(planId);
+    setTripPlanMessage("");
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setDeletingTripPlanId("");
+      setTripPlanMessage("Please sign in again to remove a saved plan.");
+      return;
+    }
+
+    const response = await fetch(`/api/account/trip-plans/${planId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json()) as { error?: string };
+    setDeletingTripPlanId("");
+
+    if (!response.ok) {
+      setTripPlanMessage(result.error || "Unable to remove this saved plan.");
+      return;
+    }
+
+    setTripPlans((current) => current.filter((plan) => plan.id !== planId));
+    setTripPlanMessage("Saved plan removed.");
   }
 
   function updateChangeRequestForm(
@@ -959,6 +1026,121 @@ export default function AccountPage() {
             bookings={bookings}
             email={signedInEmail}
           />
+        ) : null}
+
+        {hasSignedIn ? (
+          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Saved map plans
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                  Your Roatan days from the map.
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  Save a plan from Roatan Day Map and come back to it here from
+                  any signed-in device.
+                </p>
+              </div>
+              <Link
+                href="/map"
+                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-white"
+              >
+                Open map
+              </Link>
+            </div>
+
+            {tripPlanMessage ? (
+              <p className="mt-4 rounded-xl bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+                {tripPlanMessage}
+              </p>
+            ) : null}
+
+            {tripPlans.length === 0 ? (
+              <div className="mt-5 rounded-2xl border border-dashed border-[#D6B56D]/50 bg-[#FFF8E8] p-5">
+                <p className="font-black text-[#0B3C5D]">
+                  No saved map plans yet.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-gray-600">
+                  Open the map, save a few stops, then tap Save plan.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                {tripPlans.map((plan) => (
+                  <article
+                    key={plan.id || plan.name}
+                    className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-5"
+                  >
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                          {(plan.status || "saved").replaceAll("_", " ")}
+                        </p>
+                        <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
+                          {plan.name}
+                        </h3>
+                        <p className="mt-2 text-sm font-semibold text-gray-600">
+                          {getGuestTripPlanSummary(plan)}
+                        </p>
+                      </div>
+                      {plan.guestCount ? (
+                        <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black text-[#007B7B]">
+                          {plan.guestCount} guests
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="mt-4 grid gap-2">
+                      {plan.stops.slice(0, 4).map((stop, index) => (
+                        <div
+                          key={`${plan.id}-${stop.listingId}-${index}`}
+                          className="flex items-center gap-3 rounded-xl bg-white px-3 py-2"
+                        >
+                          <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#D6B56D] text-xs font-black text-[#071F2F]">
+                            {index + 1}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black text-[#0B3C5D]">
+                              {stop.title}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {stop.timeBlock || "Flexible"}
+                              {stop.location ? ` - ${stop.location}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Link
+                        href={buildGuestTripPlanMapUrl(plan)}
+                        className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white"
+                      >
+                        Reopen map
+                      </Link>
+                      <Link
+                        href="/concierge"
+                        className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
+                      >
+                        Ask concierge
+                      </Link>
+                      {plan.id ? (
+                        <button
+                          type="button"
+                          onClick={() => deleteTripPlan(plan.id || "")}
+                          disabled={deletingTripPlanId === plan.id}
+                          className="rounded-xl border border-red-200 px-4 py-2 text-sm font-black text-red-700 disabled:opacity-50"
+                        >
+                          {deletingTripPlanId === plan.id ? "Removing..." : "Remove"}
+                        </button>
+                      ) : null}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
         ) : null}
 
         <section className="mt-6 rounded-2xl bg-white p-8 shadow">

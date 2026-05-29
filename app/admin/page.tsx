@@ -17,6 +17,10 @@ import {
   getAdminCommandDigest,
   getMarketplaceCommandCenter,
 } from "@/lib/marketplace-upgrade";
+import {
+  getGuestTripPlanAdminSummary,
+  type GuestTripPlanRow,
+} from "@/lib/guest-trip-plans";
 import { getPlatformV2OperatingSignals } from "@/lib/platform-v2";
 import { supabase } from "@/lib/supabase";
 
@@ -78,6 +82,8 @@ type SupportTicket = {
   created_at: string;
 };
 
+type AdminGuestTripPlan = GuestTripPlanRow;
+
 function todayValue() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -100,6 +106,8 @@ export default function AdminDashboardPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [conciergeLeads, setConciergeLeads] = useState<ConciergeLead[]>([]);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [guestTripPlans, setGuestTripPlans] = useState<AdminGuestTripPlan[]>([]);
+  const [guestTripPlanMessage, setGuestTripPlanMessage] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -128,6 +136,7 @@ export default function AdminDashboardPage() {
         reviewsResult,
         conciergeResult,
         supportResult,
+        guestTripPlansResult,
       ] = await Promise.all([
           supabase
             .from("bookings")
@@ -149,6 +158,13 @@ export default function AdminDashboardPage() {
             .select("id, status, priority, intent, created_at")
             .order("created_at", { ascending: false })
             .limit(200),
+          supabase
+            .from("guest_trip_plans")
+            .select(
+              "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, stops, created_at, updated_at",
+            )
+            .order("updated_at", { ascending: false })
+            .limit(50),
         ]);
 
       setBookings((bookingsResult.data as Booking[]) || []);
@@ -157,6 +173,15 @@ export default function AdminDashboardPage() {
       setReviews((reviewsResult.data as Review[]) || []);
       setConciergeLeads((conciergeResult.data as ConciergeLead[]) || []);
       setSupportTickets((supportResult.data as SupportTicket[]) || []);
+      if (guestTripPlansResult.error) {
+        setGuestTripPlans([]);
+        setGuestTripPlanMessage(
+          "Run the guest trip plans SQL setup to show saved map plans here.",
+        );
+      } else {
+        setGuestTripPlans((guestTripPlansResult.data as AdminGuestTripPlan[]) || []);
+        setGuestTripPlanMessage("");
+      }
       setLoading(false);
     }
 
@@ -206,6 +231,12 @@ export default function AdminDashboardPage() {
       reviews,
       conciergeLeads,
     });
+    const guestTripPlanSummary = getGuestTripPlanAdminSummary(
+      guestTripPlans.map((plan) => ({
+        status: plan.status || undefined,
+        stops: Array.isArray(plan.stops) ? plan.stops : [],
+      })),
+    );
 
     return {
       newBookings: bookings.filter((booking) => (booking.status || "new") === "new")
@@ -245,8 +276,18 @@ export default function AdminDashboardPage() {
         .filter((booking) => booking.highValue)
         .slice(0, 5),
       supportTickets,
+      guestTripPlanSummary,
+      recentGuestTripPlans: guestTripPlans.slice(0, 5),
     };
-  }, [bookings, conciergeLeads, listings, reviews, supportTickets, vendors]);
+  }, [
+    bookings,
+    conciergeLeads,
+    guestTripPlans,
+    listings,
+    reviews,
+    supportTickets,
+    vendors,
+  ]);
 
   if (checkingAuth || !authorized) {
     return null;
@@ -294,6 +335,7 @@ export default function AdminDashboardPage() {
                   ["Upcoming", summary.upcomingBookings.length],
                   ["Pending listings", summary.pendingListings],
                   ["Concierge leads", summary.concierge.activeCount],
+                  ["Saved trip plans", summary.guestTripPlanSummary.total],
                   ["Review queue", summary.reviewQueue],
                   ["Active listings", summary.activeListings],
                   ["Active vendors", summary.activeVendors],
@@ -329,6 +371,95 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
               </div>
+
+              <section className="mt-6 rounded-2xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-6">
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+                  <div>
+                    <p className="text-sm font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+                      Guest trip plans
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                      Saved map plans ready for concierge follow-up.
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      {summary.guestTripPlanSummary.label} with{" "}
+                      {summary.guestTripPlanSummary.stopCount} saved stop
+                      {summary.guestTripPlanSummary.stopCount === 1 ? "" : "s"}.
+                    </p>
+                  </div>
+                  <Link
+                    href="/admin/concierge"
+                    className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-center text-sm font-black text-white"
+                  >
+                    Open concierge
+                  </Link>
+                </div>
+
+                {guestTripPlanMessage ? (
+                  <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#7A5A00]">
+                    {guestTripPlanMessage}
+                  </p>
+                ) : summary.recentGuestTripPlans.length === 0 ? (
+                  <p className="mt-4 rounded-xl border border-dashed border-[#D6B56D]/50 bg-white/60 px-4 py-3 text-sm text-gray-600">
+                    No guests have saved map plans yet.
+                  </p>
+                ) : (
+                  <div className="mt-5 grid gap-3">
+                    {summary.recentGuestTripPlans.map((plan) => (
+                      <article
+                        key={plan.id}
+                        className="rounded-2xl bg-white p-4 shadow-sm"
+                      >
+                        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                          <div>
+                            <p className="font-black text-[#0B3C5D]">{plan.name}</p>
+                            <p className="mt-1 text-sm text-gray-600">
+                              {plan.email} / {plan.pickup_area || "Flexible pickup"}
+                            </p>
+                          </div>
+                          <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black capitalize text-[#007B7B]">
+                            {(plan.status || "saved").replaceAll("_", " ")}
+                          </span>
+                        </div>
+                        <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                              Stops
+                            </p>
+                            <p className="font-black text-[#0B3C5D]">
+                              {Array.isArray(plan.stops) ? plan.stops.length : 0}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                              Date
+                            </p>
+                            <p className="font-black text-[#0B3C5D]">
+                              {plan.trip_date || "Flexible"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                              Guests
+                            </p>
+                            <p className="font-black text-[#0B3C5D]">
+                              {plan.guest_count || "Unknown"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.12em] text-gray-500">
+                              Updated
+                            </p>
+                            <p className="font-black text-[#0B3C5D]">
+                              {new Date(plan.updated_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </section>
 
               <section className="mt-6 rounded-2xl bg-[#071F2F] p-6 text-white shadow-xl shadow-[#071F2F]/10">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">

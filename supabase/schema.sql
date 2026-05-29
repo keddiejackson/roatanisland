@@ -323,6 +323,34 @@ create table if not exists public.guest_profiles (
 create index if not exists guest_profiles_email_idx
 on public.guest_profiles(lower(email));
 
+create table if not exists public.guest_trip_plans (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  email text not null,
+  name text not null,
+  pickup_area text,
+  arrival_type text,
+  trip_date date,
+  trip_time text,
+  guest_count integer check (guest_count is null or guest_count > 0),
+  source text not null default 'map',
+  status text not null default 'saved'
+    check (status in ('saved', 'concierge_requested', 'quoted', 'booked', 'archived')),
+  stops jsonb not null default '[]'::jsonb,
+  admin_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists guest_trip_plans_user_id_idx
+on public.guest_trip_plans(user_id, updated_at desc);
+
+create index if not exists guest_trip_plans_email_idx
+on public.guest_trip_plans(lower(email));
+
+create index if not exists guest_trip_plans_status_idx
+on public.guest_trip_plans(status, updated_at desc);
+
 create table if not exists public.booking_events (
   id uuid primary key default gen_random_uuid(),
   booking_id uuid not null references public.bookings(id) on delete cascade,
@@ -877,6 +905,7 @@ alter table public.booking_messages enable row level security;
 alter table public.booking_message_reads enable row level security;
 alter table public.booking_change_requests enable row level security;
 alter table public.guest_profiles enable row level security;
+alter table public.guest_trip_plans enable row level security;
 alter table public.booking_events enable row level security;
 alter table public.booking_money_events enable row level security;
 alter table public.booking_reminder_settings enable row level security;
@@ -904,6 +933,7 @@ grant select, insert on public.booking_messages to authenticated;
 grant select, insert, update on public.booking_message_reads to authenticated;
 grant select, insert, update on public.booking_change_requests to authenticated;
 grant select, insert, update on public.guest_profiles to authenticated;
+grant select, insert, update, delete on public.guest_trip_plans to authenticated;
 grant select, insert on public.booking_events to authenticated;
 grant select, insert on public.booking_money_events to authenticated;
 grant select, insert, update on public.booking_reminder_settings to authenticated;
@@ -959,6 +989,53 @@ on public.guest_profiles
 for select
 to authenticated
 using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Guests can manage own trip plans" on public.guest_trip_plans;
+create policy "Guests can manage own trip plans"
+on public.guest_trip_plans
+for all
+to authenticated
+using (
+  user_id = auth.uid()
+  and lower(email) = lower(auth.jwt() ->> 'email')
+)
+with check (
+  user_id = auth.uid()
+  and lower(email) = lower(auth.jwt() ->> 'email')
+);
+
+drop policy if exists "Admins can view guest trip plans" on public.guest_trip_plans;
+create policy "Admins can view guest trip plans"
+on public.guest_trip_plans
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+);
+
+drop policy if exists "Admins can update guest trip plans" on public.guest_trip_plans;
+create policy "Admins can update guest trip plans"
+on public.guest_trip_plans
+for update
+to authenticated
+using (
+  exists (
+    select 1
+    from public.admin_users
+    where lower(admin_users.email) = lower(auth.jwt() ->> 'email')
+  )
+)
+with check (
   exists (
     select 1
     from public.admin_users

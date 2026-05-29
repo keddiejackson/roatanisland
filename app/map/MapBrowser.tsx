@@ -16,6 +16,7 @@ import {
   googleDirectionsUrl,
   googleMapsUrl,
 } from "@/lib/map";
+import { supabase } from "@/lib/supabase";
 
 type Pin = MapListing & {
   latitudeValue: number;
@@ -562,6 +563,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
   const [hoveredId, setHoveredId] = useState("");
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [savingTripPlan, setSavingTripPlan] = useState(false);
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -1000,17 +1002,18 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     }
   }
 
-  function saveTripToDashboard() {
+  async function saveTripToDashboard() {
     if (savedTripPins.length === 0) {
       setTripMessage("Save at least one place first.");
       return;
     }
 
+    setSavingTripPlan(true);
     const plan: ConciergePlan = {
       id: `map-plan-${Date.now()}`,
       name: `Roatan map plan (${savedTripPins.length} stops)`,
       pickupArea: selectedPickup?.label || location,
-      arrivalType: selectedPickup?.kind || "Map plan",
+      arrivalType: selectedPickup?.kind || activeConciergeMode?.label || "Map plan",
       stops: savedTripPins.map((pin, index) => ({
         listingId: pin.id,
         title: pin.title,
@@ -1026,10 +1029,54 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         "roatan-concierge-plans",
         JSON.stringify([plan, ...plans].slice(0, 12)),
       );
-      setTripMessage("Saved to your guest dashboard.");
     } catch {
+      setSavingTripPlan(false);
       setTripMessage("Unable to save this plan in your browser.");
+      return;
     }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setSavingTripPlan(false);
+      setTripMessage("Saved in this browser. Sign in to keep it across devices.");
+      return;
+    }
+
+    const response = await fetch("/api/account/trip-plans", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        ...plan,
+        tripDate: dateFilter,
+        tripTime: timeFilter,
+        guestCount: guestFilter,
+        source: "map",
+        stops: savedTripPins.map((pin, index) => ({
+          listingId: pin.id,
+          title: pin.title,
+          timeBlock:
+            ["Morning", "Midday", "Afternoon", "Sunset"][index] || "Flexible",
+          note: pin.location || pin.category || "",
+          location: pin.location || "",
+          category: pin.category || "",
+          price: pin.price,
+        })),
+      }),
+    });
+    const result = await response.json();
+    setSavingTripPlan(false);
+
+    if (!response.ok) {
+      setTripMessage(result.error || "Saved in this browser, but not your account yet.");
+      return;
+    }
+
+    setTripMessage("Saved to your guest dashboard.");
   }
 
   function useNearMe() {
@@ -1731,10 +1778,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
             <button
               type="button"
               onClick={saveTripToDashboard}
-              disabled={savedTripPins.length === 0}
+              disabled={savedTripPins.length === 0 || savingTripPlan}
               className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Save plan
+              {savingTripPlan ? "Saving..." : "Save plan"}
             </button>
             <Link
               href={
