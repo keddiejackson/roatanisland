@@ -19,6 +19,7 @@ type ExportType =
   | "concierge_leads"
   | "concierge_assignments"
   | "concierge_quotes"
+  | "support_tickets"
   | "revenue"
   | "vendor_payouts"
   | "vendor_payout_statements";
@@ -218,6 +219,19 @@ async function fetchRows(type: ExportType) {
     return (data || []) as Record<string, unknown>[];
   }
 
+  if (type === "support_tickets") {
+    const { data, error } = await supabaseServer
+      .from("support_tickets")
+      .select("id, name, email, phone, intent, booking_reference, message, status, priority, admin_notes, source_path, created_at, updated_at")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return (data || []) as Record<string, unknown>[];
+  }
+
   if (type === "revenue") {
     const [bookingsResult, listingsResult, vendorsResult] = await Promise.all([
       supabaseServer
@@ -324,6 +338,7 @@ export async function GET(request: Request) {
       "concierge_leads",
       "concierge_assignments",
       "concierge_quotes",
+      "support_tickets",
       "revenue",
       "vendor_payouts",
       "vendor_payout_statements",

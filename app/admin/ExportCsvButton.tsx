@@ -16,6 +16,7 @@ type ExportCsvButtonProps = {
     | "concierge_leads"
     | "concierge_assignments"
     | "concierge_quotes"
+    | "support_tickets"
     | "revenue"
     | "vendor_payouts"
     | "vendor_payout_statements";

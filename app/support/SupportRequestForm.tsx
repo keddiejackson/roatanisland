@@ -17,6 +17,7 @@ export default function SupportRequestForm() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [ticketId, setTicketId] = useState("");
   const [error, setError] = useState("");
 
   async function submitSupportRequest(event: React.FormEvent<HTMLFormElement>) {
@@ -40,7 +41,10 @@ export default function SupportRequestForm() {
         leadType: "support_request",
       }),
     });
-    const result = await response.json();
+    const result = (await response.json()) as {
+      error?: string;
+      supportTicketId?: string | null;
+    };
     setLoading(false);
 
     if (!response.ok) {
@@ -49,6 +53,7 @@ export default function SupportRequestForm() {
     }
 
     setSent(true);
+    setTicketId(result.supportTicketId || "");
     setName("");
     setEmail("");
     setPhone("");
@@ -69,6 +74,11 @@ export default function SupportRequestForm() {
           Your message has been sent to the RoatanIsland.life team. Keep an eye
           on your email and your guest account messages.
         </p>
+        {ticketId ? (
+          <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-black text-[#0B3C5D]">
+            Support ticket: {ticketId.slice(0, 8).toUpperCase()}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() => setSent(false)}

@@ -3,6 +3,7 @@ import { buildConciergeLeadInsert } from "@/lib/concierge-leads";
 import { logAppError } from "@/lib/error-log";
 import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
+import { buildSupportTicketInsert } from "@/lib/support-tickets";
 
 type ContactRequest = {
   name?: string;
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
     (body.interest || "").toLowerCase().includes("concierge");
   const isSupportLead = body.leadType === "support_request";
   let conciergeLeadId: string | null = null;
+  let supportTicketId: string | null = null;
 
   if (isConciergeLead) {
     const { data: lead, error: leadError } = await supabaseServer
@@ -56,6 +58,28 @@ export async function POST(request: Request) {
       });
     } else {
       conciergeLeadId = lead.id;
+    }
+  }
+
+  if (isSupportLead) {
+    const { data: ticket, error: ticketError } = await supabaseServer
+      .from("support_tickets")
+      .insert([buildSupportTicketInsert(body)])
+      .select("id")
+      .single();
+
+    if (ticketError) {
+      await logAppError({
+        source: "support_ticket_insert",
+        message: ticketError.message,
+        details: {
+          code: ticketError.code,
+          email: body.email,
+        },
+        severity: "warning",
+      });
+    } else {
+      supportTicketId = ticket.id;
     }
   }
 
@@ -91,6 +115,7 @@ export async function POST(request: Request) {
         interest: body.interest || "",
         lead_type: body.leadType || "planning_lead",
         concierge_lead_id: conciergeLeadId,
+        support_ticket_id: supportTicketId,
       },
     },
   ]);
@@ -102,10 +127,11 @@ export async function POST(request: Request) {
       details: {
         interest: body.interest || "",
         concierge_lead_id: conciergeLeadId,
+        support_ticket_id: supportTicketId,
       },
       severity: "warning",
     });
   }
 
-  return NextResponse.json({ ok: true, conciergeLeadId });
+  return NextResponse.json({ ok: true, conciergeLeadId, supportTicketId });
 }

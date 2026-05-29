@@ -36,6 +36,7 @@ import {
   type GuestAuthMode,
 } from "@/lib/guest-account-actions";
 import { supabase } from "@/lib/supabase";
+import { getGuestSupportTicketSummary } from "@/lib/support-tickets";
 import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
 
 type Booking = {
@@ -75,6 +76,18 @@ type GuestProfile = {
   email: string | null;
   display_name: string | null;
   profile_image_url: string | null;
+};
+
+type SupportTicket = {
+  id: string;
+  intent: string;
+  status: string;
+  priority: string;
+  admin_notes: string | null;
+  message: string;
+  booking_reference: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 type ChangeRequestForm = {
@@ -171,6 +184,8 @@ export default function AccountPage() {
   const [signOutLoading, setSignOutLoading] = useState(false);
   const [signOutError, setSignOutError] = useState("");
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
+  const [supportTicketMessage, setSupportTicketMessage] = useState("");
   const [changeRequestsByBooking, setChangeRequestsByBooking] = useState<
     Record<string, BookingChangeRequest[]>
   >({});
@@ -234,6 +249,26 @@ export default function AccountPage() {
         .order("tour_date", { ascending: false });
       const accountBookings = (bookingRows as Booking[]) || [];
       setBookings(accountBookings);
+
+      const { data: supportTicketRows, error: supportTicketError } =
+        await supabase
+          .from("support_tickets")
+          .select(
+            "id, intent, status, priority, admin_notes, message, booking_reference, created_at, updated_at",
+          )
+          .eq("email", data.user.email.toLowerCase())
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+      if (supportTicketError) {
+        setSupportTicketMessage(
+          "Support request history will appear after the support ticket SQL setup is enabled.",
+        );
+      } else {
+        setSupportTickets((supportTicketRows as SupportTicket[]) || []);
+        setSupportTicketMessage("");
+      }
+
       setChangeRequestForms(
         Object.fromEntries(
           accountBookings.map((booking) => [
@@ -437,6 +472,7 @@ export default function AccountPage() {
     setEmail("");
     setSignedInEmail("");
     setBookings([]);
+    setSupportTickets([]);
     setAuthMode("signin");
     setAuthMessageTone("success");
     setAuthMessage("Password updated. You can now sign in with your new password.");
@@ -467,6 +503,8 @@ export default function AccountPage() {
     setPassword("");
     setConfirmPassword("");
     setBookings([]);
+    setSupportTickets([]);
+    setSupportTicketMessage("");
     setProfileForm({ displayName: "", profileImageUrl: "" });
     setProfileImageFile(null);
     setAuthMode("signin");
@@ -656,6 +694,9 @@ export default function AccountPage() {
     (booking) => booking.status === "confirmed",
   ).length;
   const guestBalanceSummary = getGuestBalanceSummary(bookings);
+  const supportTicketSummary = getGuestSupportTicketSummary({
+    tickets: supportTickets,
+  });
   const nextTripDate =
     bookings
       .map((booking) => booking.tour_date || "")
@@ -979,6 +1020,82 @@ export default function AccountPage() {
                   </div>
                 ))}
               </div>
+            </section>
+          ) : null}
+
+          {hasSignedIn ? (
+            <section className="mt-6 rounded-2xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-5">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+                    Support requests
+                  </p>
+                  <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                    Help history and next steps.
+                  </h3>
+                  <p className="mt-2 text-sm font-semibold text-gray-600">
+                    {supportTicketSummary.label} -{" "}
+                    {supportTicketSummary.resolvedCount} resolved
+                  </p>
+                </div>
+                <Link
+                  href="/support"
+                  className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-center text-sm font-black text-white"
+                >
+                  Get support
+                </Link>
+              </div>
+
+              {supportTicketMessage ? (
+                <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#7A5A00]">
+                  {supportTicketMessage}
+                </p>
+              ) : supportTickets.length === 0 ? (
+                <p className="mt-4 rounded-xl border border-dashed border-[#D6B56D]/50 bg-white/60 px-4 py-3 text-sm text-gray-600">
+                  No support requests yet. If you need help with a booking,
+                  pickup, cancellation, vendor question, or trip day issue, send
+                  a request from the support center.
+                </p>
+              ) : (
+                <div className="mt-4 grid gap-3">
+                  {supportTickets.slice(0, 4).map((ticket) => (
+                    <article
+                      key={ticket.id}
+                      className="rounded-xl bg-white p-4 shadow-sm"
+                    >
+                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                        <div>
+                          <p className="text-sm font-black text-[#0B3C5D]">
+                            {ticket.intent}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            {new Date(ticket.created_at).toLocaleString()}
+                            {ticket.booking_reference
+                              ? ` - ${ticket.booking_reference}`
+                              : ""}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black capitalize text-[#007B7B]">
+                            {ticket.status.replaceAll("_", " ")}
+                          </span>
+                          <span className="rounded-full bg-[#FFF3D2] px-3 py-1 text-xs font-black capitalize text-[#7A5A00]">
+                            {ticket.priority}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">
+                        {ticket.message}
+                      </p>
+                      {ticket.admin_notes ? (
+                        <p className="mt-3 rounded-lg bg-[#F7F3EA] px-3 py-2 text-sm font-semibold text-[#0B3C5D]">
+                          Admin note: {ticket.admin_notes}
+                        </p>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
           ) : null}
 
