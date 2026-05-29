@@ -95,17 +95,12 @@ export default function HomeListingCard({
             <>
               <Image
                 src="/images/roatan.jpeg"
-                alt=""
+                alt="Roatan preview"
                 fill
                 sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                className="object-cover opacity-80 transition duration-700 group-hover:scale-105"
+                className="object-cover transition duration-700 group-hover:scale-105"
               />
-              <div className="absolute inset-0 bg-[#071F2F]/28" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="rounded-full border border-white/25 bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D] shadow-lg">
-                  Image coming soon
-                </span>
-              </div>
+              <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.04)_0%,rgba(7,31,47,0.24)_100%)]" />
             </>
           )}
           <span className="brand-badge absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs uppercase shadow">

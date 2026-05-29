@@ -42,12 +42,9 @@ export default function HomeHeroHeader({
           Concierge
         </Link>
         {accountLoading ? null : account ? (
-          <div className="flex max-w-[300px] items-center gap-1 rounded-full border border-white/15 bg-white/12 p-1 text-white shadow-lg shadow-black/10 backdrop-blur">
-            <Link
-              href={account.href}
-              className="flex min-w-0 items-center gap-2 rounded-full px-2 py-1.5 hover:bg-white/15"
-            >
-              <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
+          <details className="group relative">
+            <summary className="flex max-w-[240px] cursor-pointer list-none items-center gap-2 rounded-full border border-white/15 bg-white/12 px-2 py-1.5 text-white shadow-lg shadow-black/10 backdrop-blur hover:bg-white/15">
+              <span className="grid size-7 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
                 {account.profileImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -67,16 +64,30 @@ export default function HomeHeroHeader({
                   {account.label}
                 </span>
               </span>
-            </Link>
-            <button
-              type="button"
-              onClick={onSignOut}
-              disabled={signOutLoading}
-              className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#071F2F] disabled:opacity-60"
-            >
-              {signOutLoading ? "Signing out..." : "Sign out"}
-            </button>
-          </div>
+            </summary>
+            <div className="absolute right-0 z-50 mt-2 w-52 rounded-2xl border border-white/20 bg-white p-2 text-[#071F2F] shadow-2xl shadow-black/20">
+              <Link
+                href={account.href}
+                className="block rounded-xl px-3 py-2 text-sm font-black hover:bg-[#EEF7F6]"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/account"
+                className="block rounded-xl px-3 py-2 text-sm font-black hover:bg-[#EEF7F6]"
+              >
+                Messages
+              </Link>
+              <button
+                type="button"
+                onClick={onSignOut}
+                disabled={signOutLoading}
+                className="mt-1 w-full rounded-xl bg-[#071F2F] px-3 py-2 text-left text-sm font-black text-white disabled:opacity-60"
+              >
+                {signOutLoading ? "Signing out..." : "Sign out"}
+              </button>
+            </div>
+          </details>
         ) : (
           <Link href="/signin" className="rounded-full px-3 py-2 hover:bg-white/10">
             Sign in

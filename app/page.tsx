@@ -29,6 +29,7 @@ import {
   listingMatchesAvailability,
   sortListingsForLuxuryMatch,
 } from "@/lib/marketplace-upgrade";
+import { isShowcaseReadyListing } from "@/lib/listing-quality";
 import { supabase } from "@/lib/supabase";
 import { displayNameFromProfile } from "@/lib/user-profile";
 
@@ -221,9 +222,14 @@ export default function Home() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  const showcaseListings = useMemo(
+    () => listings.filter((listing) => isShowcaseReadyListing(listing)),
+    [listings],
+  );
+
   const filteredListings = useMemo(
     () => {
-      const filtered = filterHomeListings(listings, {
+      const filtered = filterHomeListings(showcaseListings, {
         search,
         category,
         location: locationFilter,
@@ -250,12 +256,12 @@ export default function Home() {
       availableOnly,
       category,
       guestCount,
-      listings,
       locationFilter,
       maxPrice,
       minimumRating,
       search,
       selectedPersonaId,
+      showcaseListings,
       sortBy,
       travelDate,
       travelTime,
@@ -263,8 +269,8 @@ export default function Home() {
   );
 
   const spotlightListings = useMemo(
-    () => selectHomeSpotlightListings(listings, filteredListings),
-    [filteredListings, listings],
+    () => selectHomeSpotlightListings(showcaseListings, filteredListings),
+    [filteredListings, showcaseListings],
   );
 
   const locations = useMemo(
@@ -272,13 +278,13 @@ export default function Home() {
       "All",
       ...Array.from(
         new Set(
-          listings
+          showcaseListings
             .map((listing) => listing.location)
             .filter((location): location is string => Boolean(location)),
         ),
       ).sort(),
     ],
-    [listings],
+    [showcaseListings],
   );
 
   const hasActiveFilters =
@@ -311,6 +317,7 @@ export default function Home() {
   const navListingCount = Math.max(
     filteredListings.length,
     featuredHomeListings.length,
+    showcaseListings.length,
   );
 
   function clearMarketplaceFilters() {
@@ -424,7 +431,7 @@ export default function Home() {
                 className="mt-12 flex flex-wrap gap-2 text-sm font-bold text-white/85"
               >
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                  {navListingCount} active options
+                  {navListingCount} curated options
                 </span>
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
                   Map-first planning
@@ -448,9 +455,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-5xl gap-2 rounded-[1.25rem] border border-[#D6B56D]/20 bg-white p-3 shadow-xl shadow-[#071F2F]/8 md:grid-cols-3">
           {homepageTrustSignals.map((signal) => (
             <div key={signal.label} className="flex items-center gap-3 p-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#EEF7F6] text-xs font-black text-[#007B7B]">
-                OK
-              </span>
+              <span className="size-2 shrink-0 rounded-full bg-[#D6B56D]" />
               <h2 className="text-sm font-black text-[#0B3C5D]">
                 {signal.label}
               </h2>
@@ -650,7 +655,7 @@ export default function Home() {
               <div className="rounded-[1.35rem] border border-[#D6B56D]/20 bg-[#F7F3EA] p-5 shadow-inner shadow-white">
                 <EmptyState
                   title="No curated matches yet."
-                  text="Adjust the trip search, open the map, or send a planning request and we will point you toward the closest fit."
+                  text="The homepage only shows polished, guest-ready listings. Open the map for every active option or ask the concierge to point you to the closest fit."
                   primaryHref="/map"
                   primaryLabel="Explore the map"
                   secondaryHref="/concierge"
@@ -711,16 +716,18 @@ export default function Home() {
                 dashboard to keep every saved plan and booking in one place.
               </p>
             </div>
-            <div className="flex flex-col gap-3 sm:min-w-64">
-              <Link href="/map" className="brand-button-primary justify-center">
+            <div className="flex flex-col gap-3 sm:min-w-72">
+              <Link href="/map" className="brand-button-primary justify-center px-8 py-4">
                 Browse the map
               </Link>
-              <Link href="/concierge" className="brand-button-ghost justify-center">
-                Build trip plan
-              </Link>
-              <Link href="/account" className="brand-button-secondary justify-center">
-                Open my trips
-              </Link>
+              <div className="flex justify-center gap-4 text-sm font-black text-white/72">
+                <Link href="/concierge" className="hover:text-white">
+                  Concierge
+                </Link>
+                <Link href="/account" className="hover:text-white">
+                  My trips
+                </Link>
+              </div>
             </div>
           </div>
         </div>
