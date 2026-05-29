@@ -86,6 +86,9 @@ export default function PlatformProCommandCenter({
             Guest trust score
           </p>
           <p className="mt-2 text-5xl font-black">{command.healthScore}%</p>
+          <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-[#D6B56D]">
+            Guest-facing polish
+          </p>
           <p className="mt-2 text-sm text-white/65">
             Weighted toward support, bookings, payment clarity, and listing
             confidence.

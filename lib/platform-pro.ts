@@ -209,6 +209,12 @@ export function getGuestMasterpiecePlan({
   return {
     headline,
     subhead,
+    experiencePromise: "Clear, calm, and ready before you go.",
+    conciergeNote: {
+      title: "Your trip should feel handled.",
+      text:
+        "The dashboard should answer what is booked, what is paid, who replied, and what needs attention before trip day.",
+    },
     score,
     nextBooking,
     nextAction,
@@ -466,6 +472,20 @@ export function getPublicMasterpieceMoments({
     heroPromise: "A calmer way to plan a Roatan day.",
     activeListingCount: activeListings.length,
     categoryCount: categories.size,
+    trustCues: [
+      {
+        label: "Local context",
+        text: "Plan by beaches, airport, cruise port, pickup zones, and nearby stops.",
+      },
+      {
+        label: "Clear next steps",
+        text: "Search, save, request, message, pay, and support all point back to the guest account.",
+      },
+      {
+        label: "Operator confidence",
+        text: "Listings are shaped around photos, times, availability, map confidence, and verified details.",
+      },
+    ],
     moments: [
       {
         title: "Choose the feeling",

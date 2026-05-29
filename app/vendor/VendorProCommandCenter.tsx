@@ -61,22 +61,29 @@ export default function VendorProCommandCenter({
         </div>
       </div>
 
-      <div className="grid gap-3 border-t border-gray-100 p-5 lg:grid-cols-5">
-        {command.focusItems.map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className="rounded-2xl bg-[#F7F3EA] p-4 transition hover:-translate-y-0.5 hover:shadow"
-          >
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
-              {item.count || 0}
-            </span>
-            <h3 className="mt-3 text-base font-black text-[#0B3C5D]">
-              {item.label}
-            </h3>
-            <p className="mt-2 text-xs leading-5 text-gray-600">{item.text}</p>
-          </Link>
-        ))}
+      <div className="border-t border-gray-100 p-5">
+        <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+          What guests notice first
+        </p>
+        <div className="grid gap-3 lg:grid-cols-5">
+          {command.focusItems.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="rounded-2xl bg-[#F7F3EA] p-4 transition hover:-translate-y-0.5 hover:shadow"
+            >
+              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                {item.count || 0}
+              </span>
+              <h3 className="mt-3 text-base font-black text-[#0B3C5D]">
+                {item.label}
+              </h3>
+              <p className="mt-2 text-xs leading-5 text-gray-600">
+                {item.text}
+              </p>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );

@@ -27,8 +27,8 @@ export default function GuestMasterpieceSection({
             {moments.heroPromise}
           </h2>
           <p className="mt-5 max-w-2xl text-lg leading-8 text-white/72">
-            RoatanIsland.life should feel less like scrolling through random
-            options and more like having a calm local planner organize the day:
+            Your Roatan day should feel understood before you request it.
+            Instead of making guests decode the island, the site quietly answers
             where to go, what fits, what is nearby, and what happens next.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
@@ -44,6 +44,21 @@ export default function GuestMasterpieceSection({
             >
               Open trip dashboard
             </Link>
+          </div>
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {moments.trustCues.map((cue) => (
+              <div
+                key={cue.label}
+                className="rounded-2xl border border-white/10 bg-white/[0.08] p-4"
+              >
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9EE8E3]">
+                  {cue.label}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-white/68">
+                  {cue.text}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 

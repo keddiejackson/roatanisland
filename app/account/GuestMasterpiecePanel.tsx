@@ -46,6 +46,20 @@ export default function GuestMasterpiecePanel({
           <p className="mt-3 max-w-2xl leading-7 text-gray-600">
             {plan.subhead}
           </p>
+          <p
+            aria-label="Clear, calm, and ready before you go."
+            className="mt-4 text-sm font-black uppercase tracking-[0.16em] text-[#D6B56D]"
+          >
+            {plan.experiencePromise}
+          </p>
+          <div className="mt-5 rounded-2xl bg-[#F7F3EA] p-4">
+            <p className="font-black text-[#0B3C5D]">
+              {plan.conciergeNote.title}
+            </p>
+            <p className="mt-1 text-sm leading-6 text-gray-600">
+              {plan.conciergeNote.text}
+            </p>
+          </div>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link
               href={plan.nextAction.href}
