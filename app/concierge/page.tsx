@@ -49,23 +49,23 @@ export default async function ConciergePage() {
           </nav>
         </header>
 
-        <section className="mb-8 overflow-hidden rounded-2xl bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">
+        <section className="mb-8 overflow-hidden rounded-[2rem] bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-            Guest Concierge Pro
+            Luxury Concierge Trip Builder
           </p>
           <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_0.72fr] lg:items-end">
             <div>
               <h1 className="max-w-4xl text-4xl font-black leading-tight sm:text-6xl">
-                Build a Roatan day that fits your arrival, crew, and timing.
+                Build a $50 million-feeling Roatan day in minutes.
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">
-                Choose cruise, airport, family, private, or custom preferences.
-                The planner recommends real listings and saves the route to your
-                guest dashboard.
+                Choose a polished trip style, tune the details, compare real
+                island matches, save the itinerary, and send an admin-ready
+                concierge request when you want help turning it into a booked day.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              {["Smart matches", "Saved plans", "Concierge help"].map(
+              {["Curated trip styles", "Smart itinerary", "Concierge quote"].map(
                 (item, index) => (
                   <div
                     key={item}

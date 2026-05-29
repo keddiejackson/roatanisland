@@ -20,6 +20,30 @@ export type ConciergePreferences = {
   interests: string[];
 };
 
+export type ConciergeTripTemplate = {
+  id: string;
+  label: string;
+  description: string;
+  name: string;
+  arrivalType: string;
+  pickupArea: string;
+  tripStyle: string;
+  budget: string;
+  interests: string[];
+  notes: string;
+};
+
+export type ConciergeTemplateDraft = Pick<
+  ConciergeTripTemplate,
+  | "name"
+  | "arrivalType"
+  | "pickupArea"
+  | "tripStyle"
+  | "budget"
+  | "interests"
+  | "notes"
+>;
+
 export type ConciergeMatch = {
   listing: ConciergeListing;
   score: number;
@@ -44,10 +68,96 @@ export type ConciergePlan = {
   stops: ConciergePlanStop[];
 };
 
+export type ConciergePlanMetrics = {
+  stopCount: number;
+  estimatedTripValue: number;
+  estimatedTripValueLabel: string;
+  confidenceLabel: "Strong fit" | "Good start" | "Needs concierge review";
+  highlights: string[];
+};
+
+export type ConciergeLeadReadiness = {
+  label: "Ready for concierge" | "Almost ready" | "Needs contact details";
+  score: number;
+  missingItems: string[];
+};
+
 const timeBlocks = ["Morning", "Midday", "Afternoon", "Sunset"];
+
+const tripTemplates: ConciergeTripTemplate[] = [
+  {
+    id: "cruise-perfect-day",
+    label: "Cruise guest perfect day",
+    description: "Port timing, easy pickup, beach time, and reliable return.",
+    name: "Cruise guest Roatan day",
+    arrivalType: "Cruise",
+    pickupArea: "Coxen Hole",
+    tripStyle: "Family",
+    budget: "Moderate",
+    interests: ["cruise", "beach", "food"],
+    notes: "Cruise timing matters. Keep the route polished, punctual, and easy.",
+  },
+  {
+    id: "luxury-private-day",
+    label: "Luxury private day",
+    description:
+      "Private operators, flexible timing, premium water or sunset experiences.",
+    name: "Luxury private Roatan day",
+    arrivalType: "Staying on island",
+    pickupArea: "West End",
+    tripStyle: "Luxury",
+    budget: "Luxury",
+    interests: ["private", "snorkel", "sunset"],
+    notes: "Private, polished, flexible timing, premium operators preferred.",
+  },
+  {
+    id: "family-beach-day",
+    label: "Family beach day",
+    description: "Gentle pace, safe stops, food nearby, and simple pickup.",
+    name: "Family beach day",
+    arrivalType: "Staying on island",
+    pickupArea: "West Bay",
+    tripStyle: "Family",
+    budget: "Moderate",
+    interests: ["beach", "food", "wildlife"],
+    notes: "Kid-friendly, easy walking, food and shade nearby.",
+  },
+  {
+    id: "airport-arrival-day",
+    label: "Airport arrival day",
+    description: "Arrival pickup, luggage-aware timing, and a light first-day plan.",
+    name: "Airport arrival soft landing",
+    arrivalType: "Airport",
+    pickupArea: "Roatan Airport",
+    tripStyle: "Easy beach day",
+    budget: "Moderate",
+    interests: ["airport", "food", "beach"],
+    notes: "Airport pickup, luggage-friendly, light first-day pacing.",
+  },
+  {
+    id: "adventure-day",
+    label: "Adventure day",
+    description: "Snorkel, wildlife, water time, and active island stops.",
+    name: "Roatan adventure day",
+    arrivalType: "Staying on island",
+    pickupArea: "Sandy Bay",
+    tripStyle: "Adventure",
+    budget: "Moderate",
+    interests: ["snorkel", "wildlife", "beach"],
+    notes: "Active day with water time, wildlife, and flexible backup stops.",
+  },
+];
 
 function lower(value: string | null | undefined) {
   return (value || "").toLowerCase();
+}
+
+function formatMoney(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: Number.isInteger(value) ? 0 : 2,
+  }).format(value);
 }
 
 function listingText(listing: ConciergeListing) {
@@ -60,6 +170,29 @@ function listingText(listing: ConciergeListing) {
   ]
     .join(" ")
     .toLowerCase();
+}
+
+export function getConciergeTripTemplates() {
+  return tripTemplates;
+}
+
+export function applyConciergeTripTemplate(
+  templateId: string,
+  current: ConciergeTemplateDraft,
+): ConciergeTemplateDraft {
+  const template = tripTemplates.find((item) => item.id === templateId);
+
+  if (!template) return current;
+
+  return {
+    name: template.name,
+    arrivalType: template.arrivalType,
+    pickupArea: template.pickupArea,
+    tripStyle: template.tripStyle,
+    budget: template.budget,
+    interests: [...template.interests],
+    notes: template.notes,
+  };
 }
 
 function budgetScore(price: number | null, budget: string) {
@@ -196,6 +329,86 @@ export function buildConciergePlan({
       timeBlock: timeBlocks[index] || "Flexible",
       note: match.reasons.slice(0, 2).join(", "),
     })),
+  };
+}
+
+export function getConciergePlanMetrics({
+  plan,
+  matches,
+}: {
+  plan: ConciergePlan;
+  matches: ConciergeMatch[];
+}): ConciergePlanMetrics {
+  const matchesById = new Map(
+    matches.map((match) => [match.listing.id, match]),
+  );
+  const planMatches = plan.stops
+    .map((stop) => matchesById.get(stop.listingId))
+    .filter((match): match is ConciergeMatch => Boolean(match));
+  const estimatedTripValue = planMatches.reduce(
+    (total, match) => total + (match.listing.price || 0),
+    0,
+  );
+  const averageScore =
+    planMatches.length > 0
+      ? planMatches.reduce((total, match) => total + match.score, 0) /
+        planMatches.length
+      : 0;
+
+  return {
+    stopCount: plan.stops.length,
+    estimatedTripValue,
+    estimatedTripValueLabel:
+      estimatedTripValue > 0 ? formatMoney(estimatedTripValue) : "Pending",
+    confidenceLabel:
+      averageScore >= 35
+        ? "Strong fit"
+        : averageScore >= 18
+          ? "Good start"
+          : "Needs concierge review",
+    highlights: planMatches.slice(0, 3).map((match) => match.listing.title),
+  };
+}
+
+export function getConciergeLeadReadiness({
+  guestName,
+  guestEmail,
+  guestPhone,
+  plan,
+}: {
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  plan: ConciergePlan;
+}): ConciergeLeadReadiness {
+  const hasName = Boolean(guestName.trim());
+  const hasEmail = Boolean(
+    guestEmail.trim() && guestEmail.includes("@") && guestEmail.includes("."),
+  );
+  const missingItems = [
+    hasName ? "" : "Name",
+    hasEmail ? "" : "Email",
+  ].filter(Boolean);
+  const completedSections = [
+    hasName && hasEmail,
+    plan.stops.length > 0,
+    Boolean(plan.guests || plan.pickupArea || plan.arrivalType || guestPhone),
+  ].filter(Boolean).length;
+  const score = Math.round((completedSections / 3) * 100);
+  const needsContact =
+    missingItems.includes("Name") || missingItems.includes("Email");
+  const label = needsContact
+    ? "Needs contact details"
+    : score === 100
+      ? "Ready for concierge"
+      : score >= 67
+        ? "Almost ready"
+        : "Needs contact details";
+
+  return {
+    label,
+    score,
+    missingItems,
   };
 }
 

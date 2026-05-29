@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
+  applyConciergeTripTemplate,
   buildConciergePlan,
   buildPlanShareUrl,
   getConciergeMatches,
+  getConciergeLeadReadiness,
+  getConciergePlanMetrics,
+  getConciergeTripTemplates,
   serializePlanForConciergeLead,
   type ConciergeListing,
   type ConciergePlan,
@@ -26,6 +30,8 @@ const interestOptions = [
   "wildlife",
   "sunset",
 ];
+
+const tripTemplates = getConciergeTripTemplates();
 
 function readPlans() {
   try {
@@ -109,6 +115,7 @@ export default function ConciergePlanner({
   const [guestEmail, setGuestEmail] = useState("");
   const [guestPhone, setGuestPhone] = useState(initialGuestValues.guestPhone);
   const [notes, setNotes] = useState(initialGuestValues.notes);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -150,6 +157,20 @@ export default function ConciergePlanner({
     origin: "",
     stopIds: plan.stops.map((stop) => stop.listingId),
   });
+  const metrics = useMemo(
+    () => getConciergePlanMetrics({ plan, matches }),
+    [matches, plan],
+  );
+  const leadReadiness = useMemo(
+    () =>
+      getConciergeLeadReadiness({
+        guestName,
+        guestEmail,
+        guestPhone,
+        plan,
+      }),
+    [guestEmail, guestName, guestPhone, plan],
+  );
 
   function toggleInterest(interest: string) {
     setInterests((current) =>
@@ -157,6 +178,27 @@ export default function ConciergePlanner({
         ? current.filter((item) => item !== interest)
         : [...current, interest],
     );
+  }
+
+  function applyTemplate(templateId: string) {
+    const draft = applyConciergeTripTemplate(templateId, {
+      name,
+      arrivalType,
+      pickupArea,
+      tripStyle,
+      budget,
+      interests,
+      notes,
+    });
+
+    setSelectedTemplateId(templateId);
+    setName(draft.name);
+    setArrivalType(draft.arrivalType);
+    setPickupArea(draft.pickupArea);
+    setTripStyle(draft.tripStyle);
+    setBudget(draft.budget);
+    setInterests(draft.interests);
+    setNotes(draft.notes);
   }
 
   function saveCurrentPlan() {
@@ -207,13 +249,49 @@ export default function ConciergePlanner({
 
   return (
     <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-      <section className="rounded-2xl bg-white p-6 shadow">
+      <section className="rounded-[1.75rem] bg-white p-6 shadow-xl shadow-[#071F2F]/8">
         <p className="text-sm font-black uppercase tracking-[0.16em] text-[#00A8A8]">
-          Concierge builder
+          Luxury Concierge Trip Builder
         </p>
         <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
           Tell us what kind of day you want.
         </h2>
+        <div className="mt-6 rounded-[1.5rem] border border-[#D6B56D]/20 bg-[#FBF7EC] p-4">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+                Instant trip styles
+              </p>
+              <p className="mt-1 text-sm font-semibold text-[#0B3C5D]/75">
+                Start from a proven Roatan day, then fine tune the details.
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
+              {tripTemplates.length} curated paths
+            </span>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {tripTemplates.map((template) => (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => applyTemplate(template.id)}
+                className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${
+                  selectedTemplateId === template.id
+                    ? "border-[#00A8A8] bg-white shadow"
+                    : "border-white bg-white/70"
+                }`}
+              >
+                <span className="block font-black text-[#0B3C5D]">
+                  {template.label}
+                </span>
+                <span className="mt-1 block text-sm leading-6 text-gray-600">
+                  {template.description}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="mt-6 grid gap-4">
           <input
             value={name}
@@ -303,7 +381,7 @@ export default function ConciergePlanner({
         </div>
       </section>
 
-      <section className="rounded-2xl bg-white p-6 shadow">
+      <section className="rounded-[1.75rem] bg-white p-6 shadow-xl shadow-[#071F2F]/8">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.16em] text-[#D6B56D]">
@@ -320,6 +398,37 @@ export default function ConciergePlanner({
             View route map
           </Link>
         </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          {[
+            ["Estimated trip value", metrics.estimatedTripValueLabel],
+            ["Plan confidence", metrics.confidenceLabel],
+            ["Stops", `${metrics.stopCount} curated`],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="rounded-2xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-4"
+            >
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                {label}
+              </p>
+              <p className="mt-2 text-xl font-black text-[#0B3C5D]">
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {metrics.highlights.length > 0 ? (
+          <div className="mt-4 rounded-2xl bg-[#F7F3EA] p-4">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+              Best matches
+            </p>
+            <p className="mt-2 text-sm font-semibold leading-6 text-[#0B3C5D]">
+              {metrics.highlights.join(" + ")}
+            </p>
+          </div>
+        ) : null}
 
         <div className="mt-6 grid gap-3">
           {plan.stops.map((stop, index) => {
@@ -367,8 +476,30 @@ export default function ConciergePlanner({
           })}
         </div>
 
-        <div className="mt-6 rounded-xl bg-[#F7F3EA] p-4">
-          <p className="font-bold text-[#0B3C5D]">Request help with this plan</p>
+        <div className="mt-6 rounded-[1.5rem] bg-[#F7F3EA] p-5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+                Admin-ready lead
+              </p>
+              <p className="mt-1 font-bold text-[#0B3C5D]">
+                Request help with this plan
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white px-4 py-3 text-right">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                Concierge readiness
+              </p>
+              <p className="mt-1 font-black text-[#0B3C5D]">
+                {leadReadiness.score}% - {leadReadiness.label}
+              </p>
+            </div>
+          </div>
+          {leadReadiness.missingItems.length > 0 ? (
+            <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#7A5A00]">
+              Add {leadReadiness.missingItems.join(" and ")} before sending.
+            </p>
+          ) : null}
           <div className="mt-3 grid gap-3 sm:grid-cols-3">
             <input
               value={guestName}
@@ -389,6 +520,17 @@ export default function ConciergePlanner({
               placeholder="Phone"
               className="rounded-lg border border-gray-300 px-3 py-2 outline-none"
             />
+          </div>
+          <div className="mt-3 rounded-xl bg-white px-4 py-3">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+              Shareable plan link
+            </p>
+            <Link
+              href={shareUrl}
+              className="mt-1 block break-words text-sm font-bold text-[#007B7B]"
+            >
+              {shareUrl}
+            </Link>
           </div>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
