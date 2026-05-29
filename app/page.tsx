@@ -17,7 +17,7 @@ import {
   homeListingFilterDefaults,
   selectHomeSpotlightListings,
 } from "@/lib/home-listings";
-import { homepageCategories, homepageTrustSignals } from "@/lib/homepage-content";
+import { homepageCategories } from "@/lib/homepage-content";
 import {
   defaultHomepageControls,
   normalizeHomepageControls,
@@ -393,20 +393,19 @@ export default function Home() {
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="text-sm font-black uppercase tracking-[0.26em] text-[#D6B56D]"
               >
-                Private Roatan days
+                {homepageControls.heroEyebrow}
               </motion.p>
               <motion.h1
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-5 max-w-5xl text-6xl font-black leading-[0.9] tracking-[-0.06em] sm:text-8xl lg:text-[7.8rem]"
               >
-                The island, arranged beautifully.
+                {homepageControls.homepageHeadline}
               </motion.h1>
               <motion.p
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-7 max-w-3xl text-lg leading-8 text-white/84 sm:text-2xl sm:leading-10"
               >
-                Plan your Roatan day with vetted local experiences, map
-                context, and concierge help in one calm place.
+                {homepageControls.homepageSubhead}
               </motion.p>
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
@@ -416,13 +415,13 @@ export default function Home() {
                   href="#marketplace"
                   className="brand-button-primary"
                 >
-                  Plan your Roatan day
+                  {homepageControls.primaryCtaLabel}
                 </a>
                 <Link
                   href="/map"
                   className="brand-button-ghost"
                 >
-                  Explore experiences
+                  {homepageControls.secondaryCtaLabel}
                 </Link>
               </motion.div>
 
@@ -431,13 +430,13 @@ export default function Home() {
                 className="mt-12 flex flex-wrap gap-2 text-sm font-bold text-white/85"
               >
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                  {navListingCount} curated options
+                  {navListingCount} {homepageControls.heroCountLabel}
                 </span>
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                  Map-first planning
+                  {homepageControls.heroMapLabel}
                 </span>
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                  Concierge support
+                  {homepageControls.heroSupportLabel}
                 </span>
               </motion.div>
             </div>
@@ -453,11 +452,11 @@ export default function Home() {
         className="relative z-20 -mt-10 px-5 pb-12 sm:px-6"
       >
         <div className="mx-auto grid max-w-5xl gap-2 rounded-[1.25rem] border border-[#D6B56D]/20 bg-white p-3 shadow-xl shadow-[#071F2F]/8 md:grid-cols-3">
-          {homepageTrustSignals.map((signal) => (
-            <div key={signal.label} className="flex items-center gap-3 p-3">
+          {homepageControls.trustPoints.slice(0, 3).map((signal) => (
+            <div key={signal.title} className="flex items-center gap-3 p-3">
               <span className="size-2 shrink-0 rounded-full bg-[#D6B56D]" />
               <h2 className="text-sm font-black text-[#0B3C5D]">
-                {signal.label}
+                {signal.title}
               </h2>
             </div>
           ))}
@@ -475,14 +474,13 @@ export default function Home() {
           >
             <div>
               <p className="brand-eyebrow">
-                Curated trip planner
+                {homepageControls.listingsEyebrow}
               </p>
               <h2 className="brand-display mt-2 max-w-4xl text-4xl sm:text-6xl">
-                Featured Roatan picks.
+                {homepageControls.listingsTitle}
               </h2>
               <p className="brand-subtitle mt-3 max-w-2xl">
-                Start with the basics. Search, choose a trip style, add your
-                date and guest count, then open only the best matches.
+                {homepageControls.listingsIntro}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -706,26 +704,25 @@ export default function Home() {
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
             <div>
               <p className="brand-eyebrow-gold">
-                Ready when you are
+                {homepageControls.finalCtaEyebrow}
               </p>
               <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
-                Ready to plan your Roatan day?
+                {homepageControls.finalCtaTitle}
               </h2>
               <p className="mt-4 max-w-2xl text-base leading-7 text-white/72">
-                Start with the map, let the concierge help, or open your trip
-                dashboard to keep every saved plan and booking in one place.
+                {homepageControls.finalCtaBody}
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:min-w-72">
               <Link href="/map" className="brand-button-primary justify-center px-8 py-4">
-                Browse the map
+                {homepageControls.finalCtaPrimaryLabel}
               </Link>
               <div className="flex justify-center gap-4 text-sm font-black text-white/72">
                 <Link href="/concierge" className="hover:text-white">
-                  Concierge
+                  {homepageControls.finalCtaSecondaryLabel}
                 </Link>
                 <Link href="/account" className="hover:text-white">
-                  My trips
+                  {homepageControls.finalCtaTertiaryLabel}
                 </Link>
               </div>
             </div>

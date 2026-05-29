@@ -9,6 +9,9 @@ export type HomepageControls = {
   homepageSubhead: string;
   primaryCtaLabel: string;
   secondaryCtaLabel: string;
+  heroCountLabel: string;
+  heroMapLabel: string;
+  heroSupportLabel: string;
   showFeaturedListings: boolean;
   showExploreRoutes: boolean;
   showMapCallout: boolean;
@@ -30,26 +33,35 @@ export type HomepageControls = {
   trustTitle: string;
   trustBody: string;
   trustPoints: HomepageTrustPoint[];
+  finalCtaEyebrow: string;
+  finalCtaTitle: string;
+  finalCtaBody: string;
+  finalCtaPrimaryLabel: string;
+  finalCtaSecondaryLabel: string;
+  finalCtaTertiaryLabel: string;
   featuredBadgeLabel: string;
   topRatedBadgeLabel: string;
 };
 
 export const defaultHomepageControls: HomepageControls = {
-  heroEyebrow: "Roatan experiences",
-  homepageHeadline: "Plan your best Roatan day in one place.",
+  heroEyebrow: "Private Roatan days",
+  homepageHeadline: "The island, arranged beautifully.",
   homepageSubhead:
-    "Browse local experiences, compare prices, and request bookings from a simple island directory built for travelers.",
-  primaryCtaLabel: "Explore listings",
-  secondaryCtaLabel: "View map",
+    "Plan your Roatan day with vetted local experiences, map context, and concierge help in one calm place.",
+  primaryCtaLabel: "Plan your Roatan day",
+  secondaryCtaLabel: "Explore experiences",
+  heroCountLabel: "curated options",
+  heroMapLabel: "Map-first planning",
+  heroSupportLabel: "Concierge support",
   showFeaturedListings: true,
   showExploreRoutes: true,
   showMapCallout: true,
   showTrustSection: true,
   showPlanningHelp: true,
-  listingsEyebrow: "Explore listings",
-  listingsTitle: "Find the Roatan day that fits.",
+  listingsEyebrow: "Curated trip planner",
+  listingsTitle: "Featured Roatan picks.",
   listingsIntro:
-    "Start with a search or a category. Open more filters when the details matter.",
+    "Start with the basics. Search, choose a trip style, add your date and guest count, then open only the best matches.",
   mapEyebrow: "Plan by place",
   mapTitle: "See Roatan around your day.",
   mapBody:
@@ -67,20 +79,40 @@ export const defaultHomepageControls: HomepageControls = {
     "See the experience, understand the area, and send a booking request with the details an operator needs to respond well.",
   trustPoints: [
     {
-      title: "Local operators",
-      text: "Browse listings shaped by the people offering the experience.",
+      title: "Verified local operators",
+      text: "Profiles, photos, times, map context, and listing quality are shaped around guest confidence.",
     },
     {
-      title: "Map context",
-      text: "Plan around beaches, ports, towns, and the airport before you request.",
+      title: "Secure request flow",
+      text: "Guests can request, message, review payments, and keep support in one signed-in account.",
     },
     {
-      title: "Flexible requests",
-      text: "Share your date and group details before availability is confirmed.",
+      title: "Cruise and airport aware",
+      text: "Planning highlights pickup areas, cruise timing, airport transfers, beaches, and nearby stops.",
     },
   ],
+  finalCtaEyebrow: "Ready when you are",
+  finalCtaTitle: "Ready to plan your Roatan day?",
+  finalCtaBody:
+    "Start with the map, let the concierge help, or open your trip dashboard to keep every saved plan and booking in one place.",
+  finalCtaPrimaryLabel: "Browse the map",
+  finalCtaSecondaryLabel: "Concierge",
+  finalCtaTertiaryLabel: "My trips",
   featuredBadgeLabel: "Featured",
   topRatedBadgeLabel: "Top rated",
+};
+
+const legacyHomepageTextDefaults: Record<string, string> = {
+  heroEyebrow: "Roatan experiences",
+  homepageHeadline: "Plan your best Roatan day in one place.",
+  homepageSubhead:
+    "Browse local experiences, compare prices, and request bookings from a simple island directory built for travelers.",
+  primaryCtaLabel: "Explore listings",
+  secondaryCtaLabel: "View map",
+  listingsEyebrow: "Explore listings",
+  listingsTitle: "Find the Roatan day that fits.",
+  listingsIntro:
+    "Start with a search or a category. Open more filters when the details matter.",
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -93,6 +125,15 @@ function cleanText(value: unknown, fallback: string) {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
+}
+
+function cleanHomepageText(
+  value: unknown,
+  fallback: string,
+  legacyFallback?: string,
+) {
+  const cleaned = cleanText(value, fallback);
+  return legacyFallback && cleaned === legacyFallback ? fallback : cleaned;
 }
 
 function cleanBoolean(value: unknown, fallback: boolean) {
@@ -131,22 +172,39 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
   const settings = asRecord(value);
 
   return {
-    heroEyebrow: cleanText(settings.heroEyebrow, defaultHomepageControls.heroEyebrow),
-    homepageHeadline: cleanText(
+    heroEyebrow: cleanHomepageText(
+      settings.heroEyebrow,
+      defaultHomepageControls.heroEyebrow,
+      legacyHomepageTextDefaults.heroEyebrow,
+    ),
+    homepageHeadline: cleanHomepageText(
       settings.homepageHeadline,
       defaultHomepageControls.homepageHeadline,
+      legacyHomepageTextDefaults.homepageHeadline,
     ),
-    homepageSubhead: cleanText(
+    homepageSubhead: cleanHomepageText(
       settings.homepageSubhead,
       defaultHomepageControls.homepageSubhead,
+      legacyHomepageTextDefaults.homepageSubhead,
     ),
-    primaryCtaLabel: cleanText(
+    primaryCtaLabel: cleanHomepageText(
       settings.primaryCtaLabel,
       defaultHomepageControls.primaryCtaLabel,
+      legacyHomepageTextDefaults.primaryCtaLabel,
     ),
-    secondaryCtaLabel: cleanText(
+    secondaryCtaLabel: cleanHomepageText(
       settings.secondaryCtaLabel,
       defaultHomepageControls.secondaryCtaLabel,
+      legacyHomepageTextDefaults.secondaryCtaLabel,
+    ),
+    heroCountLabel: cleanText(
+      settings.heroCountLabel,
+      defaultHomepageControls.heroCountLabel,
+    ),
+    heroMapLabel: cleanText(settings.heroMapLabel, defaultHomepageControls.heroMapLabel),
+    heroSupportLabel: cleanText(
+      settings.heroSupportLabel,
+      defaultHomepageControls.heroSupportLabel,
     ),
     showFeaturedListings: cleanBoolean(
       settings.showFeaturedListings,
@@ -168,17 +226,20 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
       settings.showPlanningHelp,
       defaultHomepageControls.showPlanningHelp,
     ),
-    listingsEyebrow: cleanText(
+    listingsEyebrow: cleanHomepageText(
       settings.listingsEyebrow,
       defaultHomepageControls.listingsEyebrow,
+      legacyHomepageTextDefaults.listingsEyebrow,
     ),
-    listingsTitle: cleanText(
+    listingsTitle: cleanHomepageText(
       settings.listingsTitle,
       defaultHomepageControls.listingsTitle,
+      legacyHomepageTextDefaults.listingsTitle,
     ),
-    listingsIntro: cleanText(
+    listingsIntro: cleanHomepageText(
       settings.listingsIntro,
       defaultHomepageControls.listingsIntro,
+      legacyHomepageTextDefaults.listingsIntro,
     ),
     mapEyebrow: cleanText(settings.mapEyebrow, defaultHomepageControls.mapEyebrow),
     mapTitle: cleanText(settings.mapTitle, defaultHomepageControls.mapTitle),
@@ -210,6 +271,30 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
     trustPoints: cleanTrustPoints(
       settings.trustPoints,
       defaultHomepageControls.trustPoints,
+    ),
+    finalCtaEyebrow: cleanText(
+      settings.finalCtaEyebrow,
+      defaultHomepageControls.finalCtaEyebrow,
+    ),
+    finalCtaTitle: cleanText(
+      settings.finalCtaTitle,
+      defaultHomepageControls.finalCtaTitle,
+    ),
+    finalCtaBody: cleanText(
+      settings.finalCtaBody,
+      defaultHomepageControls.finalCtaBody,
+    ),
+    finalCtaPrimaryLabel: cleanText(
+      settings.finalCtaPrimaryLabel,
+      defaultHomepageControls.finalCtaPrimaryLabel,
+    ),
+    finalCtaSecondaryLabel: cleanText(
+      settings.finalCtaSecondaryLabel,
+      defaultHomepageControls.finalCtaSecondaryLabel,
+    ),
+    finalCtaTertiaryLabel: cleanText(
+      settings.finalCtaTertiaryLabel,
+      defaultHomepageControls.finalCtaTertiaryLabel,
     ),
     featuredBadgeLabel: cleanText(
       settings.featuredBadgeLabel,
