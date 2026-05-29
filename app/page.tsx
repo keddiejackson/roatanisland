@@ -4,12 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import BrandAbout from "@/app/BrandAbout";
 import EmptyState from "@/app/EmptyState";
-import GuestMasterpieceSection from "@/app/GuestMasterpieceSection";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
-import TripPlannerDock from "@/app/TripPlannerDock";
 import {
   filterHomeListings,
   homeListingFilterDefaults,
@@ -27,7 +24,6 @@ import {
   getListingConversionTags,
   getListingTrustBadges,
   getLuxuryMarketplaceMatch,
-  getMarketplaceMatchBrief,
   getTravelerPersonaPresets,
   listingMatchesAvailability,
   sortListingsForLuxuryMatch,
@@ -88,93 +84,6 @@ const tripTypes = [
   },
 ];
 
-const categoryHighlights = [
-  {
-    title: "Tours",
-    category: "Tours",
-    text: "Guided island days, wildlife stops, beach time, and water experiences.",
-    href: "/tours",
-    imagePosition: "center 44%",
-  },
-  {
-    title: "Hotels",
-    category: "Hotels",
-    text: "Places to stay by area, from beach zones to quieter island bases.",
-    href: "/hotels",
-    imagePosition: "center 52%",
-  },
-  {
-    title: "Transport",
-    category: "Transport",
-    text: "Airport rides, port transfers, private drivers, and easy pickup planning.",
-    href: "/transport",
-    imagePosition: "42% center",
-  },
-  {
-    title: "Food",
-    category: "Food",
-    text: "Restaurants, beach bars, and local stops to add around your plans.",
-    href: "/map?category=Food",
-    imagePosition: "center 60%",
-  },
-  {
-    title: "Beaches",
-    category: "Beaches",
-    text: "Beach areas and coastal stops to anchor an easy Roatan day.",
-    href: "/map?category=Beaches",
-    imagePosition: "center 65%",
-  },
-  {
-    title: "Private Charters",
-    category: "Private Charters",
-    text: "Custom boats, private days, and flexible high-touch island plans.",
-    href: "/map?category=Private%20Charters",
-    imagePosition: "62% center",
-  },
-];
-
-const audiencePaths = [
-  {
-    eyebrow: "For travelers",
-    title: "Find and plan your Roatan day.",
-    text: "Search listings, compare by area, save a plan, and message from your trip dashboard.",
-    href: "#marketplace",
-    cta: "Explore listings",
-  },
-  {
-    eyebrow: "For vendors",
-    title: "List your local business.",
-    text: "Create a vendor account, add tours or services, manage requests, and keep details current.",
-    href: "/vendor/signup",
-    cta: "List your business",
-  },
-  {
-    eyebrow: "For admins",
-    title: "Run the marketplace.",
-    text: "Review bookings, vendors, listings, concierge leads, messages, payments, and reports.",
-    href: "/admin",
-    cta: "Admin dashboard",
-  },
-];
-
-const luxuryProofPoints = [
-  {
-    label: "Trusted local operators",
-    value: "Curated marketplace",
-    text: "Browse active Roatan experiences with clearer photos, prices, times, and local context.",
-  },
-  {
-    label: "Concierge-ready planning",
-    value: "Map-first trips",
-    text: "Plan around beaches, pickup areas, cruise ports, the airport, and nearby stops before booking.",
-  },
-  {
-    label: "One elegant trip thread",
-    value: "Messages connected",
-    text: "Keep bookings, saved plans, payments, and conversations together in a guest account.",
-  },
-];
-
 const guestConfidenceSignals = [
   {
     label: "Verified local operators",
@@ -191,48 +100,6 @@ const guestConfidenceSignals = [
   {
     label: "Concierge safety net",
     text: "When a guest is not sure what fits, the planning request gives them a clear path forward.",
-  },
-];
-
-const luxuryJourneyCards = [
-  {
-    eyebrow: "Discover",
-    title: "Start with the feeling.",
-    text: "Private boat, beach day, wildlife stop, family route, or a polished transfer plan.",
-    href: "#marketplace",
-  },
-  {
-    eyebrow: "Compare",
-    title: "Plan like a private client.",
-    text: "Use area context, availability, capacity, and local operator details before you request.",
-    href: "/map",
-  },
-  {
-    eyebrow: "Book",
-    title: "Reserve the day with confidence.",
-    text: "Send the request, keep messages in one place, and let the trip board organize the next step.",
-    href: "/account",
-  },
-];
-
-const homepagePlanningSteps = [
-  {
-    step: "01",
-    title: "Choose the day.",
-    text: "Start with cruise timing, airport arrival, beach pace, family comfort, or private luxury.",
-    href: "#marketplace",
-  },
-  {
-    step: "02",
-    title: "Compare with context.",
-    text: "See area, pickup, price, time, availability, map fit, and operator details before you request.",
-    href: "/map",
-  },
-  {
-    step: "03",
-    title: "Keep everything together.",
-    text: "Save plans, request bookings, send messages, review payments, and ask for help from one account.",
-    href: "/account",
   },
 ];
 
@@ -299,15 +166,6 @@ const listingCardVariants: Variants = {
   },
 };
 
-const categoryCardVariants: Variants = {
-  hidden: { opacity: 0, y: 26 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.52, ease: smoothEase },
-  },
-};
-
 function formatPrice(price: number | null) {
   if (!price) {
     return "Ask";
@@ -348,13 +206,6 @@ export default function Home() {
   const [availableOnly, setAvailableOnly] = useState(false);
   const [selectedPersonaId, setSelectedPersonaId] = useState("luxury-private");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
-  const [leadName, setLeadName] = useState("");
-  const [leadEmail, setLeadEmail] = useState("");
-  const [leadPhone, setLeadPhone] = useState("");
-  const [leadInterest, setLeadInterest] = useState("Tours");
-  const [leadMessage, setLeadMessage] = useState("");
-  const [leadLoading, setLeadLoading] = useState(false);
-  const [leadSubmitted, setLeadSubmitted] = useState(false);
   const [homeAccount, setHomeAccount] = useState<HomeAccountProfile | null>(
     null,
   );
@@ -506,17 +357,6 @@ export default function Home() {
     ],
   );
 
-  const matchBrief = useMemo(
-    () =>
-      getMarketplaceMatchBrief({
-        personaId: selectedPersonaId,
-        listings: filteredListings,
-        date: travelDate,
-        guests: guestCount,
-      }),
-    [filteredListings, guestCount, selectedPersonaId, travelDate],
-  );
-
   const spotlightListings = useMemo(
     () => selectHomeSpotlightListings(listings, filteredListings),
     [filteredListings, listings],
@@ -536,7 +376,6 @@ export default function Home() {
     [listings],
   );
 
-  const visibleListings = filteredListings.slice(0, 6);
   const hasActiveFilters =
     search !== homeListingFilterDefaults.search ||
     category !== homeListingFilterDefaults.category ||
@@ -558,48 +397,19 @@ export default function Home() {
     guests: guestCount,
     availableOnly,
   });
-  const categoryCards = useMemo(
-    () =>
-      categoryHighlights.map((item) => ({
-        ...item,
-        count: listings.filter((listing) => listing.category === item.category).length,
-      })),
-    [listings],
+  const featuredHomeListings = (
+    hasActiveFilters ? filteredListings : spotlightListings
+  ).slice(0, 6);
+  const activeTripStyle =
+    travelerPersonaPresets.find((preset) => preset.id === selectedPersonaId) ||
+    travelerPersonaPresets[0];
+
+  const simpleTrustSignals = guestConfidenceSignals.slice(0, 3);
+
+  const navListingCount = Math.max(
+    filteredListings.length,
+    featuredHomeListings.length,
   );
-
-  async function handleLeadSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLeadLoading(true);
-
-    const response = await fetch("/api/contact", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: leadName,
-        email: leadEmail,
-        phone: leadPhone,
-        interest: leadInterest,
-        message: leadMessage,
-      }),
-    });
-
-    const result = await response.json();
-    setLeadLoading(false);
-
-    if (!response.ok) {
-      alert(result.error || "Unable to send your message. Please try again.");
-      return;
-    }
-
-    setLeadSubmitted(true);
-    setLeadName("");
-    setLeadEmail("");
-    setLeadPhone("");
-    setLeadInterest("Tours");
-    setLeadMessage("");
-  }
 
   function clearMarketplaceFilters() {
     setSearch(homeListingFilterDefaults.search);
@@ -644,7 +454,7 @@ export default function Home() {
       variants={reduceMotion ? reducedMotionVariants : pageTransitionVariants}
       className="brand-page min-h-screen overflow-x-hidden"
     >
-      <section className="relative min-h-[860px] overflow-hidden bg-[#061D2C] text-white">
+      <section className="relative min-h-[760px] overflow-hidden bg-[#061D2C] text-white">
         <Image
           src="/images/roatan.jpeg"
           alt="Roatan coastline"
@@ -657,7 +467,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_28%,rgba(8,170,168,0.28),transparent_30%),linear-gradient(90deg,rgba(6,29,44,0.92)_0%,rgba(6,29,44,0.55)_48%,rgba(6,29,44,0.2)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-72 bg-[linear-gradient(180deg,rgba(247,243,234,0)_0%,#F7F3EA_88%)]" />
 
-        <div className="relative mx-auto flex min-h-[860px] max-w-7xl flex-col px-5 py-6 sm:px-6">
+        <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col px-5 py-6 sm:px-6">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <SiteLogo variant="light" priority />
             <nav className="flex flex-wrap items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.09] p-1 text-sm font-semibold text-white/90 shadow-2xl shadow-black/15 backdrop-blur-xl">
@@ -669,12 +479,6 @@ export default function Home() {
               </Link>
               <Link href="/concierge" className="rounded-full px-3 py-2 hover:bg-white/10">
                 Concierge
-              </Link>
-              <Link href="/tours" className="rounded-full px-3 py-2 hover:bg-white/10">
-                Tours
-              </Link>
-              <Link href="/vendors" className="rounded-full px-3 py-2 hover:bg-white/10">
-                Vendors
               </Link>
               {homeAccountLoading ? null : homeAccount ? (
                 <div className="flex max-w-[300px] items-center gap-1 rounded-full border border-white/15 bg-white/12 p-1 text-white shadow-lg shadow-black/10 backdrop-blur">
@@ -731,7 +535,7 @@ export default function Home() {
 
           <motion.div
             variants={reduceMotion ? reducedMotionVariants : heroContainerVariants}
-            className="grid flex-1 items-center gap-10 py-16 lg:grid-cols-[minmax(0,1fr)_430px] lg:py-24"
+            className="grid flex-1 items-center gap-10 py-14 lg:grid-cols-[minmax(0,1fr)_390px] lg:py-20"
           >
             <div>
               <motion.p
@@ -750,9 +554,8 @@ export default function Home() {
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-7 max-w-3xl text-lg leading-8 text-white/84 sm:text-2xl sm:leading-10"
               >
-                {homepageControls.homepageHeadline} Browse vetted experiences,
-                compare local operators, and build a Roatan day with the polish
-                of a private travel desk.
+                Plan your Roatan day with vetted local experiences, map
+                context, and concierge help in one calm place.
               </motion.p>
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
@@ -762,36 +565,29 @@ export default function Home() {
                   href="#marketplace"
                   className="brand-button-primary"
                 >
-                  {homepageControls.primaryCtaLabel}
+                  Plan your Roatan day
                 </a>
                 <Link
-                  href="/concierge"
+                  href="/map"
                   className="brand-button-ghost"
                 >
-                  Plan my Roatan day
+                  Explore experiences
                 </Link>
               </motion.div>
 
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-14 grid max-w-5xl gap-3 md:grid-cols-3"
+                className="mt-12 flex flex-wrap gap-2 text-sm font-bold text-white/85"
               >
-                {luxuryProofPoints.map((point) => (
-                  <div
-                    key={point.label}
-                    className="rounded-[1.25rem] border border-white/14 bg-white/[0.08] p-5 shadow-xl shadow-black/10 backdrop-blur"
-                  >
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-                      {point.label}
-                    </p>
-                    <h2 className="mt-3 text-xl font-black leading-tight">
-                      {point.value}
-                    </h2>
-                    <p className="mt-3 line-clamp-3 text-sm leading-6 text-white/72">
-                      {point.text}
-                    </p>
-                  </div>
-                ))}
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                  {navListingCount} active options
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                  Map-first planning
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                  Concierge support
+                </span>
               </motion.div>
             </div>
 
@@ -811,45 +607,44 @@ export default function Home() {
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0)_0%,rgba(7,31,47,0.8)_100%)]" />
                 <div className="absolute bottom-4 left-4 right-4">
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-[#D6B56D]">
-                    Hero trip planner
+                    Trip planner
                   </p>
                   <h2 className="mt-2 text-3xl font-black leading-tight">
-                    Plan like a private client.
+                    Start with the day you want.
                   </h2>
                 </div>
               </div>
               <p className="mt-5 text-sm leading-6 text-white/76">
-                Search by area, compare local operators, save a plan, and keep
-                booking messages connected to your account.
+                Pick a style, date, and guest count. The marketplace narrows
+                the best options without making the page feel crowded.
               </p>
               <div className="mt-6 grid gap-3">
-                {audiencePaths.map((path) => (
+                <div className="rounded-[1.1rem] border border-white/12 bg-[#071F2F]/52 p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
+                    Current style
+                  </p>
+                  <h3 className="mt-2 text-xl font-black">
+                    {activeTripStyle.label}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-white/68">
+                    {activeTripStyle.description}
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <Link
-                    key={path.eyebrow}
-                    href={path.href}
-                    className="group rounded-[1.15rem] border border-white/12 bg-[#071F2F]/48 p-4 text-white transition hover:-translate-y-1 hover:bg-[#071F2F]/64 focus:outline-none focus:ring-4 focus:ring-white/20"
+                    href="#marketplace"
+                    className="rounded-xl bg-white px-4 py-3 text-center text-sm font-black text-[#071F2F]"
                   >
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
-                      {path.eyebrow}
-                    </p>
-                    <h2 className="mt-2 text-lg font-black leading-snug">
-                      {path.title}
-                    </h2>
-                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-white/72">
-                      {path.text}
-                    </p>
-                    <span className="mt-4 inline-flex text-sm font-black text-[#9EE8E3]">
-                      {path.cta}
-                    </span>
+                    Search
                   </Link>
-                ))}
+                  <Link
+                    href="/concierge"
+                    className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-black text-white"
+                  >
+                    Concierge
+                  </Link>
+                </div>
               </div>
-              <Link
-                href="/map"
-                className="mt-5 inline-flex w-full justify-center rounded-full bg-white px-5 py-3 text-sm font-black text-[#071F2F] shadow-lg shadow-black/10"
-              >
-                Open the trip map
-              </Link>
             </motion.div>
           </motion.div>
         </div>
@@ -860,133 +655,10 @@ export default function Home() {
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="relative z-20 -mt-24 px-5 pb-12 sm:px-6"
+        className="relative z-20 -mt-10 px-5 pb-12 sm:px-6"
       >
-        <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-[#D6B56D]/20 bg-white shadow-2xl shadow-[#071F2F]/12">
-          <div className="grid gap-0 lg:grid-cols-[0.78fr_1.22fr]">
-            <div className="bg-[#071F2F] p-6 text-white sm:p-8 lg:p-10">
-              <p className="brand-eyebrow-gold">
-                First-time guest path
-              </p>
-              <h2 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">
-                Plan your Roatan day in three calm steps.
-              </h2>
-              <p className="mt-4 text-base leading-7 text-white/72">
-                The homepage now starts like a private travel desk: choose the
-                day, compare with local context, then keep every next step in
-                one account.
-              </p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <a href="#marketplace" className="brand-button-primary">
-                  Start planning
-                </a>
-                <Link href="/concierge" className="brand-button-ghost">
-                  Ask concierge
-                </Link>
-              </div>
-            </div>
-
-            <div className="p-5 sm:p-6 lg:p-8">
-              <div className="grid gap-3 md:grid-cols-3">
-                {homepagePlanningSteps.map((step) => (
-                  <Link
-                    key={step.step}
-                    href={step.href}
-                    className="group rounded-[1.25rem] border border-[#D6B56D]/18 bg-[#FBF8F1] p-5 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-[#071F2F]/8 focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
-                  >
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-                      {step.step}
-                    </p>
-                    <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
-                      {step.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-gray-600">
-                      {step.text}
-                    </p>
-                    <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
-                      Continue
-                    </span>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="mt-5 grid gap-3 border-t border-[#D6B56D]/18 pt-5 sm:grid-cols-2">
-                {guestConfidenceSignals.map((signal) => (
-                  <div
-                    key={signal.label}
-                    className="rounded-[1rem] bg-[#EEF7F6] p-4"
-                  >
-                    <p className="text-sm font-black text-[#0B3C5D]">
-                      {signal.label}
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-gray-600">
-                      {signal.text}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.section>
-
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportOnce}
-        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="bg-[#071F2F] px-5 py-20 text-white sm:px-6"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="grid gap-8 lg:grid-cols-[0.82fr_1fr] lg:items-end">
-            <div>
-              <p className="brand-eyebrow-gold">
-                Concierge journey
-              </p>
-              <h2 className="mt-3 max-w-3xl text-4xl font-black leading-[0.96] tracking-[-0.045em] sm:text-6xl">
-                Adventure with the calm of a private travel desk.
-              </h2>
-            </div>
-            <p className="max-w-2xl text-lg leading-8 text-white/70">
-              The homepage now guides guests from inspiration to search to
-              booking confidence, without losing the quiet luxury feel.
-            </p>
-          </div>
-
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {luxuryJourneyCards.map((item) => (
-              <Link
-                key={item.title}
-                href={item.href}
-                className="group rounded-[1.5rem] border border-white/12 bg-white/[0.07] p-6 shadow-2xl shadow-black/10 transition hover:-translate-y-1 hover:bg-white/[0.11] focus:outline-none focus:ring-4 focus:ring-white/20"
-              >
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-                  {item.eyebrow}
-                </p>
-                <h3 className="mt-4 text-2xl font-black leading-tight">
-                  {item.title}
-                </h3>
-                <p className="mt-3 text-sm leading-6 text-white/68">
-                  {item.text}
-                </p>
-                <span className="mt-6 inline-flex text-sm font-black text-[#9EE8E3]">
-                  Continue
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportOnce}
-        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="relative z-20 -mt-12 px-5 sm:px-6"
-      >
-        <div className="mx-auto grid max-w-6xl gap-3 rounded-[1.5rem] border border-[#D6B56D]/20 bg-white p-4 shadow-xl shadow-[#071F2F]/8 md:grid-cols-4">
-          {guestConfidenceSignals.map((signal) => (
+        <div className="mx-auto grid max-w-6xl gap-3 rounded-[1.5rem] border border-[#D6B56D]/20 bg-white p-4 shadow-xl shadow-[#071F2F]/8 md:grid-cols-3">
+          {simpleTrustSignals.map((signal) => (
             <div key={signal.label} className="p-4">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
                 Guest confidence
@@ -1002,37 +674,30 @@ export default function Home() {
         </div>
       </motion.section>
 
-      <GuestMasterpieceSection listings={listings} />
-
-      <section id="marketplace" className="relative z-10 bg-[#FBF8F1] px-5 py-24 sm:px-6">
+      <section id="marketplace" className="relative z-10 bg-[#FBF8F1] px-5 py-20 sm:px-6">
         <div className="mx-auto max-w-7xl">
           <motion.div
             initial="hidden"
             whileInView="visible"
             viewport={viewportOnce}
             variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-            className="mb-10 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"
+            className="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end"
           >
             <div>
               <p className="brand-eyebrow">
-                {homepageControls.listingsEyebrow}
+                Curated trip planner
               </p>
               <h2 className="brand-display mt-2 max-w-4xl text-4xl sm:text-6xl">
-                Signature Roatan experiences.
+                Featured Roatan picks.
               </h2>
               <p className="brand-subtitle mt-3 max-w-2xl">
-                {homepageControls.listingsIntro} Choose with the confidence of
-                a polished travel marketplace: search, compare, map, and save
-                the day that fits.
-              </p>
-              <p className="mt-4 text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-                Search, compare, then plan
+                Start with the basics. Search, choose a trip style, add your
+                date and guest count, then open only the best matches.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <p className="brand-badge brand-badge-teal">
-                {filteredListings.length} result
-                {filteredListings.length === 1 ? "" : "s"}
+                {featuredHomeListings.length} shown
               </p>
               <Link
                 href={mapUrl}
@@ -1053,77 +718,7 @@ export default function Home() {
             }
             className="brand-card p-4 sm:p-5"
           >
-            <div className="mb-4 flex flex-col justify-between gap-3 border-b border-[#D6B56D]/15 pb-4 sm:flex-row sm:items-center">
-              <div>
-                <p className="brand-eyebrow-gold">
-                  Curated marketplace search
-                </p>
-                <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
-                  Find the right stay, tour, ride, beach, or private charter.
-                </h3>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {hasActiveFilters ? (
-                  <button
-                    type="button"
-                    onClick={clearMarketplaceFilters}
-                    className="brand-button-secondary min-h-10 px-4 py-2 text-sm"
-                  >
-                    Clear filters
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setShowAdvancedFilters((current) => !current)}
-                  className="brand-button-secondary min-h-10 px-4 py-2 text-sm"
-                >
-                  {showAdvancedFilters ? "Hide filters" : "More filters"}
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-4 rounded-[1.25rem] border border-[#00A8A8]/15 bg-[#EEF7F6] p-4">
-              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                <div>
-                  <p className="brand-eyebrow">
-                    Smart trip matching
-                  </p>
-                  <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
-                    Traveler style
-                  </h3>
-                  <p className="mt-1 text-sm leading-6 text-gray-600">
-                    Pick the kind of Roatan day first. We will tune the search,
-                    ranking, and match reasons around that style.
-                  </p>
-                </div>
-                <span className="brand-badge brand-badge-teal">
-                  Smart match ranking
-                </span>
-              </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                {travelerPersonaPresets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => applyTravelerPersona(preset.id)}
-                    className={`rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${
-                      selectedPersonaId === preset.id
-                        ? "border-[#00A8A8] bg-white shadow-lg shadow-[#071F2F]/8"
-                        : "border-white/70 bg-white/70"
-                    }`}
-                  >
-                    <span className="block text-sm font-black text-[#0B3C5D]">
-                      {preset.label}
-                    </span>
-                    <span className="mt-1 block text-xs leading-5 text-gray-600">
-                      {preset.description}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
+            <div className="grid gap-3 lg:grid-cols-[1.4fr_0.9fr_0.8fr_0.7fr]">
               <input
                 type="text"
                 placeholder="Search by tour, stay, transport, or location"
@@ -1131,36 +726,21 @@ export default function Home() {
                 onChange={(e) => setSearch(e.target.value)}
                 className="brand-input min-h-12"
               />
-
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-                {categories.map((cat) => (
-                  <button
-                    type="button"
-                    key={cat}
-                    onClick={() => setCategory(cat)}
-                    className={`rounded-lg px-4 py-3 text-sm font-bold transition ${
-                      category === cat
-                        ? "bg-[#071F2F] text-white shadow-lg"
-                        : "bg-white text-[#0B3C5D] hover:bg-[#EEF7F6]"
-                    }`}
-                  >
-                    {cat}
-                  </button>
+              <select
+                value={selectedPersonaId}
+                onChange={(e) => applyTravelerPersona(e.target.value)}
+                className="brand-input min-h-12"
+              >
+                {travelerPersonaPresets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.label}
+                  </option>
                 ))}
-              </div>
-            </div>
-
-            <div className="mt-3 grid gap-3 border-t border-[#D6B56D]/20 pt-3 md:grid-cols-[1fr_1fr_120px_auto]">
+              </select>
               <input
                 type="date"
                 value={travelDate}
                 onChange={(e) => setTravelDate(e.target.value)}
-                className="brand-input min-h-12"
-              />
-              <input
-                value={travelTime}
-                onChange={(e) => setTravelTime(e.target.value)}
-                placeholder="Preferred time"
                 className="brand-input min-h-12"
               />
               <input
@@ -1171,6 +751,26 @@ export default function Home() {
                 placeholder="Guests"
                 className="brand-input min-h-12"
               />
+            </div>
+
+            <div className="mt-3 grid gap-3 border-t border-[#D6B56D]/20 pt-3 md:grid-cols-[1fr_1fr_auto_auto]">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="brand-input min-h-12"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat === "All" ? "All categories" : cat}
+                  </option>
+                ))}
+              </select>
+              <input
+                value={travelTime}
+                onChange={(e) => setTravelTime(e.target.value)}
+                placeholder="Preferred time"
+                className="brand-input min-h-12"
+              />
               <label className="flex min-h-12 items-center gap-3 rounded-lg border border-[#00A8A8]/20 bg-white px-4 text-sm font-bold text-[#0B3C5D]">
                 <input
                   type="checkbox"
@@ -1179,6 +779,13 @@ export default function Home() {
                 />
                 Available only
               </label>
+              <button
+                type="button"
+                onClick={() => setShowAdvancedFilters((current) => !current)}
+                className="brand-button-secondary min-h-12 px-4 py-2 text-sm"
+              >
+                {showAdvancedFilters ? "Hide filters" : "More filters"}
+              </button>
             </div>
 
             {showAdvancedFilters ? (
@@ -1225,93 +832,33 @@ export default function Home() {
                 </select>
               </div>
             ) : null}
-          </motion.form>
 
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={viewportOnce}
-            variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-            className="brand-card mt-4 px-4 py-3"
-          >
-            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
-                  {matchBrief.eyebrow}
-                </p>
-                <p className="mt-1 text-base font-black text-[#0B3C5D]">
-                  {matchBrief.title}
-                </p>
-                <p className="mt-1 text-sm leading-6 text-gray-600">
-                  {matchBrief.body}
-                </p>
-                {matchBrief.topReasons.length > 0 ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="brand-badge">
-                      Why this matches
-                    </span>
-                    {matchBrief.topReasons.map((reason) => (
-                      <span
-                        key={reason}
-                        className="brand-badge brand-badge-teal"
-                      >
-                        {reason}
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
+            <div className="mt-4 flex flex-col justify-between gap-3 rounded-[1rem] bg-[#EEF7F6] p-4 sm:flex-row sm:items-center">
+              <p className="text-sm leading-6 text-gray-700">
+                <span className="font-black text-[#0B3C5D]">
+                  {activeTripStyle.label}:
+                </span>{" "}
+                {activeTripStyle.description}
+              </p>
               <div className="flex flex-wrap gap-2">
-                <Link
-                  href={mapUrl}
-                  className="brand-button-primary"
-                >
+                {hasActiveFilters ? (
+                  <button
+                    type="button"
+                    onClick={clearMarketplaceFilters}
+                    className="brand-button-secondary px-4 py-2 text-sm"
+                  >
+                    Clear filters
+                  </button>
+                ) : null}
+                <Link href={mapUrl} className="brand-button-primary px-4 py-2 text-sm">
                   Compare on map
                 </Link>
-                <Link
-                  href="/account"
-                  className="brand-button-secondary"
-                >
-                  Open trip board
-                </Link>
               </div>
             </div>
-          </motion.div>
-
-          {homepageControls.showFeaturedListings && spotlightListings.length > 0 ? (
-            <div className="mt-12">
-              <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
-                    Featured island picks
-                  </p>
-                  <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                    A shorter list worth opening first.
-                  </h3>
-                </div>
-                <p className="max-w-md text-sm leading-6 text-gray-600">
-                  Curated highlights are kept scan-friendly so guests can compare
-                  area, price, rating, and next step without hunting.
-                </p>
-              </div>
-              <div className="grid gap-5 lg:grid-cols-3">
-                {spotlightListings.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    homepageControls={homepageControls}
-                    travelDate={travelDate}
-                    guestCount={guestCount}
-                    selectedPersonaId={selectedPersonaId}
-                    featured
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
+          </motion.form>
 
           <div className="mt-10">
-            {visibleListings.length === 0 ? (
+            {featuredHomeListings.length === 0 ? (
               <div className="rounded-[1.35rem] border border-[#D6B56D]/20 bg-[#F7F3EA] p-5 shadow-inner shadow-white">
                 <EmptyState
                   title="No curated matches yet."
@@ -1324,14 +871,14 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={clearMarketplaceFilters}
-                className="brand-button-primary mx-auto mt-5"
+                  className="brand-button-primary mx-auto mt-5"
                 >
                   Reset trip search
                 </button>
               </div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {visibleListings.map((listing) => (
+                {featuredHomeListings.map((listing) => (
                   <ListingCard
                     key={listing.id}
                     listing={listing}
@@ -1339,11 +886,12 @@ export default function Home() {
                     travelDate={travelDate}
                     guestCount={guestCount}
                     selectedPersonaId={selectedPersonaId}
+                    featured={!hasActiveFilters}
                   />
                 ))}
               </div>
             )}
-            {filteredListings.length > visibleListings.length ? (
+            {filteredListings.length > featuredHomeListings.length ? (
               <div className="mt-8 flex justify-center">
                 <Link
                   href={mapUrl}
@@ -1354,10 +902,6 @@ export default function Home() {
               </div>
             ) : null}
           </div>
-
-          <div className="mt-8">
-            <TripPlannerDock />
-          </div>
         </div>
       </section>
 
@@ -1366,95 +910,12 @@ export default function Home() {
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="bg-[#F7F3EA] px-5 py-24 sm:px-6"
-      >
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-9 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
-              <p className="brand-eyebrow">
-                Explore by category
-              </p>
-              <h2 className="brand-display mt-2 max-w-3xl text-4xl sm:text-6xl">
-                Choose the kind of trip first.
-              </h2>
-              <p className="brand-subtitle mt-3 max-w-2xl">
-                A quieter, more premium way to browse: start by desire, then
-                narrow into the exact operator, area, and time.
-              </p>
-            </div>
-            <Link href="/map" className="text-sm font-black text-[#007B7B]">
-              Open full map
-            </Link>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {categoryCards.map((item, index) => (
-              <motion.div
-                key={item.title}
-                custom={index}
-                variants={reduceMotion ? reducedMotionVariants : categoryCardVariants}
-                whileHover={reduceMotion ? undefined : { y: -8 }}
-                transition={{ duration: 0.28, ease: smoothEase }}
-                className="h-full"
-              >
-                <Link
-                  href={item.href}
-                  className="brand-card-lift group block h-full overflow-hidden rounded-[1.35rem] focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
-                >
-                  <div className="relative h-52 overflow-hidden bg-[#D8EFEC]">
-                    <motion.div
-                      className="absolute inset-0"
-                      whileHover={reduceMotion ? undefined : { scale: 1.06 }}
-                      transition={{ duration: 0.55, ease: smoothEase }}
-                    >
-                      <Image
-                        src="/images/roatan.jpeg"
-                        alt=""
-                        fill
-                        sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
-                        className="object-cover"
-                        style={{ objectPosition: item.imagePosition }}
-                      />
-                    </motion.div>
-                    <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.06)_0%,rgba(7,31,47,0.58)_100%)]" />
-                    <p className="absolute bottom-4 left-5 text-xs font-black uppercase tracking-[0.2em] text-[#D6B56D]">
-                      {item.count} live
-                    </p>
-                  </div>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                          {item.title}
-                        </h3>
-                      </div>
-                      <span className="brand-badge brand-badge-teal">
-                        View
-                      </span>
-                    </div>
-                    <p className="mt-3 text-sm leading-6 text-gray-600">
-                      {item.text}
-                    </p>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </motion.section>
-
-      {homepageControls.showExploreRoutes ? (
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportOnce}
-        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="mx-auto max-w-7xl px-5 py-24 sm:px-6"
+        className="mx-auto max-w-7xl px-5 py-20 sm:px-6"
       >
         <div className="mb-9 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
             <p className="brand-eyebrow">
-              Explore your way
+              Choose your Roatan style
             </p>
             <h2 className="brand-display mt-2 max-w-3xl text-4xl sm:text-6xl">
               Start with the day you want.
@@ -1465,11 +926,11 @@ export default function Home() {
             </p>
           </div>
           <Link href="/map" className="text-sm font-black text-[#007B7B]">
-            See every area
+            Open the map
           </Link>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {tripTypes.map((item, index) => (
             <motion.div
               key={item.title}
@@ -1497,188 +958,6 @@ export default function Home() {
           ))}
         </div>
       </motion.section>
-      ) : null}
-
-      {homepageControls.showMapCallout ? (
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportOnce}
-        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="px-5 pb-16 sm:px-6"
-      >
-        <div className="brand-hero-panel mx-auto grid max-w-7xl overflow-hidden text-white lg:grid-cols-[1fr_0.9fr]">
-          <div className="p-6 sm:p-10">
-            <p className="brand-eyebrow-gold">
-              {homepageControls.mapEyebrow}
-            </p>
-            <h2 className="mt-3 text-3xl font-black sm:text-5xl">
-              {homepageControls.mapTitle}
-            </h2>
-            <p className="mt-4 max-w-xl leading-8 text-white/75">
-              {homepageControls.mapBody}
-            </p>
-            {homepageControls.mapChips.length > 0 ? (
-            <div className="mt-6 flex flex-wrap gap-2 text-sm font-semibold text-white/85">
-              {homepageControls.mapChips.map((item) => (
-                <span
-                  key={item}
-                  className="rounded-lg border border-white/15 bg-white/10 px-3 py-2"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-            ) : null}
-            <Link
-              href="/map"
-              className="brand-button-secondary mt-7"
-            >
-              {homepageControls.mapCtaLabel}
-            </Link>
-          </div>
-          <div className="relative min-h-72">
-            <Image
-              src="/images/roatan.jpeg"
-              alt="Roatan island water and coast"
-              fill
-              sizes="(min-width: 1024px) 40vw, 100vw"
-              className="object-cover"
-            />
-          </div>
-        </div>
-      </motion.section>
-      ) : null}
-
-      {homepageControls.showTrustSection ? (
-        <BrandAbout
-          eyebrow={homepageControls.trustEyebrow}
-          title={homepageControls.trustTitle}
-          body={homepageControls.trustBody}
-          trustPoints={homepageControls.trustPoints}
-        />
-      ) : null}
-
-      {homepageControls.showPlanningHelp ? (
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportOnce}
-        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
-        className="px-5 pb-16 sm:px-6"
-      >
-        <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[0.82fr_1fr] lg:items-start">
-          <div>
-            <p className="brand-eyebrow">
-              {homepageControls.planningEyebrow}
-            </p>
-            <h2 className="brand-display mt-3 text-3xl sm:text-4xl">
-              {homepageControls.planningTitle}
-            </h2>
-            <p className="brand-subtitle mt-4 max-w-lg">
-              {homepageControls.planningBody}
-            </p>
-            {homepageControls.planningChips.length > 0 ? (
-            <div className="mt-5 flex flex-wrap gap-2 text-sm font-bold text-[#0B3C5D]">
-              {homepageControls.planningChips.map((item) => (
-                <span
-                  key={item}
-                  className="rounded-lg border border-[#D6B56D]/25 bg-white px-3 py-2"
-                >
-                  {item}
-                </span>
-              ))}
-            </div>
-            ) : null}
-          </div>
-
-          <div className="brand-card p-5 sm:p-6">
-            {leadSubmitted ? (
-              <div className="rounded-lg bg-green-100 p-5 text-green-800">
-                <h3 className="text-xl font-black">Message sent</h3>
-                <p className="mt-2">
-                  Thanks. We received your note and will follow up soon.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setLeadSubmitted(false)}
-                  className="brand-button-primary mt-4"
-                >
-                  Send another message
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleLeadSubmit} className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block font-bold">Name</label>
-                  <input
-                    value={leadName}
-                    onChange={(e) => setLeadName(e.target.value)}
-                    className="brand-input"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-bold">Email</label>
-                  <input
-                    type="email"
-                    value={leadEmail}
-                    onChange={(e) => setLeadEmail(e.target.value)}
-                    className="brand-input"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-bold">Phone</label>
-                  <input
-                    value={leadPhone}
-                    onChange={(e) => setLeadPhone(e.target.value)}
-                    className="brand-input"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block font-bold">Interest</label>
-                  <select
-                    value={leadInterest}
-                    onChange={(e) => setLeadInterest(e.target.value)}
-                    className="brand-input"
-                  >
-                    <option value="Tours">Tours</option>
-                    <option value="Hotels">Hotels</option>
-                    <option value="Transport">Transport</option>
-                    <option value="Private Charters">Private Charters</option>
-                    <option value="Not sure yet">Not sure yet</option>
-                  </select>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="mb-2 block font-bold">Message</label>
-                  <textarea
-                    value={leadMessage}
-                    onChange={(e) => setLeadMessage(e.target.value)}
-                    rows={4}
-                    placeholder="Dates, group size, pickup area, and what kind of day you want."
-                    className="brand-input"
-                    required
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={leadLoading}
-                  className="brand-button-primary disabled:opacity-50 md:col-span-2"
-                >
-                  {leadLoading ? "Sending..." : "Send planning request"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </motion.section>
-      ) : null}
 
       <motion.section
         initial="hidden"
