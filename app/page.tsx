@@ -67,6 +67,11 @@ const tripTypes = [
     href: "/map",
   },
   {
+    title: "Airport pickup",
+    text: "Arrivals, luggage, first stop timing, and transfer confidence.",
+    href: "/map?category=Transport",
+  },
+  {
     title: "Beach day",
     text: "West Bay, West End, Sandy Bay, food stops, and sunset plans.",
     href: "/map",
@@ -170,6 +175,25 @@ const luxuryProofPoints = [
   },
 ];
 
+const guestConfidenceSignals = [
+  {
+    label: "Verified local operators",
+    text: "Profiles, photos, times, map context, and listing quality are shaped around guest confidence.",
+  },
+  {
+    label: "Secure request flow",
+    text: "Guests can request, message, review payments, and keep support in one signed-in account.",
+  },
+  {
+    label: "Cruise and airport aware",
+    text: "Planning highlights pickup areas, cruise timing, airport transfers, beaches, and nearby stops.",
+  },
+  {
+    label: "Concierge safety net",
+    text: "When a guest is not sure what fits, the planning request gives them a clear path forward.",
+  },
+];
+
 const luxuryJourneyCards = [
   {
     eyebrow: "Discover",
@@ -187,6 +211,27 @@ const luxuryJourneyCards = [
     eyebrow: "Book",
     title: "Reserve the day with confidence.",
     text: "Send the request, keep messages in one place, and let the trip board organize the next step.",
+    href: "/account",
+  },
+];
+
+const homepagePlanningSteps = [
+  {
+    step: "01",
+    title: "Choose the day.",
+    text: "Start with cruise timing, airport arrival, beach pace, family comfort, or private luxury.",
+    href: "#marketplace",
+  },
+  {
+    step: "02",
+    title: "Compare with context.",
+    text: "See area, pickup, price, time, availability, map fit, and operator details before you request.",
+    href: "/map",
+  },
+  {
+    step: "03",
+    title: "Keep everything together.",
+    text: "Save plans, request bookings, send messages, review payments, and ask for help from one account.",
     href: "/account",
   },
 ];
@@ -723,7 +768,7 @@ export default function Home() {
                   href="/concierge"
                   className="brand-button-ghost"
                 >
-                  Build a trip plan
+                  Plan my Roatan day
                 </Link>
               </motion.div>
 
@@ -815,6 +860,81 @@ export default function Home() {
         whileInView="visible"
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        className="relative z-20 -mt-24 px-5 pb-12 sm:px-6"
+      >
+        <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-[#D6B56D]/20 bg-white shadow-2xl shadow-[#071F2F]/12">
+          <div className="grid gap-0 lg:grid-cols-[0.78fr_1.22fr]">
+            <div className="bg-[#071F2F] p-6 text-white sm:p-8 lg:p-10">
+              <p className="brand-eyebrow-gold">
+                First-time guest path
+              </p>
+              <h2 className="mt-3 text-3xl font-black leading-tight sm:text-5xl">
+                Plan your Roatan day in three calm steps.
+              </h2>
+              <p className="mt-4 text-base leading-7 text-white/72">
+                The homepage now starts like a private travel desk: choose the
+                day, compare with local context, then keep every next step in
+                one account.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <a href="#marketplace" className="brand-button-primary">
+                  Start planning
+                </a>
+                <Link href="/concierge" className="brand-button-ghost">
+                  Ask concierge
+                </Link>
+              </div>
+            </div>
+
+            <div className="p-5 sm:p-6 lg:p-8">
+              <div className="grid gap-3 md:grid-cols-3">
+                {homepagePlanningSteps.map((step) => (
+                  <Link
+                    key={step.step}
+                    href={step.href}
+                    className="group rounded-[1.25rem] border border-[#D6B56D]/18 bg-[#FBF8F1] p-5 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-[#071F2F]/8 focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/20"
+                  >
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                      {step.step}
+                    </p>
+                    <h3 className="mt-3 text-xl font-black text-[#0B3C5D]">
+                      {step.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-gray-600">
+                      {step.text}
+                    </p>
+                    <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
+                      Continue
+                    </span>
+                  </Link>
+                ))}
+              </div>
+
+              <div className="mt-5 grid gap-3 border-t border-[#D6B56D]/18 pt-5 sm:grid-cols-2">
+                {guestConfidenceSignals.map((signal) => (
+                  <div
+                    key={signal.label}
+                    className="rounded-[1rem] bg-[#EEF7F6] p-4"
+                  >
+                    <p className="text-sm font-black text-[#0B3C5D]">
+                      {signal.label}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-gray-600">
+                      {signal.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
         className="bg-[#071F2F] px-5 py-20 text-white sm:px-6"
       >
         <div className="mx-auto max-w-7xl">
@@ -865,17 +985,17 @@ export default function Home() {
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
         className="relative z-20 -mt-12 px-5 sm:px-6"
       >
-        <div className="brand-card mx-auto grid max-w-6xl gap-3 p-4 md:grid-cols-3">
-          {luxuryProofPoints.map((point) => (
-            <div key={point.label} className="brand-card-lift p-5">
-              <p className="brand-eyebrow-gold">
-                Marketplace confidence
+        <div className="mx-auto grid max-w-6xl gap-3 rounded-[1.5rem] border border-[#D6B56D]/20 bg-white p-4 shadow-xl shadow-[#071F2F]/8 md:grid-cols-4">
+          {guestConfidenceSignals.map((signal) => (
+            <div key={signal.label} className="p-4">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                Guest confidence
               </p>
-              <h2 className="mt-2 text-lg font-black text-[#0B3C5D]">
-                {point.label}
+              <h2 className="mt-2 text-base font-black text-[#0B3C5D]">
+                {signal.label}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-gray-600">
-                {point.text}
+              <p className="mt-2 text-xs leading-5 text-gray-600">
+                {signal.text}
               </p>
             </div>
           ))}
@@ -1559,6 +1679,42 @@ export default function Home() {
         </div>
       </motion.section>
       ) : null}
+
+      <motion.section
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
+        className="px-5 pb-20 sm:px-6"
+      >
+        <div className="brand-hero-panel mx-auto max-w-7xl overflow-hidden p-6 text-white sm:p-10">
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-center">
+            <div>
+              <p className="brand-eyebrow-gold">
+                Ready when you are
+              </p>
+              <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
+                Ready to plan your Roatan day?
+              </h2>
+              <p className="mt-4 max-w-2xl text-base leading-7 text-white/72">
+                Start with the map, let the concierge help, or open your trip
+                dashboard to keep every saved plan and booking in one place.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:min-w-64">
+              <Link href="/map" className="brand-button-primary justify-center">
+                Browse the map
+              </Link>
+              <Link href="/concierge" className="brand-button-ghost justify-center">
+                Build trip plan
+              </Link>
+              <Link href="/account" className="brand-button-secondary justify-center">
+                Open my trips
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.section>
       <SiteFooter />
     </motion.main>
   );
@@ -1615,9 +1771,21 @@ function ListingCard({
               className="object-cover transition duration-700 group-hover:scale-105"
             />
           ) : (
-            <div className="brand-skeleton flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
-              No image yet
-            </div>
+            <>
+              <Image
+                src="/images/roatan.jpeg"
+                alt=""
+                fill
+                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                className="object-cover opacity-80 transition duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-[#071F2F]/28" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="rounded-full border border-white/25 bg-white/90 px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D] shadow-lg">
+                  Image coming soon
+                </span>
+              </div>
+            </>
           )}
           <span className="brand-badge absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs uppercase shadow">
             {listingBadge(listing, homepageControls)}
