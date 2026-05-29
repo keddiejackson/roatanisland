@@ -21,10 +21,15 @@ import {
   type HomepageControls,
 } from "@/lib/homepage-settings";
 import {
+  applyTravelerPersonaToFilters,
   buildDateAwareMapUrl,
   getListingConversionTags,
   getListingTrustBadges,
+  getLuxuryMarketplaceMatch,
+  getMarketplaceMatchBrief,
+  getTravelerPersonaPresets,
   listingMatchesAvailability,
+  sortListingsForLuxuryMatch,
 } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
@@ -51,6 +56,8 @@ const categories = [
   "Beaches",
   "Private Charters",
 ];
+
+const travelerPersonaPresets = getTravelerPersonaPresets();
 
 const tripTypes = [
   {
@@ -293,6 +300,7 @@ export default function Home() {
   const [travelTime, setTravelTime] = useState("");
   const [guestCount, setGuestCount] = useState("");
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [selectedPersonaId, setSelectedPersonaId] = useState("luxury-private");
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [leadName, setLeadName] = useState("");
   const [leadEmail, setLeadEmail] = useState("");
@@ -412,8 +420,8 @@ export default function Home() {
   }, []);
 
   const filteredListings = useMemo(
-    () =>
-      filterHomeListings(listings, {
+    () => {
+      const filtered = filterHomeListings(listings, {
         search,
         category,
         location: locationFilter,
@@ -427,7 +435,15 @@ export default function Home() {
           guests: guestCount,
           availableOnly,
         }),
-      ),
+      );
+
+      return sortBy === "Smart match"
+        ? sortListingsForLuxuryMatch(filtered, selectedPersonaId, {
+            date: travelDate,
+            guests: guestCount,
+          })
+        : filtered;
+    },
     [
       availableOnly,
       category,
@@ -437,10 +453,22 @@ export default function Home() {
       maxPrice,
       minimumRating,
       search,
+      selectedPersonaId,
       sortBy,
       travelDate,
       travelTime,
     ],
+  );
+
+  const matchBrief = useMemo(
+    () =>
+      getMarketplaceMatchBrief({
+        personaId: selectedPersonaId,
+        listings: filteredListings,
+        date: travelDate,
+        guests: guestCount,
+      }),
+    [filteredListings, guestCount, selectedPersonaId, travelDate],
   );
 
   const spotlightListings = useMemo(
@@ -474,6 +502,7 @@ export default function Home() {
     travelTime !== "" ||
     guestCount !== "" ||
     availableOnly ||
+    selectedPersonaId !== "luxury-private" ||
     showAdvancedFilters;
   const mapUrl = buildDateAwareMapUrl({
     category,
@@ -537,7 +566,22 @@ export default function Home() {
     setTravelTime("");
     setGuestCount("");
     setAvailableOnly(false);
+    setSelectedPersonaId("luxury-private");
     setShowAdvancedFilters(false);
+  }
+
+  function applyTravelerPersona(personaId: string) {
+    const filters = applyTravelerPersonaToFilters(personaId);
+
+    setSelectedPersonaId(personaId);
+    setSearch(filters.search);
+    setCategory(filters.category);
+    setLocationFilter(filters.location);
+    setMaxPrice(filters.maxPrice);
+    setMinimumRating(filters.minimumRating);
+    setSortBy(filters.sortBy);
+    setGuestCount(filters.guestCount);
+    setAvailableOnly(filters.availableOnly);
   }
 
   async function signOutHomeAccount() {
@@ -915,6 +959,47 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="mb-4 rounded-[1.25rem] border border-[#00A8A8]/15 bg-[#EEF7F6] p-4">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+                <div>
+                  <p className="brand-eyebrow">
+                    Smart trip matching
+                  </p>
+                  <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                    Traveler style
+                  </h3>
+                  <p className="mt-1 text-sm leading-6 text-gray-600">
+                    Pick the kind of Roatan day first. We will tune the search,
+                    ranking, and match reasons around that style.
+                  </p>
+                </div>
+                <span className="brand-badge brand-badge-teal">
+                  Smart match ranking
+                </span>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                {travelerPersonaPresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyTravelerPersona(preset.id)}
+                    className={`rounded-[1rem] border p-4 text-left transition hover:-translate-y-0.5 ${
+                      selectedPersonaId === preset.id
+                        ? "border-[#00A8A8] bg-white shadow-lg shadow-[#071F2F]/8"
+                        : "border-white/70 bg-white/70"
+                    }`}
+                  >
+                    <span className="block text-sm font-black text-[#0B3C5D]">
+                      {preset.label}
+                    </span>
+                    <span className="mt-1 block text-xs leading-5 text-gray-600">
+                      {preset.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-center">
               <input
                 type="text"
@@ -1010,6 +1095,7 @@ export default function Home() {
                   className="brand-input min-h-12"
                 >
                   <option value="Featured">Featured first</option>
+                  <option value="Smart match">Smart match</option>
                   <option value="Rating">Highest rated</option>
                   <option value="Price low">Price low to high</option>
                   <option value="Price high">Price high to low</option>
@@ -1028,20 +1114,29 @@ export default function Home() {
             <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
-                  Trip match brief
+                  {matchBrief.eyebrow}
                 </p>
                 <p className="mt-1 text-base font-black text-[#0B3C5D]">
-                  {filteredListings.length} match
-                  {filteredListings.length === 1 ? "" : "es"} for{" "}
-                  {category === "All" ? "all experiences" : category.toLowerCase()}
-                  {locationFilter === "All" ? "" : ` near ${locationFilter}`}
-                  {travelDate ? ` on ${travelDate}` : ""}
-                  {guestCount ? ` for ${guestCount} guests` : ""}.
+                  {matchBrief.title}
                 </p>
                 <p className="mt-1 text-sm leading-6 text-gray-600">
-                  Open the matched map to compare stops by area, or save options
-                  into your trip board before requesting help.
+                  {matchBrief.body}
                 </p>
+                {matchBrief.topReasons.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="brand-badge">
+                      Why this matches
+                    </span>
+                    {matchBrief.topReasons.map((reason) => (
+                      <span
+                        key={reason}
+                        className="brand-badge brand-badge-teal"
+                      >
+                        {reason}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link
@@ -1084,6 +1179,7 @@ export default function Home() {
                     homepageControls={homepageControls}
                     travelDate={travelDate}
                     guestCount={guestCount}
+                    selectedPersonaId={selectedPersonaId}
                     featured
                   />
                 ))}
@@ -1119,6 +1215,7 @@ export default function Home() {
                     homepageControls={homepageControls}
                     travelDate={travelDate}
                     guestCount={guestCount}
+                    selectedPersonaId={selectedPersonaId}
                   />
                 ))}
               </div>
@@ -1469,17 +1566,23 @@ function ListingCard({
   homepageControls,
   travelDate,
   guestCount,
+  selectedPersonaId,
   featured = false,
 }: {
   listing: Listing;
   homepageControls: HomepageControls;
   travelDate: string;
   guestCount: string;
+  selectedPersonaId: string;
   featured?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
   const trustBadges = getListingTrustBadges(listing);
   const conversionTags = getListingConversionTags(listing, {
+    date: travelDate,
+    guests: guestCount,
+  });
+  const luxuryMatch = getLuxuryMarketplaceMatch(listing, selectedPersonaId, {
     date: travelDate,
     guests: guestCount,
   });
@@ -1570,6 +1673,24 @@ function ListingCard({
               ))}
             </div>
           ) : null}
+          <div className="mt-4 rounded-[1rem] border border-[#00A8A8]/15 bg-[#EEF7F6] p-3">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                Smart match
+              </p>
+              <span className="rounded-full bg-white px-2 py-1 text-xs font-black text-[#0B3C5D]">
+                {luxuryMatch.score}%
+              </span>
+            </div>
+            <p className="mt-1 text-sm font-black text-[#0B3C5D]">
+              {luxuryMatch.label}
+            </p>
+            {luxuryMatch.reasons.length > 0 ? (
+              <p className="mt-1 text-xs leading-5 text-gray-600">
+                {luxuryMatch.reasons.slice(0, 2).join(" - ")}
+              </p>
+            ) : null}
+          </div>
         </div>
       </Link>
     </motion.div>

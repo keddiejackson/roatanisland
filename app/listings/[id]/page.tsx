@@ -28,6 +28,7 @@ import {
   getListingConversionScore,
   getListingTrustBadges,
 } from "@/lib/booking-conversion-pro";
+import { getLuxuryListingDetailProfile } from "@/lib/marketplace-upgrade";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getListingReadinessSummary } from "@/lib/vendor-dashboard";
 
@@ -271,6 +272,7 @@ export default async function ListingPage({
   const conversionScore = getListingConversionScore(listing);
   const trustBadges = getListingTrustBadges({ listing, vendor });
   const comparisonFacts = buildListingComparisonFacts(listing);
+  const luxuryProfile = getLuxuryListingDetailProfile(listing);
   const availabilityPreviewDays = getAvailabilityPreviewDays({
     listing,
     listingId: listing.id,
@@ -436,6 +438,62 @@ export default async function ListingPage({
               </div>
             ))}
           </div>
+
+          <section className="rounded-[1.75rem] border border-[#00A8A8]/15 bg-white p-6 shadow-xl shadow-[#071F2F]/8 sm:p-8">
+            <div className="grid gap-6 lg:grid-cols-[0.86fr_1fr] lg:items-start">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#00A8A8]">
+                  Private planning profile
+                </p>
+                <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                  {luxuryProfile.label}
+                </h2>
+                <p className="mt-4 text-base leading-7 text-gray-600">
+                  {luxuryProfile.summary}
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {luxuryProfile.idealFor.map((item) => (
+                    <span
+                      key={item}
+                      className="rounded-full bg-[#071F2F] px-3 py-2 text-xs font-black text-white"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-4">
+                <div className="rounded-[1.25rem] bg-[#EEF7F6] p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
+                    Best for this trip
+                  </p>
+                  <div className="mt-3 grid gap-2">
+                    {luxuryProfile.serviceSignals.map((signal) => (
+                      <p
+                        key={signal}
+                        className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#0B3C5D]"
+                      >
+                        {signal}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-[1.25rem] bg-[#FBF7EC] p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+                    Concierge-grade next steps
+                  </p>
+                  <ul className="mt-3 grid gap-2 text-sm leading-6 text-[#0B3C5D]">
+                    {luxuryProfile.planningNotes.map((note) => (
+                      <li key={note} className="flex gap-3">
+                        <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#D6B56D]" />
+                        <span>{note}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </section>
 
           <ListingConversionTools
             listing={shortlistItem}

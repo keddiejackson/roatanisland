@@ -15,6 +15,7 @@ export type MarketplaceListing = {
   image_url?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  price?: number | null;
 };
 
 export type MarketplaceBooking = {
@@ -49,8 +50,382 @@ export type DateAwareFilters = {
   availableOnly: boolean;
 };
 
+export type TravelerPersonaPreset = {
+  id: string;
+  label: string;
+  description: string;
+  searchTerms: string[];
+  filters: {
+    search: string;
+    category: string;
+    location: string;
+    maxPrice: string;
+    minimumRating: string;
+    sortBy: string;
+    guestCount: string;
+    availableOnly: boolean;
+  };
+};
+
+export type LuxuryMarketplaceMatch = {
+  label: "Excellent match" | "Strong match" | "Worth comparing";
+  score: number;
+  reasons: string[];
+};
+
+export type LuxuryListingDetailProfile = {
+  label: string;
+  summary: string;
+  idealFor: string[];
+  serviceSignals: string[];
+  planningNotes: string[];
+};
+
+const travelerPersonaPresets: TravelerPersonaPreset[] = [
+  {
+    id: "luxury-private",
+    label: "Luxury private day",
+    description: "Private boats, VIP pacing, sunset timing, and premium operators.",
+    searchTerms: ["private", "charter", "luxury", "sunset"],
+    filters: {
+      search: "private sunset",
+      category: "Private Charters",
+      location: "All",
+      maxPrice: "",
+      minimumRating: "4.5",
+      sortBy: "Smart match",
+      guestCount: "4",
+      availableOnly: false,
+    },
+  },
+  {
+    id: "cruise-day",
+    label: "Cruise guest day",
+    description: "Port-friendly timing, short routes, beaches, and easy return.",
+    searchTerms: ["cruise", "port", "beach", "coxen"],
+    filters: {
+      search: "cruise beach",
+      category: "Tours",
+      location: "All",
+      maxPrice: "",
+      minimumRating: "4.5",
+      sortBy: "Smart match",
+      guestCount: "4",
+      availableOnly: false,
+    },
+  },
+  {
+    id: "family-easy",
+    label: "Family easy day",
+    description: "Gentle pacing, easy pickup, food nearby, and flexible stops.",
+    searchTerms: ["family", "beach", "easy", "food"],
+    filters: {
+      search: "family beach",
+      category: "All",
+      location: "All",
+      maxPrice: "",
+      minimumRating: "4.5",
+      sortBy: "Smart match",
+      guestCount: "4",
+      availableOnly: false,
+    },
+  },
+  {
+    id: "arrival-transfer",
+    label: "Airport arrival",
+    description: "Airport pickup, luggage-friendly timing, and simple first steps.",
+    searchTerms: ["airport", "transfer", "pickup", "transport"],
+    filters: {
+      search: "airport transfer",
+      category: "Transport",
+      location: "All",
+      maxPrice: "",
+      minimumRating: "4.5",
+      sortBy: "Smart match",
+      guestCount: "2",
+      availableOnly: false,
+    },
+  },
+];
+
 function normalizeTime(value: string) {
   return value.trim().toLowerCase();
+}
+
+function listingSearchText(listing: MarketplaceListing) {
+  return [
+    listing.title,
+    listing.description,
+    listing.category,
+    listing.location,
+    ...(listing.tour_times || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function uniqueValues(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function scoreTrustSignals(listing: MarketplaceListing) {
+  let score = 0;
+
+  if (listing.is_featured) score += 8;
+  if ((listing.rating || 0) >= 4.8) score += 10;
+  if ((listing.reviews_count || 0) >= 3) score += 8;
+  if (listing.latitude != null && listing.longitude != null) score += 4;
+  if ((listing.tour_times || []).length > 0) score += 4;
+
+  return score;
+}
+
+function getTravelerPersona(id: string) {
+  return (
+    travelerPersonaPresets.find((preset) => preset.id === id) ||
+    travelerPersonaPresets[0]
+  );
+}
+
+function getGuestFitReason(listing: MarketplaceListing, guests: string) {
+  const guestCount = Number(guests);
+
+  if (
+    Number.isFinite(guestCount) &&
+    guestCount > 0 &&
+    (!listing.max_guests || guestCount <= listing.max_guests)
+  ) {
+    return `Fits ${guestCount} guest${guestCount === 1 ? "" : "s"}`;
+  }
+
+  return "";
+}
+
+function addPersonaReason({
+  reasons,
+  condition,
+  reason,
+}: {
+  reasons: string[];
+  condition: boolean;
+  reason: string;
+}) {
+  if (condition) reasons.push(reason);
+}
+
+export function getTravelerPersonaPresets() {
+  return travelerPersonaPresets;
+}
+
+export function applyTravelerPersonaToFilters(personaId: string) {
+  return { ...getTravelerPersona(personaId).filters };
+}
+
+export function getLuxuryMarketplaceMatch(
+  listing: MarketplaceListing,
+  personaId: string,
+  context: { date?: string; guests?: string } = {},
+): LuxuryMarketplaceMatch {
+  const persona = getTravelerPersona(personaId);
+  const text = listingSearchText(listing);
+  const category = (listing.category || "").toLowerCase();
+  const reasons: string[] = [];
+  let score = scoreTrustSignals(listing);
+
+  if (persona.id === "luxury-private") {
+    const privateFit =
+      category.includes("private") ||
+      text.includes("private") ||
+      text.includes("charter") ||
+      text.includes("vip");
+    const sunsetFit = text.includes("sunset");
+    const premiumTier = (listing.price || 0) >= 150;
+
+    addPersonaReason({
+      reasons,
+      condition: privateFit,
+      reason: "Private or VIP fit",
+    });
+    addPersonaReason({
+      reasons,
+      condition: sunsetFit,
+      reason: "Sunset-friendly",
+    });
+    addPersonaReason({
+      reasons,
+      condition: premiumTier,
+      reason: "Premium price tier",
+    });
+    if (privateFit) score += 24;
+    if (sunsetFit) score += 14;
+    if (premiumTier) score += 16;
+  }
+
+  if (persona.id === "cruise-day") {
+    const cruiseFit =
+      text.includes("cruise") || text.includes("port") || text.includes("coxen");
+    const beachFit = text.includes("beach");
+
+    addPersonaReason({ reasons, condition: cruiseFit, reason: "Cruise-friendly" });
+    addPersonaReason({ reasons, condition: beachFit, reason: "Beach time" });
+    if (cruiseFit) score += 28;
+    if (beachFit) score += 12;
+  }
+
+  if (persona.id === "family-easy") {
+    const familyFit =
+      text.includes("family") ||
+      text.includes("beach") ||
+      text.includes("easy") ||
+      text.includes("food");
+
+    addPersonaReason({
+      reasons,
+      condition: familyFit,
+      reason: "Family-friendly",
+    });
+    if (familyFit) score += 28;
+    if ((listing.max_guests || 0) >= 4) score += 8;
+  }
+
+  if (persona.id === "arrival-transfer") {
+    const airportFit = text.includes("airport") || text.includes("transfer");
+    const transportFit = category.includes("transport");
+
+    addPersonaReason({
+      reasons,
+      condition: airportFit,
+      reason: "Airport pickup",
+    });
+    addPersonaReason({
+      reasons,
+      condition: transportFit,
+      reason: "Transport fit",
+    });
+    if (airportFit) score += 32;
+    if (transportFit) score += 20;
+  }
+
+  if (
+    context.date &&
+    !(listing.blocked_dates || []).includes(context.date)
+  ) {
+    reasons.push("Open on your date");
+    score += 8;
+  }
+
+  const guestReason = getGuestFitReason(listing, context.guests || "");
+  if (guestReason) {
+    reasons.push(guestReason);
+    score += 8;
+  }
+
+  const finalScore = Math.min(100, Math.max(0, score));
+
+  return {
+    label:
+      finalScore >= 82
+        ? "Excellent match"
+        : finalScore >= 58
+          ? "Strong match"
+          : "Worth comparing",
+    score: finalScore,
+    reasons: uniqueValues(
+      reasons.length > 0 ? reasons : getListingConversionTags(listing, context),
+    ).slice(0, 5),
+  };
+}
+
+export function sortListingsForLuxuryMatch<Listing extends MarketplaceListing>(
+  listings: Listing[],
+  personaId: string,
+  context: { date?: string; guests?: string } = {},
+) {
+  return [...listings].sort((first, second) => {
+    const firstMatch = getLuxuryMarketplaceMatch(first, personaId, context);
+    const secondMatch = getLuxuryMarketplaceMatch(second, personaId, context);
+
+    if (firstMatch.score === secondMatch.score) {
+      return (second.rating || 0) - (first.rating || 0);
+    }
+
+    return secondMatch.score - firstMatch.score;
+  });
+}
+
+export function getMarketplaceMatchBrief({
+  personaId,
+  listings,
+  date,
+  guests,
+}: {
+  personaId: string;
+  listings: MarketplaceListing[];
+  date?: string;
+  guests?: string;
+}) {
+  const persona = getTravelerPersona(personaId);
+  const ranked = sortListingsForLuxuryMatch(listings, persona.id, {
+    date,
+    guests,
+  });
+  const topMatch = ranked[0]
+    ? getLuxuryMarketplaceMatch(ranked[0], persona.id, { date, guests })
+    : null;
+
+  return {
+    eyebrow: "Smart trip matching",
+    title: `Best matches for ${persona.label}`,
+    body: `We ranked ${listings.length} live option${
+      listings.length === 1 ? "" : "s"
+    } using your travel style, date, guest count, location fit, trust signals, and booking clarity.`,
+    topReasons: (topMatch?.reasons || persona.searchTerms).slice(0, 3),
+  };
+}
+
+export function getLuxuryListingDetailProfile(
+  listing: MarketplaceListing,
+): LuxuryListingDetailProfile {
+  const text = listingSearchText(listing);
+  const category = (listing.category || "").toLowerCase();
+  const isPrivate =
+    category.includes("private") ||
+    text.includes("private") ||
+    text.includes("charter");
+  const hasSunset = text.includes("sunset");
+  const hasAirport = text.includes("airport") || text.includes("transfer");
+  const isFamily =
+    text.includes("family") || text.includes("beach") || text.includes("easy");
+  const idealFor = uniqueValues([
+    isPrivate ? "Private day" : "",
+    hasSunset ? "Sunset plan" : "",
+    hasAirport ? "Arrival or transfer" : "",
+    isFamily ? "Family-friendly" : "",
+    (listing.price || 0) >= 150 ? "Premium experience" : "",
+    !isPrivate && !hasAirport && !isFamily ? "Roatan discovery" : "",
+  ]).slice(0, 3);
+  const serviceSignals = uniqueValues([
+    isPrivate ? "Private or charter-style experience" : "",
+    (listing.tour_times || []).length > 0 ? "Tour times published" : "",
+    (listing.reviews_count || 0) >= 3 ? "Verified review history" : "",
+    listing.latitude != null && listing.longitude != null ? "Exact map context" : "",
+    listing.max_guests ? "Guest capacity listed" : "",
+  ]).slice(0, 4);
+
+  return {
+    label: isPrivate ? "Luxury private fit" : "Curated Roatan fit",
+    summary: isPrivate
+      ? "Best for travelers who want a polished private Roatan day with clear timing, operator trust, and map context before requesting."
+      : "Best for travelers who want a clear Roatan plan with useful timing, area context, and operator details before requesting.",
+    idealFor,
+    serviceSignals,
+    planningNotes: [
+      "Use this as an anchor stop, then compare nearby listings before requesting.",
+      "Ask for pickup timing, weather backup, and final payment details before confirmation.",
+      "Save or book this listing so messages stay connected to your trip dashboard.",
+    ],
+  };
 }
 
 function listingHasTime(listing: MarketplaceListing, time: string) {
