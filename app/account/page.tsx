@@ -111,18 +111,6 @@ type ChangeRequestForm = {
   reason: string;
 };
 
-type AccountTab = "overview" | "messages" | "profile";
-
-const accountTabs: Array<{
-  id: AccountTab;
-  label: string;
-  text: string;
-}> = [
-  { id: "overview", label: "Overview", text: "Trips, plans, and help" },
-  { id: "messages", label: "Messages", text: "Chat with the team" },
-  { id: "profile", label: "Profile", text: "Name and photo" },
-];
-
 function statusBadgeClass(status: string | null) {
   switch ((status || "new").toLowerCase()) {
     case "confirmed":
@@ -231,8 +219,6 @@ export default function AccountPage() {
   >({});
   const [selectedBookingId, setSelectedBookingId] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
-  const [activeAccountTab, setActiveAccountTab] =
-    useState<AccountTab>("overview");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -851,6 +837,19 @@ export default function AccountPage() {
   const messageThreadsNeedingReply = Object.values(threadSummaries).filter(
     (summary) => summary.needsResponse,
   ).length;
+  const latestBookingAction = latestBooking
+    ? bookingNextAction({
+        status: latestBooking.status,
+        depositStatus: latestBooking.deposit_status,
+        canReview: Boolean(
+          latestBooking.status === "completed" && latestBooking.listing_id,
+        ),
+      })
+    : null;
+  const latestThreadSummary = latestBooking
+    ? threadSummaries[latestBooking.id]
+    : undefined;
+
   return (
     <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
       <div className="mx-auto max-w-5xl">
@@ -880,7 +879,7 @@ export default function AccountPage() {
         </header>
 
         <section
-          aria-label="Private guest lounge"
+          aria-label="Private guest travel lounge"
           className="overflow-hidden rounded-[1.75rem] bg-[#071F2F] text-white shadow-2xl shadow-[#071F2F]/20"
         >
           <div className="p-6 sm:p-10">
@@ -890,7 +889,7 @@ export default function AccountPage() {
             <div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
                 <h1 className="max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
-                  Your Roatan plans, simplified.
+                  Your Roatan trip, beautifully handled.
                 </h1>
                 <p className="mt-3 max-w-2xl leading-7 text-white/75">
                   {hasSignedIn
@@ -947,45 +946,147 @@ export default function AccountPage() {
         </section>
 
         {hasSignedIn ? (
-          <section
-            aria-label="Guest account sections"
-            className="mt-6 rounded-[1.5rem] border border-white/70 bg-white/90 p-2 shadow-xl shadow-[#0B3C5D]/5"
-          >
-            <div role="tablist" className="grid gap-2 sm:grid-cols-3">
-              {accountTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  role="tab"
-                  type="button"
-                  onClick={() => setActiveAccountTab(tab.id)}
-                  aria-selected={activeAccountTab === tab.id}
-                  className={`rounded-2xl px-4 py-4 text-left transition ${
-                    activeAccountTab === tab.id
-                      ? "bg-[#071F2F] text-white shadow"
-                      : "bg-[#F7F3EA] text-[#0B3C5D] hover:bg-[#EEF7F6]"
-                  }`}
-                >
-                  <span className="block text-sm font-black">{tab.label}</span>
-                  <span
-                    className={`mt-1 block text-xs font-semibold ${
-                      activeAccountTab === tab.id
-                        ? "text-white/65"
-                        : "text-gray-500"
-                    }`}
+          <section className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+            <article className="rounded-[1.5rem] border border-white/70 bg-white p-6 shadow-xl shadow-[#0B3C5D]/5">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                Next step
+              </p>
+              <h2 className="mt-3 text-3xl font-black text-[#0B3C5D]">
+                {latestBooking
+                  ? `${latestBooking.tour_date} at ${latestBooking.tour_time}`
+                  : "Start with your ideal island day."}
+              </h2>
+              <p className="mt-3 max-w-2xl leading-7 text-gray-600">
+                {latestBookingAction?.text ||
+                  "Save a few map stops or send a concierge request and we will keep the plan here."}
+              </p>
+              <div className="mt-5 flex flex-wrap gap-2">
+                {latestBooking ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedBookingId(latestBooking.id);
+                        setChatOpen(true);
+                      }}
+                      className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+                    >
+                      Open messages
+                    </button>
+                    <Link
+                      href={`/book/status/${latestBooking.id}`}
+                      className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                    >
+                      Open trip details
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <Link
+                      href="/map"
+                      className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+                    >
+                      Open the map
+                    </Link>
+                    <Link
+                      href="/concierge"
+                      className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                    >
+                      Ask concierge
+                    </Link>
+                  </>
+                )}
+              </div>
+            </article>
+
+            <aside className="grid gap-4">
+              <article className="rounded-[1.5rem] border border-white/70 bg-white p-5 shadow-xl shadow-[#0B3C5D]/5">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Messages
+                </p>
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-2xl font-black text-[#0B3C5D]">
+                      {messageThreadsNeedingReply}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-600">
+                      need a response
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setChatOpen(true)}
+                    className="rounded-xl bg-[#071F2F] px-4 py-3 text-sm font-black text-white"
                   >
-                    {tab.text}
-                  </span>
-                </button>
-              ))}
-            </div>
+                    Open messages
+                  </button>
+                </div>
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">
+                  {latestThreadSummary?.lastMessagePreview ||
+                    "Your booking conversations stay available across the site."}
+                </p>
+              </article>
+
+              <article className="rounded-[1.5rem] border border-white/70 bg-white p-5 shadow-xl shadow-[#0B3C5D]/5">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+                  Profile
+                </p>
+                <div className="mt-3 flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#EEF7F6] text-sm font-black text-[#007B7B] shadow-inner">
+                      {profileForm.profileImageUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={profileForm.profileImageUrl}
+                          alt=""
+                          className="size-full object-cover"
+                        />
+                      ) : (
+                        profileAvatarInitials
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-black text-[#0B3C5D]">
+                        {profileDisplayName}
+                      </p>
+                      <p className="truncate text-sm font-semibold text-gray-500">
+                        {signedInEmail}
+                      </p>
+                    </div>
+                  </div>
+                  <a
+                    href="#guest-profile"
+                    className="shrink-0 rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
+                  >
+                    Edit profile
+                  </a>
+                </div>
+              </article>
+            </aside>
           </section>
         ) : null}
 
-        {hasSignedIn && activeAccountTab === "profile" ? (
-          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+        {hasSignedIn ? (
+          <details
+            id="guest-profile"
+            className="mt-6 rounded-2xl bg-white p-6 shadow"
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+                  Profile
+                </p>
+                <h2 className="mt-1 text-2xl font-black text-[#0B3C5D]">
+                  Edit profile
+                </h2>
+              </div>
+              <span className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]">
+                Open
+              </span>
+            </summary>
             <form
               onSubmit={saveProfile}
-              className="grid gap-5 md:grid-cols-[auto_1fr_auto] md:items-end"
+              className="mt-5 grid gap-5 md:grid-cols-[auto_1fr_auto] md:items-end"
             >
               <div className="flex items-center gap-4 md:block">
                 <div className="grid size-20 place-items-center overflow-hidden rounded-2xl bg-[#EEF7F6] text-xl font-black text-[#007B7B] shadow-inner">
@@ -1061,10 +1162,10 @@ export default function AccountPage() {
                 {profileSaving ? "Saving..." : "Save profile"}
               </button>
             </form>
-          </section>
+          </details>
         ) : null}
 
-        {hasSignedIn && activeAccountTab === "overview" ? (
+        {hasSignedIn ? (
           <section className="mt-6 rounded-2xl bg-white p-6 shadow">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
@@ -1208,85 +1309,6 @@ export default function AccountPage() {
           </section>
         ) : null}
 
-        {hasSignedIn && activeAccountTab === "messages" ? (
-          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
-                  Messages
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                  Booking conversations.
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
-                  Open any trip thread without digging through the booking
-                  cards.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setChatOpen(true)}
-                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white"
-              >
-                Open chat drawer
-              </button>
-            </div>
-
-            {chatThreads.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-[#D6B56D]/50 bg-[#FFF8E8] p-5">
-                <p className="font-black text-[#0B3C5D]">
-                  No conversations yet.
-                </p>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
-                  Booking messages will appear here after you request or confirm
-                  a trip.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-5 grid gap-3">
-                {chatThreads.map((thread) => (
-                  <article
-                    key={thread.id}
-                    className="rounded-2xl border border-gray-200 bg-[#FFFDF7] p-4"
-                  >
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                      <div>
-                        <p className="font-black text-[#0B3C5D]">
-                          {thread.title}
-                        </p>
-                        <p className="mt-1 text-sm text-gray-600">
-                          {thread.summary?.lastMessagePreview ||
-                            thread.subtitle}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span
-                          className={`rounded-full px-3 py-1 text-xs font-black ${threadBadgeClass(
-                            thread.summary,
-                          )}`}
-                        >
-                          {thread.summary?.badgeLabel || "No messages"}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedBookingId(thread.id);
-                            setChatOpen(true);
-                          }}
-                          className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white"
-                        >
-                          Open conversation
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        ) : null}
-
-        {!hasSignedIn || isUpdatingPassword || activeAccountTab === "overview" ? (
         <section className="mt-6 rounded-[1.5rem] bg-white p-6 shadow-xl shadow-[#0B3C5D]/5 sm:p-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
@@ -1294,7 +1316,7 @@ export default function AccountPage() {
                 Private itinerary
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
-                Your bookings and next steps.
+                Your trips.
               </h2>
             </div>
             {hasSignedIn ? (
@@ -1382,56 +1404,10 @@ export default function AccountPage() {
                 </Link>
               </div>
 
-              {supportTicketMessage ? (
-                <p className="mt-4 rounded-xl bg-white px-4 py-3 text-sm font-bold text-[#7A5A00]">
-                  {supportTicketMessage}
-                </p>
-              ) : supportTickets.length === 0 ? (
-                <p className="mt-4 rounded-xl border border-dashed border-[#D6B56D]/50 bg-white/60 px-4 py-3 text-sm text-gray-600">
-                  No support requests yet. If you need help with a booking,
-                  pickup, cancellation, vendor question, or trip day issue, send
-                  a request from the support center.
-                </p>
-              ) : (
-                <div className="mt-4 grid gap-3">
-                  {supportTickets.slice(0, 4).map((ticket) => (
-                    <article
-                      key={ticket.id}
-                      className="rounded-xl bg-white p-4 shadow-sm"
-                    >
-                      <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                        <div>
-                          <p className="text-sm font-black text-[#0B3C5D]">
-                            {ticket.intent}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            {new Date(ticket.created_at).toLocaleString()}
-                            {ticket.booking_reference
-                              ? ` - ${ticket.booking_reference}`
-                              : ""}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black capitalize text-[#007B7B]">
-                            {ticket.status.replaceAll("_", " ")}
-                          </span>
-                          <span className="rounded-full bg-[#FFF3D2] px-3 py-1 text-xs font-black capitalize text-[#7A5A00]">
-                            {ticket.priority}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">
-                        {ticket.message}
-                      </p>
-                      {ticket.admin_notes ? (
-                        <p className="mt-3 rounded-lg bg-[#F7F3EA] px-3 py-2 text-sm font-semibold text-[#0B3C5D]">
-                          Admin note: {ticket.admin_notes}
-                        </p>
-                      ) : null}
-                    </article>
-                  ))}
-                </div>
-              )}
+              <p className="mt-4 rounded-xl border border-dashed border-[#D6B56D]/50 bg-white/70 px-4 py-3 text-sm text-gray-600">
+                {supportTicketMessage ||
+                  "For pickup changes, timing questions, cancellations, or trip-day help, open support and we will keep the conversation organized."}
+              </p>
             </section>
           ) : null}
 
@@ -1609,7 +1585,11 @@ export default function AccountPage() {
                       </span>
                     </div>
                   </div>
-                  <div className="mt-4 grid gap-3 rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-4 sm:grid-cols-4">
+                  <details className="mt-4 rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-4">
+                    <summary className="cursor-pointer list-none text-sm font-black text-[#0B3C5D]">
+                      Payment and trip tools
+                    </summary>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-4">
                     {[
                       ["Payment", moneySnapshot.paymentLabel],
                       [
@@ -1649,6 +1629,7 @@ export default function AccountPage() {
                       </Link>
                     </div>
                   </div>
+                  </details>
                   <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">
                     {threadSummaries[booking.id]?.lastMessagePreview ||
                       "No booking messages yet."}
@@ -1661,9 +1642,13 @@ export default function AccountPage() {
                     <p className="font-black">{nextAction.label}</p>
                     <p className="mt-1 leading-6">{nextAction.text}</p>
                   </div>
+                  <details className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
+                    <summary className="cursor-pointer list-none text-sm font-black text-[#0B3C5D]">
+                      Request a change
+                    </summary>
                   <form
                     onSubmit={(event) => submitChangeRequest(event, booking)}
-                    className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4"
+                    className="mt-4"
                   >
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                       <div>
@@ -1753,6 +1738,7 @@ export default function AccountPage() {
                         : "Send change request"}
                     </button>
                   </form>
+                  </details>
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -1785,7 +1771,6 @@ export default function AccountPage() {
             </div>
           )}
         </section>
-        ) : null}
         {hasSignedIn ? (
           <BookingChatDrawer
             threads={chatThreads}
