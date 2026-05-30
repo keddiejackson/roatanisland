@@ -575,8 +575,8 @@ export default function BookingForm({
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_390px] lg:pb-0">
-      <section className="rounded-[2rem] bg-white p-5 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
+    <div className="mobile-no-overflow mx-auto grid w-full max-w-7xl gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_390px] lg:pb-0">
+      <section className="mobile-no-overflow rounded-[2rem] bg-white p-5 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
         <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
           Private booking request desk
         </p>
@@ -973,7 +973,7 @@ export default function BookingForm({
         <form
           id="booking-request-form"
           onSubmit={handleSubmit}
-          className="mt-8 grid gap-6 md:grid-cols-2"
+          className="mobile-no-overflow mt-8 grid gap-6 md:grid-cols-2"
         >
           <div
             id="booking-guest"
@@ -1384,7 +1384,7 @@ export default function BookingForm({
         </div>
       </aside>
       {!submitted ? (
-        <div className="mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/95 px-3 pt-3 shadow-2xl shadow-[#071F2F]/20 backdrop-blur lg:hidden">
+        <div className="mobile-safe-bottom mobile-no-overflow fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/95 px-3 pt-3 shadow-2xl shadow-[#071F2F]/20 backdrop-blur lg:hidden">
           <div className="mx-auto flex max-w-7xl items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">

@@ -55,6 +55,7 @@ export default function GlobalAccountButton() {
   if (
     pathname === "/" ||
     pathname?.startsWith("/admin") ||
+    pathname === "/book" ||
     pathname === "/signin" ||
     loading
   ) {

@@ -664,14 +664,14 @@ export default function BookingChatDrawer({
                 onSubmit={sendMessage}
                 className="mobile-safe-bottom shrink-0 border-t border-[#D6B56D]/20 bg-white p-3 sm:p-4"
               >
-                <div className="mobile-scroll-row mb-2">
+                <div className="mobile-chat-replies mb-2">
                   {quickReplies.map((reply) => (
                     <button
                       key={reply}
                       type="button"
                       onClick={() => setDraft(reply)}
                       disabled={!viewerProfile}
-                      className="max-w-full rounded-full border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-1.5 text-left text-[11px] font-bold leading-tight text-[#0B3C5D] transition hover:border-[#00A8A8]"
+                      className="mobile-chat-reply disabled:opacity-55"
                     >
                       {reply}
                     </button>
@@ -686,7 +686,7 @@ export default function BookingChatDrawer({
                   placeholder={
                     viewerProfile ? "Write a message..." : "Sign in to reply..."
                   }
-                  className="max-h-24 min-h-20 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#00A8A8]"
+                  className="max-h-20 min-h-16 w-full resize-none rounded-xl border border-gray-300 px-4 py-3 text-sm leading-6 outline-none focus:border-[#00A8A8]"
                 />
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {allowInternalNotes ? (
