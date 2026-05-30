@@ -99,7 +99,7 @@ export default async function BookPage({
               </Link>
             </div>
           </div>
-          <div className="rounded-[1.75rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/20 backdrop-blur">
+          <div className="hidden rounded-[1.75rem] border border-white/15 bg-white/10 p-4 shadow-2xl shadow-black/20 backdrop-blur lg:block">
             <p className="px-2 text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
               Guided request path
             </p>
@@ -128,7 +128,7 @@ export default async function BookPage({
           </div>
         </section>
 
-        <section className="brand-card mb-8 p-6 lg:p-8">
+        <section className="brand-card mb-8 hidden p-6 sm:block lg:p-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="brand-eyebrow">

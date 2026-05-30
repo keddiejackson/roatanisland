@@ -704,7 +704,7 @@ export default function AccountPage() {
             </div>
             <Link
               href={hasSignedIn ? "#guest-plans" : "/map"}
-              className="rounded-xl bg-[#D6B56D] px-5 py-3 text-center font-bold text-[#071F2F]"
+              className="rounded-xl bg-[#D6B56D] px-5 py-3 text-center font-bold text-[#071F2F] sm:w-auto"
             >
               <span className="sm:hidden">
                 {hasSignedIn
@@ -719,18 +719,18 @@ export default function AccountPage() {
         </section>
 
         {hasSignedIn ? (
-          <section className="mt-6 rounded-[1.5rem] border border-white/70 bg-white p-6 shadow-xl shadow-[#0B3C5D]/5">
+          <section className="mt-6 rounded-[1.5rem] border border-white/70 bg-white p-4 shadow-xl shadow-[#0B3C5D]/5 sm:p-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
                   Next up
                 </p>
-                <h2 className="mt-3 text-2xl font-black text-[#0B3C5D] sm:text-3xl">
+                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D] sm:mt-3 sm:text-3xl">
                   {latestBooking
                     ? `${latestBooking.tour_date} at ${latestBooking.tour_time}`
                     : "Start with your ideal island day."}
                 </h2>
-                <p className="mt-3 max-w-2xl leading-7 text-gray-600">
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600 sm:mt-3 sm:text-base sm:leading-7">
                   {latestBookingAction?.text ||
                     "Save a few map stops or send a concierge request and we will keep the plan here."}
                 </p>
@@ -740,7 +740,7 @@ export default function AccountPage() {
                   </p>
                 ) : null}
                 {latestBookingConfidence ? (
-                  <div className="mt-4 rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] px-4 py-3">
+                  <div className="mt-4 hidden rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] px-4 py-3 sm:block">
                     <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
                       Guest booking confidence
                     </p>
@@ -764,7 +764,7 @@ export default function AccountPage() {
                 </span>
               ) : null}
             </div>
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-5 grid gap-2 sm:flex sm:flex-wrap">
               {latestBooking ? (
                 <>
                   <button
@@ -773,19 +773,19 @@ export default function AccountPage() {
                       setSelectedBookingId(latestBooking.id);
                       setChatOpen(true);
                     }}
-                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-white"
                   >
                     Open messages
                   </button>
                   <Link
                     href={`/book/status/${latestBooking.id}`}
-                    className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                    className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-center text-sm font-black text-[#0B3C5D]"
                   >
                     View trip
                   </Link>
                   <Link
                     href={`/book/trip/${latestBooking.id}`}
-                    className="rounded-xl border border-[#D6B56D]/50 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                    className="rounded-xl border border-[#D6B56D]/50 bg-white px-5 py-3 text-center text-sm font-black text-[#0B3C5D]"
                   >
                     Trip packet
                   </Link>
@@ -794,13 +794,13 @@ export default function AccountPage() {
                 <>
                   <Link
                     href="/map"
-                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-white"
                   >
                     Open the map
                   </Link>
                   <Link
                     href="/concierge"
-                    className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                    className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-center text-sm font-black text-[#0B3C5D]"
                   >
                     Ask concierge
                   </Link>
@@ -813,7 +813,7 @@ export default function AccountPage() {
         {hasSignedIn ? (
           <details
             id="guest-profile"
-            className="mt-6 rounded-2xl bg-white p-6 shadow"
+            className="mt-6 rounded-2xl bg-white p-4 shadow sm:p-6"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>
@@ -912,17 +912,17 @@ export default function AccountPage() {
         {hasSignedIn ? (
           <section
             id="guest-plans"
-            className="mt-6 rounded-[1.5rem] bg-white p-6 shadow-xl shadow-[#0B3C5D]/5 sm:p-8"
+            className="mt-6 rounded-[1.5rem] bg-white p-4 shadow-xl shadow-[#0B3C5D]/5 sm:p-8"
           >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
                   Your plans
                 </p>
-                <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D] sm:text-3xl">
                   Trips and saved map ideas.
                 </h2>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
+                <p className="mt-2 hidden text-sm leading-6 text-gray-600 sm:block">
                   Keep the overview light. Open a trip when you need payments,
                   invoices, change requests, or a full packet.
                 </p>

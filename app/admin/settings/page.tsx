@@ -1738,11 +1738,18 @@ export default function AdminSettingsPage() {
               </div>
 
               <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
-                <div className="rounded-[2rem] border border-[#0B3C5D]/10 bg-[#071F2F] p-4 text-white shadow-xl shadow-[#071F2F]/10">
-                  <div className="rounded-[1.5rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4">
+                <div className="mx-auto w-full max-w-[24rem] rounded-[2rem] border border-[#0B3C5D]/10 bg-[#071F2F] p-3 text-white shadow-xl shadow-[#071F2F]/10">
+                  <div className="overflow-hidden rounded-[1.6rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.09),rgba(255,255,255,0.03))]">
+                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
+                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/45">
+                        Phone preview
+                      </span>
+                      <span className="h-1.5 w-16 rounded-full bg-white/20" />
+                    </div>
+                    <div className="p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="max-w-[70%]">
-                        {sitePreviewBranding.logoUrl ? (
+                        {mobileLogoPreviewBranding.logoUrl ? (
                           <div className="mb-5 origin-top-left scale-[0.72]">
                             <span style={logoFrameStyle(mobileLogoPreviewBranding)}>
                               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1784,6 +1791,20 @@ export default function AdminSettingsPage() {
                       <span className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-black">
                         {mobileControlsPreview.mobileSecondaryCtaLabel}
                       </span>
+                    </div>
+                    <div className="mt-4 rounded-2xl bg-white p-3 text-[#0B3C5D]">
+                      <div className="h-10 rounded-xl border border-[#D6B56D]/35 px-3 py-2 text-xs font-bold text-[#0B3C5D]/55">
+                        {mobileControlsPreview.mobileListingsSearchPlaceholder}
+                      </div>
+                      <div className="mt-3 rounded-xl bg-[#EEF7F6] p-3">
+                        <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                          {mobileControlsPreview.mobileListingsResultLabel}
+                        </p>
+                        <p className="mt-1 text-sm font-black">
+                          {mobileControlsPreview.mobileListingsTitle}
+                        </p>
+                      </div>
+                    </div>
                     </div>
                   </div>
                 </div>

@@ -1184,7 +1184,26 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               {selectedPickup?.label || activeConciergeMode?.label || "Choose one"}
             </p>
           </div>
-          <div className="mobile-scroll-row mt-3 pb-1">
+          <div className="mt-3 grid grid-cols-2 gap-2 sm:hidden">
+            {mapConciergeModes.slice(0, 4).map((mode) => (
+              <button
+                key={mode.id}
+                type="button"
+                onClick={() => applyMapConciergeMode(mode)}
+                className={`rounded-xl px-3 py-3 text-left text-sm font-black transition ${
+                  activeModeId === mode.id
+                    ? "bg-[#071F2F] text-white shadow-lg shadow-[#071F2F]/15"
+                    : "bg-white text-[#0B3C5D] shadow-sm"
+                }`}
+              >
+                <span className="block text-[10px] uppercase tracking-[0.14em] opacity-70">
+                  {mode.eyebrow}
+                </span>
+                <span className="mt-1 block leading-tight">{mode.label}</span>
+              </button>
+            ))}
+          </div>
+          <div className="mobile-scroll-row mt-3 hidden pb-1 sm:flex">
             {mapConciergeModes.map((mode) => (
               <button
                 key={mode.id}
@@ -1226,7 +1245,31 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               </button>
             </div>
           </div>
-          <div className="mobile-scroll-row mt-3 pb-1">
+          <div className="mt-3 grid gap-2 sm:hidden">
+            <select
+              aria-label="Choose day style"
+              value={activeCollectionId}
+              onChange={(event) => {
+                const collection = mapCollections.find(
+                  (item) => item.id === event.target.value,
+                );
+                if (collection) {
+                  applyCollection(collection);
+                } else {
+                  clearCollection();
+                }
+              }}
+              className="min-h-12 rounded-xl border border-[#D6B56D]/35 bg-white px-4 text-sm font-black text-[#0B3C5D] outline-none focus:border-[#00A8A8]"
+            >
+              <option value="">Choose a day style</option>
+              {mapCollections.map((collection) => (
+                <option key={collection.id} value={collection.id}>
+                  {collection.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mobile-scroll-row mt-3 hidden pb-1 sm:flex">
             {mapCollections.map((collection) => (
               <button
                 key={collection.id}
