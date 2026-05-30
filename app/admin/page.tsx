@@ -161,7 +161,7 @@ export default function AdminDashboardPage() {
           supabase
             .from("guest_trip_plans")
             .select(
-              "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, stops, created_at, updated_at",
+              "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, concierge_lead_id, stops, created_at, updated_at",
             )
             .order("updated_at", { ascending: false })
             .limit(50),
@@ -417,9 +417,19 @@ export default function AdminDashboardPage() {
                               {plan.email} / {plan.pickup_area || "Flexible pickup"}
                             </p>
                           </div>
-                          <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black capitalize text-[#007B7B]">
-                            {(plan.status || "saved").replaceAll("_", " ")}
-                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black capitalize text-[#007B7B]">
+                              {(plan.status || "saved").replaceAll("_", " ")}
+                            </span>
+                            {plan.concierge_lead_id ? (
+                              <Link
+                                href="/admin/concierge"
+                                className="rounded-full bg-[#0B3C5D] px-3 py-1 text-xs font-black text-white"
+                              >
+                                Concierge lead ready
+                              </Link>
+                            ) : null}
+                          </div>
                         </div>
                         <div className="mt-3 grid gap-2 sm:grid-cols-4">
                           <div>

@@ -31,6 +31,7 @@ export type GuestTripPlan = {
   guestCount: number | null;
   source: string;
   status?: string;
+  conciergeLeadId?: string | null;
   stops: GuestTripPlanStop[];
   created_at?: string;
   updated_at?: string;
@@ -48,6 +49,7 @@ export type GuestTripPlanRow = {
   guest_count: number | null;
   source: string | null;
   status: string | null;
+  concierge_lead_id: string | null;
   stops: GuestTripPlanStop[] | null;
   created_at: string;
   updated_at: string;
@@ -115,9 +117,68 @@ export function guestTripPlanFromRow(row: GuestTripPlanRow): GuestTripPlan {
     guestCount: row.guest_count,
     source: row.source || "map",
     status: row.status || "saved",
+    conciergeLeadId: row.concierge_lead_id || null,
     stops: Array.isArray(row.stops) ? row.stops : [],
     created_at: row.created_at,
     updated_at: row.updated_at,
+  };
+}
+
+function fallbackGuestName(email: string) {
+  return email.split("@")[0] || "Guest";
+}
+
+function formatConciergeStop(stop: GuestTripPlanStop, index: number) {
+  const details = [stop.location, stop.timeBlock, stop.category].filter(Boolean);
+  const detailText = details.length > 0 ? ` - ${details.join(" / ")}` : "";
+  const noteText = stop.note ? ` (${stop.note})` : "";
+
+  return `${index + 1}. ${stop.title}${detailText}${noteText}`;
+}
+
+export function buildGuestTripPlanConciergeRequest(
+  plan: GuestTripPlan,
+  guestEmail: string,
+  guestName?: string | null,
+) {
+  const email = cleanText(guestEmail, plan.email || "", 200).toLowerCase();
+  const summary = getGuestTripPlanSummary(plan);
+  const stopLines = plan.stops
+    .map(formatConciergeStop)
+    .join("\n");
+
+  return {
+    name: cleanText(guestName, fallbackGuestName(email), 160),
+    email,
+    interest: "Saved map plan",
+    message: [
+      `Guest requested concierge help for saved map plan "${plan.name}".`,
+      `Plan summary: ${summary}`,
+      stopLines ? `Saved stops:\n${stopLines}` : "No stops were attached.",
+      plan.tripTime ? `Preferred time: ${plan.tripTime}` : "",
+      "Please review the saved stops and build a quote from the concierge dashboard.",
+    ]
+      .filter(Boolean)
+      .join("\n\n"),
+    leadType: "concierge_plan",
+    travelDate: plan.tripDate || undefined,
+    guests: plan.guestCount || undefined,
+    pickupArea: plan.pickupArea,
+    arrivalType: plan.arrivalType,
+    tripStyle: plan.name,
+    plan: {
+      source: "guest_trip_plan",
+      tripPlanId: plan.id,
+      planName: plan.name,
+      summary,
+      pickupArea: plan.pickupArea,
+      arrivalType: plan.arrivalType,
+      tripDate: plan.tripDate,
+      tripTime: plan.tripTime,
+      guestCount: plan.guestCount,
+      stops: plan.stops,
+    },
+    sourcePath: `/account#trip-plan-${plan.id || "new"}`,
   };
 }
 

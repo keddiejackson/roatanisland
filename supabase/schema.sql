@@ -336,6 +336,7 @@ create table if not exists public.guest_trip_plans (
   source text not null default 'map',
   status text not null default 'saved'
     check (status in ('saved', 'concierge_requested', 'quoted', 'booked', 'archived')),
+  concierge_lead_id uuid,
   stops jsonb not null default '[]'::jsonb,
   admin_notes text,
   created_at timestamptz not null default now(),
@@ -350,6 +351,12 @@ on public.guest_trip_plans(lower(email));
 
 create index if not exists guest_trip_plans_status_idx
 on public.guest_trip_plans(status, updated_at desc);
+
+alter table public.guest_trip_plans
+add column if not exists concierge_lead_id uuid;
+
+create index if not exists guest_trip_plans_concierge_lead_id_idx
+on public.guest_trip_plans(concierge_lead_id);
 
 create table if not exists public.booking_events (
   id uuid primary key default gen_random_uuid(),
@@ -552,6 +559,21 @@ create table if not exists public.concierge_leads (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'guest_trip_plans_concierge_lead_id_fkey'
+  ) then
+    alter table public.guest_trip_plans
+    add constraint guest_trip_plans_concierge_lead_id_fkey
+    foreign key (concierge_lead_id)
+    references public.concierge_leads(id)
+    on delete set null;
+  end if;
+end $$;
 
 create table if not exists public.concierge_lead_assignments (
   id uuid primary key default gen_random_uuid(),

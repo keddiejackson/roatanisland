@@ -101,6 +101,13 @@ type TripPlanApiResponse = {
   error?: string;
 };
 
+type TripPlanConciergeResponse = {
+  tripPlan?: GuestTripPlan;
+  conciergeLeadId?: string;
+  alreadyRequested?: boolean;
+  error?: string;
+};
+
 type ChangeRequestForm = {
   tourDate: string;
   tourTime: string;
@@ -198,6 +205,8 @@ export default function AccountPage() {
   const [tripPlans, setTripPlans] = useState<GuestTripPlan[]>([]);
   const [tripPlanMessage, setTripPlanMessage] = useState("");
   const [deletingTripPlanId, setDeletingTripPlanId] = useState("");
+  const [requestingConciergePlanId, setRequestingConciergePlanId] =
+    useState("");
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [supportTicketMessage, setSupportTicketMessage] = useState("");
   const [changeRequestsByBooking, setChangeRequestsByBooking] = useState<
@@ -645,6 +654,48 @@ export default function AccountPage() {
     setTripPlanMessage("Saved plan removed.");
   }
 
+  async function requestConciergeForPlan(planId: string) {
+    setRequestingConciergePlanId(planId);
+    setTripPlanMessage("");
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    if (!token) {
+      setRequestingConciergePlanId("");
+      setTripPlanMessage("Please sign in again to request concierge help.");
+      return;
+    }
+
+    const response = await fetch(
+      `/api/account/trip-plans/${planId}/concierge`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    const result = (await response.json()) as TripPlanConciergeResponse;
+    setRequestingConciergePlanId("");
+
+    if (!response.ok || !result.tripPlan) {
+      setTripPlanMessage(
+        result.error || "Unable to send this plan to the concierge team.",
+      );
+      return;
+    }
+
+    setTripPlans((current) =>
+      current.map((plan) => (plan.id === planId ? result.tripPlan! : plan)),
+    );
+    setTripPlanMessage(
+      result.alreadyRequested
+        ? "This plan is already in the concierge queue."
+        : "Concierge request sent. The team can now build a quote from this saved plan.",
+    );
+  }
+
   function updateChangeRequestForm(
     bookingId: string,
     values: Partial<ChangeRequestForm>,
@@ -1068,8 +1119,14 @@ export default function AccountPage() {
               </div>
             ) : (
               <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                {tripPlans.map((plan) => (
+                {tripPlans.map((plan) => {
+                  const conciergeRequested =
+                    plan.status === "concierge_requested" ||
+                    Boolean(plan.conciergeLeadId);
+
+                  return (
                   <article
+                    id={`trip-plan-${plan.id || plan.name}`}
                     key={plan.id || plan.name}
                     className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-5"
                   >
@@ -1119,12 +1176,34 @@ export default function AccountPage() {
                       >
                         Reopen map
                       </Link>
-                      <Link
-                        href="/concierge"
-                        className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
-                      >
-                        Ask concierge
-                      </Link>
+                      {plan.id ? (
+                        <button
+                          type="button"
+                          onClick={() => requestConciergeForPlan(plan.id || "")}
+                          disabled={
+                            conciergeRequested ||
+                            requestingConciergePlanId === plan.id
+                          }
+                          className={`rounded-xl border px-4 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-70 ${
+                            conciergeRequested
+                              ? "border-green-200 bg-green-50 text-green-800"
+                              : "border-[#00A8A8]/30 text-[#007B7B]"
+                          }`}
+                        >
+                          {conciergeRequested
+                            ? "Requested"
+                            : requestingConciergePlanId === plan.id
+                              ? "Sending..."
+                              : "Ask concierge"}
+                        </button>
+                      ) : (
+                        <Link
+                          href="/concierge"
+                          className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
+                        >
+                          Ask concierge
+                        </Link>
+                      )}
                       {plan.id ? (
                         <button
                           type="button"
@@ -1137,7 +1216,8 @@ export default function AccountPage() {
                       ) : null}
                     </div>
                   </article>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
