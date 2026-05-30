@@ -416,7 +416,7 @@ export default function BookingChatDrawer({
       <motion.button
         type="button"
         onClick={() => changeOpen(true)}
-        className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 z-40 max-w-[calc(100vw-2rem)] rounded-2xl bg-[#071F2F] px-4 py-3 text-left font-bold text-white shadow-2xl shadow-[#071F2F]/25 ring-1 ring-white/10 transition hover:-translate-y-1 sm:right-5 sm:px-5 sm:py-4"
+        className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 right-3 z-40 max-w-[calc(100vw-1.5rem)] rounded-2xl bg-[#071F2F] px-4 py-3 text-left font-bold text-white shadow-2xl shadow-[#071F2F]/25 ring-1 ring-white/10 transition hover:-translate-y-1 sm:left-auto sm:right-5 sm:max-w-[calc(100vw-2rem)] sm:px-5 sm:py-4"
         aria-label="Open booking messages"
         initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
         animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
@@ -662,9 +662,9 @@ export default function BookingChatDrawer({
 
               <form
                 onSubmit={sendMessage}
-                className="shrink-0 border-t border-[#D6B56D]/20 bg-white p-3 sm:p-4"
+                className="mobile-safe-bottom shrink-0 border-t border-[#D6B56D]/20 bg-white p-3 sm:p-4"
               >
-                <div className="mb-2 flex flex-wrap gap-1.5">
+                <div className="mobile-scroll-row mb-2">
                   {quickReplies.map((reply) => (
                     <button
                       key={reply}

@@ -22,7 +22,7 @@ export default async function BookPage({
   const luxurySteps = getLuxuryBookingFlowSteps();
 
   return (
-    <main className="brand-page min-h-screen overflow-hidden px-6 py-10">
+    <main className="brand-page min-h-screen overflow-hidden px-4 py-6 sm:px-6 sm:py-10">
       <div className="pointer-events-none fixed inset-x-0 top-0 h-96 bg-[radial-gradient(circle_at_20%_20%,rgba(0,168,168,0.2),transparent_34%),radial-gradient(circle_at_82%_12%,rgba(214,181,109,0.22),transparent_30%)]" />
       <div className="relative mx-auto max-w-7xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -43,7 +43,7 @@ export default async function BookPage({
           </div>
         </div>
 
-        <section className="brand-hero-panel mb-8 grid gap-8 overflow-hidden p-6 text-white lg:grid-cols-[1fr_0.78fr] lg:p-10">
+        <section className="brand-hero-panel mb-6 grid gap-6 overflow-hidden p-4 text-white sm:mb-8 sm:p-6 lg:grid-cols-[1fr_0.78fr] lg:p-10">
           <div>
             <p className="brand-eyebrow-gold">
               Luxury booking flow

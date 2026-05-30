@@ -297,7 +297,7 @@ export default async function ListingPage({
 
   return (
     <main className="min-h-screen bg-[#F8F3EA] text-[#17324D]">
-      <section className="relative min-h-[760px] overflow-hidden">
+      <section className="relative min-h-[680px] overflow-hidden sm:min-h-[760px]">
         {listing.image_url ? (
           <Image
             src={listing.image_url}
@@ -315,7 +315,7 @@ export default async function ListingPage({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(8,170,168,0.24),transparent_32%),linear-gradient(90deg,rgba(6,29,44,0.94)_0%,rgba(6,29,44,0.55)_48%,rgba(6,29,44,0.16)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-80 bg-[linear-gradient(180deg,rgba(248,243,234,0)_0%,#F8F3EA_92%)]" />
 
-        <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col justify-between px-5 py-6 sm:px-6 sm:py-8">
+        <div className="relative mx-auto flex min-h-[680px] max-w-7xl flex-col justify-between px-4 py-5 sm:min-h-[760px] sm:px-6 sm:py-8">
           <header className="flex flex-wrap items-center justify-between gap-4 text-white">
             <SiteLogo variant="light" />
             <div className="flex flex-wrap items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.1] p-1 shadow-2xl shadow-black/15 backdrop-blur-xl">

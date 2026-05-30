@@ -73,7 +73,7 @@ export default function GlobalAccountButton() {
     return (
       <Link
         href="/signin"
-        className="fixed right-4 top-[calc(1rem+env(safe-area-inset-top))] z-40 rounded-2xl bg-white px-4 py-3 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 transition hover:-translate-y-0.5 sm:right-5"
+        className="fixed right-2 top-[calc(0.75rem+env(safe-area-inset-top))] z-40 max-w-[calc(100vw-1rem)] rounded-2xl bg-white px-3 py-2.5 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 transition hover:-translate-y-0.5 sm:right-5 sm:top-[calc(1rem+env(safe-area-inset-top))] sm:px-4 sm:py-3"
       >
         Sign in
       </Link>
@@ -84,12 +84,12 @@ export default function GlobalAccountButton() {
   const initials = profileInitials(profile.display_name, profile.email);
 
   return (
-    <div className="fixed right-4 top-[calc(1rem+env(safe-area-inset-top))] z-40 flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-2xl bg-white p-2 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 sm:right-5">
+    <div className="fixed right-2 top-[calc(0.75rem+env(safe-area-inset-top))] z-40 flex max-w-[calc(100vw-1rem)] items-center gap-1.5 rounded-2xl bg-white p-1.5 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 sm:right-5 sm:top-[calc(1rem+env(safe-area-inset-top))] sm:gap-2 sm:p-2">
       <Link
         href="/account"
         className="flex min-w-0 items-center gap-3 rounded-xl px-1 py-1 transition hover:bg-[#EEF7F6]"
       >
-        <span className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF7F6] text-xs text-[#007B7B]">
+        <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-[#EEF7F6] text-xs text-[#007B7B] sm:size-9">
           {profile.profile_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -112,7 +112,7 @@ export default function GlobalAccountButton() {
         type="button"
         onClick={signOut}
         disabled={signingOut}
-        className="rounded-xl bg-[#F7F3EA] px-3 py-2 text-xs font-black text-[#0B3C5D] transition hover:bg-[#EEF7F6] disabled:opacity-60"
+        className="rounded-xl bg-[#F7F3EA] px-2.5 py-2 text-[11px] font-black text-[#0B3C5D] transition hover:bg-[#EEF7F6] disabled:opacity-60 sm:px-3 sm:text-xs"
       >
         {signingOut ? "Signing out..." : "Sign out"}
       </button>

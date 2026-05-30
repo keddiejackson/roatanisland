@@ -991,7 +991,12 @@ export default function AdminBookingsPage() {
               ))}
             </div>
             ) : (
-            <div className="mt-6 overflow-x-auto">
+            <>
+            <div className="mt-6 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4 text-sm font-semibold text-[#0B3C5D] md:hidden">
+              Table view is optimized for wider screens. Use calendar view on
+              your phone for the cleanest booking workflow.
+            </div>
+            <div className="mt-6 hidden md:block overflow-x-auto">
               <table className="min-w-[1100px] border-collapse">
               <thead>
                 <tr className="border-b text-left">
@@ -1755,6 +1760,7 @@ export default function AdminBookingsPage() {
               </tbody>
               </table>
             </div>
+            </>
             )}
               </>
             )}

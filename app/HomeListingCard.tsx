@@ -67,7 +67,9 @@ export default function HomeListingCard({
       >
         <div
           className={
-            featured ? "relative h-60 bg-[#D8EFEC]" : "relative h-52 bg-[#D8EFEC]"
+            featured
+              ? "relative h-52 bg-[#D8EFEC] sm:h-60"
+              : "relative h-48 bg-[#D8EFEC] sm:h-52"
           }
         >
           {listing.image_url ? (
@@ -103,7 +105,7 @@ export default function HomeListingCard({
           </span>
         </div>
 
-        <div className="p-5">
+        <div className="p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="brand-eyebrow">{listing.location || "Roatan"}</p>

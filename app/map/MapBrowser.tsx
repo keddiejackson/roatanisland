@@ -1146,11 +1146,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     <section
       className={
         fullMap
-          ? "fixed inset-0 z-50 grid min-w-0 gap-4 overflow-auto bg-[#071F2F] p-3 text-[#17324D] sm:p-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start"
-          : "grid min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start"
+          ? "fixed inset-0 z-50 grid min-w-0 gap-3 overflow-auto bg-[#071F2F] p-2 text-[#17324D] sm:gap-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start"
+          : "grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start"
       }
     >
-      <div className="min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-4 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-3 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
         <div className="mb-3 flex min-w-0 flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] px-4 py-3 text-white sm:flex-row sm:items-center">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
@@ -1184,7 +1184,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               {selectedPickup?.label || activeConciergeMode?.label || "Choose one"}
             </p>
           </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="mobile-scroll-row mt-3 pb-1">
             {mapConciergeModes.map((mode) => (
               <button
                 key={mode.id}
@@ -1226,7 +1226,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               </button>
             </div>
           </div>
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="mobile-scroll-row mt-3 pb-1">
             {mapCollections.map((collection) => (
               <button
                 key={collection.id}
@@ -1408,7 +1408,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
         <div
           className={`relative mt-5 cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner ring-1 ring-[#071F2F]/10 active:cursor-grabbing ${
-            fullMap ? "min-h-[calc(100vh-260px)]" : "min-h-[560px]"
+            fullMap ? "min-h-[calc(100vh-220px)]" : "min-h-[460px] sm:min-h-[560px]"
           }`}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);

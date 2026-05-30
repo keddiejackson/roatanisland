@@ -411,7 +411,7 @@ export default function Home() {
           Draft preview - not live yet
         </div>
       ) : null}
-      <section className="relative min-h-[760px] overflow-hidden bg-[#061D2C] text-white">
+      <section className="relative min-h-[680px] overflow-hidden bg-[#061D2C] text-white sm:min-h-[760px]">
         <Image
           src={homepageControls.heroImageUrl}
           alt="Roatan coastline"
@@ -425,7 +425,7 @@ export default function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_24%_28%,rgba(8,170,168,0.28),transparent_30%),linear-gradient(90deg,rgba(6,29,44,0.92)_0%,rgba(6,29,44,0.55)_48%,rgba(6,29,44,0.2)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-72 bg-[linear-gradient(180deg,rgba(247,243,234,0)_0%,#F7F3EA_88%)]" />
 
-        <div className="relative mx-auto flex min-h-[760px] max-w-7xl flex-col px-5 py-6 sm:px-6">
+        <div className="relative mx-auto flex min-h-[680px] max-w-7xl flex-col px-4 py-5 sm:min-h-[760px] sm:px-6 sm:py-6">
           <HomeHeroHeader
             account={homeAccount}
             accountLoading={homeAccountLoading}
@@ -435,7 +435,7 @@ export default function Home() {
 
           <motion.div
             variants={reduceMotion ? reducedMotionVariants : heroContainerVariants}
-            className="flex flex-1 items-center py-14 lg:py-20"
+            className="flex flex-1 items-center py-10 sm:py-14 lg:py-20"
           >
             <div className="max-w-6xl">
               <motion.p
@@ -446,19 +446,19 @@ export default function Home() {
               </motion.p>
               <motion.h1
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-5 max-w-5xl text-6xl font-black leading-[0.9] tracking-[-0.06em] sm:text-8xl lg:text-[7.8rem]"
+                className="mt-5 max-w-5xl text-[clamp(3.25rem,17vw,6rem)] font-black leading-[0.9] tracking-normal sm:text-8xl lg:text-[7.8rem]"
               >
                 {homepageControls.homepageHeadline}
               </motion.h1>
               <motion.p
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-7 max-w-3xl text-lg leading-8 text-white/84 sm:text-2xl sm:leading-10"
+                className="mt-6 max-w-3xl text-base leading-7 text-white/84 sm:mt-7 sm:text-2xl sm:leading-10"
               >
                 {homepageControls.homepageSubhead}
               </motion.p>
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-10 flex flex-wrap gap-3"
+                className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap"
               >
                 <a href={homepageControls.primaryCtaHref} className="brand-button-primary">
                   {homepageControls.primaryCtaLabel}
@@ -470,7 +470,7 @@ export default function Home() {
 
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mt-12 flex flex-wrap gap-2 text-sm font-bold text-white/85"
+                className="mobile-scroll-row mt-9 text-sm font-bold text-white/85 sm:mt-12 sm:flex-wrap"
               >
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
                   {navListingCount} {homepageControls.heroCountLabel}

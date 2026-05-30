@@ -630,11 +630,11 @@ export default function AccountPage() {
     : undefined;
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+    <main className="min-h-screen bg-[#F7F3EA] px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
           <SiteLogo />
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="mobile-scroll-row sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <Link href="/" className="rounded-xl bg-white px-4 py-2 font-semibold shadow">
               Home
             </Link>
@@ -672,7 +672,7 @@ export default function AccountPage() {
           </p>
           <div className="mt-4 flex flex-col justify-between gap-5 md:flex-row md:items-end">
             <div>
-              <h1 className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
+              <h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl">
                 {hasSignedIn
                   ? `Welcome back, ${profileDisplayName}.`
                   : "Your Roatan trip, beautifully handled."}
@@ -699,7 +699,7 @@ export default function AccountPage() {
                 <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
                   Next up
                 </p>
-                <h2 className="mt-3 text-3xl font-black text-[#0B3C5D]">
+                <h2 className="mt-3 text-2xl font-black text-[#0B3C5D] sm:text-3xl">
                   {latestBooking
                     ? `${latestBooking.tour_date} at ${latestBooking.tour_time}`
                     : "Start with your ideal island day."}

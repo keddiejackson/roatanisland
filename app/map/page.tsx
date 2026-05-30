@@ -35,26 +35,26 @@ export default async function MapPage() {
     .order("created_at", { ascending: false });
 
   return (
-    <main className="brand-page min-h-screen overflow-x-hidden px-5 py-10 sm:px-6">
+    <main className="brand-page min-h-screen overflow-x-hidden px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-7xl min-w-0">
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <header className="mb-6 grid gap-4 sm:mb-8 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <SiteLogo />
-          <div className="flex flex-wrap gap-2">
+          <div className="mobile-scroll-row sm:flex sm:flex-wrap sm:gap-2">
             <Link
               href="/"
-              className="brand-button-secondary"
+              className="brand-button-secondary shrink-0"
             >
               Home
             </Link>
             <Link
               href="/tours"
-              className="brand-button-secondary"
+              className="brand-button-secondary shrink-0"
             >
               Tours
             </Link>
             <Link
               href="/vendor/signup"
-              className="brand-button-primary"
+              className="brand-button-primary shrink-0"
             >
               List your business
             </Link>

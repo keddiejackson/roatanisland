@@ -2414,7 +2414,11 @@ export default function VendorDashboardPage() {
                 </section>
               ))}
             </div>
-            <div className="mt-8 overflow-x-auto">
+            <div className="mt-8 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4 text-sm font-semibold text-[#0B3C5D] md:hidden">
+              The full table is available on wider screens. On your phone, use
+              the booking cards above for faster updates.
+            </div>
+            <div className="mt-8 hidden md:block overflow-x-auto">
               <table className="min-w-[1320px] border-collapse">
                 <thead>
                   <tr className="border-b text-left">

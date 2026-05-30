@@ -39,33 +39,33 @@ export default async function CategoryPage({
 
   return (
     <main className="brand-page min-h-screen">
-      <section className="px-6 py-10 text-white">
+      <section className="px-4 py-6 text-white sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl">
-          <header className="flex flex-wrap items-center justify-between gap-4">
+          <header className="grid gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
             <SiteLogo variant="light" />
-            <div className="flex flex-wrap gap-2">
+            <div className="mobile-scroll-row sm:flex sm:flex-wrap sm:gap-2">
               <Link
                 href="/"
-                className="brand-button-secondary"
+                className="brand-button-secondary shrink-0"
               >
                 Home
               </Link>
               <Link
                 href="/map"
-                className="brand-button-ghost"
+                className="brand-button-ghost shrink-0"
               >
                 Map
               </Link>
             </div>
           </header>
-          <div className="brand-hero-panel mt-8 px-6 py-14 sm:px-10 sm:py-16">
+          <div className="brand-hero-panel mt-6 px-5 py-10 sm:mt-8 sm:px-10 sm:py-16">
             <p className="brand-eyebrow-gold">
               {category}
             </p>
-            <h1 className="mt-3 text-4xl font-black leading-tight sm:text-6xl">
+            <h1 className="mt-3 text-3xl font-black leading-tight sm:text-6xl">
               {title}
             </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-white/80">
+            <p className="mt-5 max-w-2xl text-base leading-7 text-white/80 sm:text-lg sm:leading-8">
               {description}
             </p>
             <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
@@ -86,7 +86,7 @@ export default async function CategoryPage({
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-14">
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <p className="brand-eyebrow">

@@ -27,33 +27,41 @@ export default function HomeHeroHeader({
 }: HomeHeroHeaderProps) {
   return (
     <header className="grid items-start gap-3 sm:flex sm:items-center sm:justify-between">
-      <div className="max-w-[min(100%,22rem)] sm:max-w-none">
+      <div className="max-w-[min(100%,19rem)] sm:max-w-none">
         <SiteLogo
           variant="light"
           priority
-          className="max-w-full [&>span]:max-h-24 [&>span]:max-w-full"
+          className="max-w-full [&>span]:max-h-20 [&>span]:max-w-full sm:[&>span]:max-h-24"
         />
       </div>
 
       <nav aria-label="Mobile main navigation" className="w-full sm:hidden">
-        <div className="grid grid-cols-4 gap-1 rounded-[1.15rem] border border-white/12 bg-white/[0.09] p-1 text-center text-[13px] font-black text-white/90 shadow-xl shadow-black/10 backdrop-blur-xl">
-          <a href="#marketplace" className="rounded-xl px-2 py-3 hover:bg-white/10">
+        <div className="mobile-scroll-row rounded-[1.15rem] border border-white/12 bg-white/[0.09] p-1 text-center text-[13px] font-black text-white/90 shadow-xl shadow-black/10 backdrop-blur-xl">
+          <a
+            href="#marketplace"
+            className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+          >
             Listings
           </a>
-          <Link href="/map" className="rounded-xl px-2 py-3 hover:bg-white/10">
+          <Link
+            href="/map"
+            className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+          >
             Map
           </Link>
           <Link
             href="/concierge"
-            className="rounded-xl px-2 py-3 hover:bg-white/10"
+            className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
           >
             Concierge
           </Link>
           {accountLoading ? (
-            <span className="rounded-xl px-2 py-3 text-white/50">...</span>
+            <span className="shrink-0 rounded-xl px-3 py-3 text-white/50">
+              ...
+            </span>
           ) : account ? (
-            <details className="group relative">
-              <summary className="grid cursor-pointer list-none place-items-center rounded-xl px-2 py-3 hover:bg-white/10">
+            <details className="group relative shrink-0">
+              <summary className="grid cursor-pointer list-none place-items-center rounded-xl px-3 py-3 hover:bg-white/10">
                 Account
               </summary>
               <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-white/20 bg-white p-2 text-left text-[#071F2F] shadow-2xl shadow-black/20">
@@ -80,17 +88,20 @@ export default function HomeHeroHeader({
               </div>
             </details>
           ) : (
-            <Link href="/signin" className="rounded-xl px-2 py-3 hover:bg-white/10">
+            <Link
+              href="/signin"
+              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+            >
               Sign in
             </Link>
           )}
+          <Link
+            href="/vendor/signup"
+            className="shrink-0 rounded-xl bg-white px-3 py-3 text-[#071F2F] shadow-lg shadow-black/10"
+          >
+            List business
+          </Link>
         </div>
-        <Link
-          href="/vendor/signup"
-          className="mt-2 block rounded-xl bg-white px-4 py-3 text-center text-sm font-black text-[#071F2F] shadow-lg shadow-black/10"
-        >
-          List your business
-        </Link>
       </nav>
 
       <nav

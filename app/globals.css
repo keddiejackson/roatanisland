@@ -198,6 +198,29 @@ body {
     box-shadow: 0 0 0 4px rgba(0, 168, 168, 0.16);
   }
 
+  .mobile-scroll-row {
+    display: flex;
+    gap: 0.5rem;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .mobile-scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+
+  .mobile-card-tight {
+    border-radius: 1.15rem;
+    padding: 1rem;
+  }
+
   .brand-empty-state {
     border: 1px dashed rgba(0, 168, 168, 0.35);
     border-radius: var(--brand-radius-lg);
@@ -221,6 +244,36 @@ body {
     transform: translateX(-100%);
     background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.62), transparent);
     animation: brand-skeleton-shimmer 1.35s infinite;
+  }
+}
+
+@media (max-width: 640px) {
+  .brand-container {
+    width: min(100% - 1.25rem, 80rem);
+  }
+
+  .brand-page {
+    background:
+      radial-gradient(circle at top left, rgba(0, 168, 168, 0.07), transparent 22rem),
+      linear-gradient(180deg, #fffdfa 0%, var(--brand-sand) 58%, #fffdfa 100%);
+  }
+
+  input,
+  select,
+  textarea,
+  .brand-input {
+    font-size: 16px;
+  }
+
+  .brand-input {
+    min-height: 3rem;
+    padding-block: 0.78rem;
+  }
+
+  .brand-eyebrow,
+  .brand-eyebrow-gold {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
   }
 }
 
