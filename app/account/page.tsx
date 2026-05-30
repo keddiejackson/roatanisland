@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import BookingChatDrawer, {
   type BookingChatThread,
 } from "@/app/BookingChatDrawer";
-import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import {
@@ -14,17 +13,7 @@ import {
   type BookingMessageLike,
   type BookingThreadSummary,
 } from "@/lib/booking-communication";
-import {
-  formatMoneyCents,
-  getBookingMoneySnapshot,
-  getGuestBalanceSummary,
-} from "@/lib/booking-money-command";
-import {
-  getBookingChangeRequestSummary,
-  type BookingChangeRequest,
-} from "@/lib/booking-change-requests";
 import { bookingNextAction } from "@/lib/booking-flow";
-import { getGuestTripHubHero } from "@/lib/guest-command-center";
 import {
   buildGuestTripPlanMapUrl,
   getGuestTripPlanSummary,
@@ -37,7 +26,6 @@ import {
   type GuestAuthMode,
 } from "@/lib/guest-account-actions";
 import { supabase } from "@/lib/supabase";
-import { getGuestSupportTicketSummary } from "@/lib/support-tickets";
 import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
 
 type Booking = {
@@ -79,18 +67,6 @@ type GuestProfile = {
   profile_image_url: string | null;
 };
 
-type SupportTicket = {
-  id: string;
-  intent: string;
-  status: string;
-  priority: string;
-  admin_notes: string | null;
-  message: string;
-  booking_reference: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
 type TripPlanApiResponse = {
   tripPlans?: GuestTripPlan[];
   error?: string;
@@ -101,14 +77,6 @@ type TripPlanConciergeResponse = {
   conciergeLeadId?: string;
   alreadyRequested?: boolean;
   error?: string;
-};
-
-type ChangeRequestForm = {
-  tourDate: string;
-  tourTime: string;
-  guests: string;
-  pickupNote: string;
-  reason: string;
 };
 
 function statusBadgeClass(status: string | null) {
@@ -134,17 +102,6 @@ function threadBadgeClass(summary?: BookingThreadSummary) {
   }
 
   return "bg-[#EEF7F6] text-[#0B3C5D]";
-}
-
-function nextActionClass(tone: ReturnType<typeof bookingNextAction>["tone"]) {
-  if (tone === "cancelled") return "border-red-200 bg-red-50 text-red-800";
-  if (tone === "complete" || tone === "paid") {
-    return "border-green-200 bg-green-50 text-green-800";
-  }
-  if (tone === "confirmed") {
-    return "border-[#00A8A8]/25 bg-[#EEF7F6] text-[#0B3C5D]";
-  }
-  return "border-[#D6B56D]/35 bg-[#FFF8E8] text-[#0B3C5D]";
 }
 
 function summarizeThreads(
@@ -202,18 +159,6 @@ export default function AccountPage() {
   const [deletingTripPlanId, setDeletingTripPlanId] = useState("");
   const [requestingConciergePlanId, setRequestingConciergePlanId] =
     useState("");
-  const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
-  const [supportTicketMessage, setSupportTicketMessage] = useState("");
-  const [changeRequestsByBooking, setChangeRequestsByBooking] = useState<
-    Record<string, BookingChangeRequest[]>
-  >({});
-  const [changeRequestForms, setChangeRequestForms] = useState<
-    Record<string, ChangeRequestForm>
-  >({});
-  const [changeRequestMessages, setChangeRequestMessages] = useState<
-    Record<string, string>
-  >({});
-  const [savingChangeRequestId, setSavingChangeRequestId] = useState("");
   const [threadSummaries, setThreadSummaries] = useState<
     Record<string, BookingThreadSummary>
   >({});
@@ -287,68 +232,7 @@ export default function AccountPage() {
       const accountBookings = (bookingRows as Booking[]) || [];
       setBookings(accountBookings);
 
-      const { data: supportTicketRows, error: supportTicketError } =
-        await supabase
-          .from("support_tickets")
-          .select(
-            "id, intent, status, priority, admin_notes, message, booking_reference, created_at, updated_at",
-          )
-          .eq("email", data.user.email.toLowerCase())
-          .order("created_at", { ascending: false })
-          .limit(20);
-
-      if (supportTicketError) {
-        setSupportTicketMessage(
-          "Support request history will appear after the support ticket SQL setup is enabled.",
-        );
-      } else {
-        setSupportTickets((supportTicketRows as SupportTicket[]) || []);
-        setSupportTicketMessage("");
-      }
-
-      setChangeRequestForms(
-        Object.fromEntries(
-          accountBookings.map((booking) => [
-            booking.id,
-            {
-              tourDate: "",
-              tourTime: "",
-              guests: "",
-              pickupNote: "",
-              reason: "",
-            },
-          ]),
-        ),
-      );
-
       if (accountBookings.length > 0) {
-        if (sessionData.session?.access_token) {
-          const changeRequestEntries = await Promise.all(
-            accountBookings.map(async (booking) => {
-              const response = await fetch(
-                `/api/bookings/${booking.id}/change-requests`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${sessionData.session?.access_token}`,
-                  },
-                },
-              );
-
-              if (!response.ok) {
-                return [booking.id, []] as const;
-              }
-
-              const result = (await response.json()) as {
-                changeRequests?: BookingChangeRequest[];
-              };
-
-              return [booking.id, result.changeRequests || []] as const;
-            }),
-          );
-
-          setChangeRequestsByBooking(Object.fromEntries(changeRequestEntries));
-        }
-
         const { data: messageRows, error: messageError } = await supabase
           .from("booking_messages")
           .select("booking_id, sender_role, sender_email, message, is_internal, created_at")
@@ -378,7 +262,6 @@ export default function AccountPage() {
         }
       } else {
         setThreadSummaries({});
-        setChangeRequestsByBooking({});
       }
 
       setLoading(false);
@@ -511,7 +394,6 @@ export default function AccountPage() {
     setBookings([]);
     setTripPlans([]);
     setTripPlanMessage("");
-    setSupportTickets([]);
     setAuthMode("signin");
     setAuthMessageTone("success");
     setAuthMessage("Password updated. You can now sign in with your new password.");
@@ -544,8 +426,6 @@ export default function AccountPage() {
     setBookings([]);
     setTripPlans([]);
     setTripPlanMessage("");
-    setSupportTickets([]);
-    setSupportTicketMessage("");
     setProfileForm({ displayName: "", profileImageUrl: "" });
     setProfileImageFile(null);
     setAuthMode("signin");
@@ -691,104 +571,6 @@ export default function AccountPage() {
     );
   }
 
-  function updateChangeRequestForm(
-    bookingId: string,
-    values: Partial<ChangeRequestForm>,
-  ) {
-    setChangeRequestForms((current) => {
-      const existing = current[bookingId] || {
-        tourDate: "",
-        tourTime: "",
-        guests: "",
-        pickupNote: "",
-        reason: "",
-      };
-
-      return {
-        ...current,
-        [bookingId]: {
-          ...existing,
-          ...values,
-        },
-      };
-    });
-  }
-
-  async function submitChangeRequest(
-    e: React.FormEvent<HTMLFormElement>,
-    booking: Booking,
-  ) {
-    e.preventDefault();
-    setSavingChangeRequestId(booking.id);
-    setChangeRequestMessages((current) => ({ ...current, [booking.id]: "" }));
-
-    const { data: sessionData } = await supabase.auth.getSession();
-    const token = sessionData.session?.access_token;
-
-    if (!token) {
-      setSavingChangeRequestId("");
-      setChangeRequestMessages((current) => ({
-        ...current,
-        [booking.id]: "Please sign in again to request a change.",
-      }));
-      return;
-    }
-
-    const form = changeRequestForms[booking.id] || {
-      tourDate: "",
-      tourTime: "",
-      guests: "",
-      pickupNote: "",
-      reason: "",
-    };
-    const response = await fetch(`/api/bookings/${booking.id}/change-requests`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        requestedTourDate: form.tourDate || null,
-        requestedTourTime: form.tourTime || null,
-        requestedGuests: form.guests ? Number(form.guests) : null,
-        requestedPickupNote: form.pickupNote || null,
-        reason: form.reason || null,
-      }),
-    });
-    const result = (await response.json()) as {
-      error?: string;
-      changeRequest?: BookingChangeRequest;
-    };
-
-    setSavingChangeRequestId("");
-
-    const createdChangeRequest = result.changeRequest;
-
-    if (!response.ok || !createdChangeRequest) {
-      setChangeRequestMessages((current) => ({
-        ...current,
-        [booking.id]: result.error || "Unable to send change request.",
-      }));
-      return;
-    }
-
-    setChangeRequestsByBooking((current) => ({
-      ...current,
-      [booking.id]: [createdChangeRequest, ...(current[booking.id] || [])],
-    }));
-    updateChangeRequestForm(booking.id, {
-      tourDate: "",
-      tourTime: "",
-      guests: "",
-      pickupNote: "",
-      reason: "",
-    });
-    setChangeRequestMessages((current) => ({
-      ...current,
-      [booking.id]: "Change request sent.",
-    }));
-  }
-
   if (loading) {
     return <main className="min-h-screen bg-[#F7F3EA] p-8">Loading account...</main>;
   }
@@ -804,27 +586,6 @@ export default function AccountPage() {
     profileForm.displayName,
     signedInEmail,
   );
-  const confirmedCount = bookings.filter(
-    (booking) => booking.status === "confirmed",
-  ).length;
-  const guestBalanceSummary = getGuestBalanceSummary(bookings);
-  const supportTicketSummary = getGuestSupportTicketSummary({
-    tickets: supportTickets,
-  });
-  const nextTripDate =
-    bookings
-      .map((booking) => booking.tour_date || "")
-      .filter(Boolean)
-      .sort()[0] ||
-    latestBooking?.tour_date ||
-    "Flexible";
-  const tripHero = getGuestTripHubHero({
-    bookingCount: bookings.length,
-    confirmedCount,
-    tripScore: confirmedCount > 0 ? 86 : bookings.length > 0 ? 58 : 20,
-    nextDate: nextTripDate,
-    walletLabel: guestBalanceSummary.label,
-  });
   const chatThreads: BookingChatThread[] = bookings.map((booking) => ({
     id: booking.id,
     title: `${booking.tour_date} at ${booking.tour_time}`,
@@ -834,9 +595,6 @@ export default function AccountPage() {
     apiPath: `/api/bookings/${booking.id}/messages`,
     summary: threadSummaries[booking.id],
   }));
-  const messageThreadsNeedingReply = Object.values(threadSummaries).filter(
-    (summary) => summary.needsResponse,
-  ).length;
   const latestBookingAction = latestBooking
     ? bookingNextAction({
         status: latestBooking.status,
@@ -878,191 +636,110 @@ export default function AccountPage() {
           </div>
         </header>
 
+        {signOutError ? (
+          <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+            {signOutError}
+          </p>
+        ) : null}
+
         <section
           aria-label="Private guest travel lounge"
-          className="overflow-hidden rounded-[1.75rem] bg-[#071F2F] text-white shadow-2xl shadow-[#071F2F]/20"
+          className="rounded-[1.75rem] bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/20 sm:p-8"
         >
-          <div className="p-6 sm:p-10">
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-[#D6B56D]">
-              Private guest lounge
-            </p>
-            <div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-              <div>
-                <h1 className="max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
-                  Your Roatan trip, beautifully handled.
-                </h1>
-                <p className="mt-3 max-w-2xl leading-7 text-white/75">
-                  {hasSignedIn
-                    ? tripHero.text
-                    : "Sign in once to keep bookings, messages, saved map plans, and trip details in one calm place."}
-                </p>
-              </div>
-              <Link
-                href={hasSignedIn ? tripHero.actionHref : "/map"}
-                className="rounded-xl bg-[#D6B56D] px-5 py-3 text-center font-bold text-[#071F2F]"
-              >
-                {hasSignedIn ? tripHero.actionLabel : "Start planning"}
-              </Link>
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-[#D6B56D]">
+            Private guest lounge
+          </p>
+          <div className="mt-4 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+            <div>
+              <h1 className="max-w-3xl text-4xl font-black leading-tight sm:text-5xl">
+                {hasSignedIn
+                  ? `Welcome back, ${profileDisplayName}.`
+                  : "Your Roatan trip, beautifully handled."}
+              </h1>
+              <p className="mt-3 max-w-2xl leading-7 text-white/75">
+                {hasSignedIn
+                  ? "Your next trip, saved plans, and messages are gathered in one quiet place."
+                  : "Sign in once to keep bookings, messages, saved map plans, and trip details in one calm place."}
+              </p>
             </div>
+            <Link
+              href={hasSignedIn ? "#guest-plans" : "/map"}
+              className="rounded-xl bg-[#D6B56D] px-5 py-3 text-center font-bold text-[#071F2F]"
+            >
+              {hasSignedIn ? "View all trips" : "Start planning"}
+            </Link>
           </div>
-
-          {hasSignedIn ? (
-            <div className="grid border-t border-white/10 bg-white/10 text-center sm:grid-cols-4">
-              <div className="p-5">
-                <p className="text-3xl font-black">{bookings.length}</p>
-                <p className="mt-1 text-sm text-white/65">Booking requests</p>
-              </div>
-              <div className="p-5">
-                <p className="text-3xl font-black">{tripPlans.length}</p>
-                <p className="mt-1 text-sm text-white/65">Saved map plans</p>
-              </div>
-              <div className="p-5">
-                <p className="text-3xl font-black">
-                  {messageThreadsNeedingReply}
-                </p>
-                <p className="mt-1 text-sm text-white/65">Need reply</p>
-              </div>
-              <div className="p-5">
-                <p className="text-3xl font-black">{guestBalanceSummary.label}</p>
-                <p className="mt-1 text-sm text-white/65">Balance</p>
-              </div>
-            </div>
-          ) : (
-            <div className="grid border-t border-white/10 bg-white/10 text-center sm:grid-cols-3">
-              <div className="p-5">
-                <p className="text-lg font-black">Booking status</p>
-                <p className="mt-1 text-sm text-white/65">Check requests fast</p>
-              </div>
-              <div className="p-5">
-                <p className="text-lg font-black">Saved plans</p>
-                <p className="mt-1 text-sm text-white/65">Ready on return</p>
-              </div>
-              <div className="p-5">
-                <p className="text-lg font-black">Concierge help</p>
-                <p className="mt-1 text-sm text-white/65">When you need it</p>
-              </div>
-            </div>
-          )}
         </section>
 
         {hasSignedIn ? (
-          <section className="mt-6 grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-            <article className="rounded-[1.5rem] border border-white/70 bg-white p-6 shadow-xl shadow-[#0B3C5D]/5">
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-                Next step
-              </p>
-              <h2 className="mt-3 text-3xl font-black text-[#0B3C5D]">
-                {latestBooking
-                  ? `${latestBooking.tour_date} at ${latestBooking.tour_time}`
-                  : "Start with your ideal island day."}
-              </h2>
-              <p className="mt-3 max-w-2xl leading-7 text-gray-600">
-                {latestBookingAction?.text ||
-                  "Save a few map stops or send a concierge request and we will keep the plan here."}
-              </p>
-              <div className="mt-5 flex flex-wrap gap-2">
-                {latestBooking ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedBookingId(latestBooking.id);
-                        setChatOpen(true);
-                      }}
-                      className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
-                    >
-                      Open messages
-                    </button>
-                    <Link
-                      href={`/book/status/${latestBooking.id}`}
-                      className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
-                    >
-                      Open trip details
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <Link
-                      href="/map"
-                      className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
-                    >
-                      Open the map
-                    </Link>
-                    <Link
-                      href="/concierge"
-                      className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
-                    >
-                      Ask concierge
-                    </Link>
-                  </>
-                )}
-              </div>
-            </article>
-
-            <aside className="grid gap-4">
-              <article className="rounded-[1.5rem] border border-white/70 bg-white p-5 shadow-xl shadow-[#0B3C5D]/5">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-                  Messages
+          <section className="mt-6 rounded-[1.5rem] border border-white/70 bg-white p-6 shadow-xl shadow-[#0B3C5D]/5">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Next up
                 </p>
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <div>
-                    <p className="text-2xl font-black text-[#0B3C5D]">
-                      {messageThreadsNeedingReply}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-600">
-                      need a response
-                    </p>
-                  </div>
+                <h2 className="mt-3 text-3xl font-black text-[#0B3C5D]">
+                  {latestBooking
+                    ? `${latestBooking.tour_date} at ${latestBooking.tour_time}`
+                    : "Start with your ideal island day."}
+                </h2>
+                <p className="mt-3 max-w-2xl leading-7 text-gray-600">
+                  {latestBookingAction?.text ||
+                    "Save a few map stops or send a concierge request and we will keep the plan here."}
+                </p>
+                {latestThreadSummary?.lastMessagePreview ? (
+                  <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">
+                    {latestThreadSummary.lastMessagePreview}
+                  </p>
+                ) : null}
+              </div>
+              {latestBooking ? (
+                <span
+                  className={`w-fit rounded-full px-3 py-1 text-xs font-black capitalize ${statusBadgeClass(
+                    latestBooking.status,
+                  )}`}
+                >
+                  {latestBooking.status || "new"}
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              {latestBooking ? (
+                <>
                   <button
                     type="button"
-                    onClick={() => setChatOpen(true)}
-                    className="rounded-xl bg-[#071F2F] px-4 py-3 text-sm font-black text-white"
+                    onClick={() => {
+                      setSelectedBookingId(latestBooking.id);
+                      setChatOpen(true);
+                    }}
+                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
                   >
                     Open messages
                   </button>
-                </div>
-                <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">
-                  {latestThreadSummary?.lastMessagePreview ||
-                    "Your booking conversations stay available across the site."}
-                </p>
-              </article>
-
-              <article className="rounded-[1.5rem] border border-white/70 bg-white p-5 shadow-xl shadow-[#0B3C5D]/5">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-                  Profile
-                </p>
-                <div className="mt-3 flex items-center justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-2xl bg-[#EEF7F6] text-sm font-black text-[#007B7B] shadow-inner">
-                      {profileForm.profileImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={profileForm.profileImageUrl}
-                          alt=""
-                          className="size-full object-cover"
-                        />
-                      ) : (
-                        profileAvatarInitials
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-black text-[#0B3C5D]">
-                        {profileDisplayName}
-                      </p>
-                      <p className="truncate text-sm font-semibold text-gray-500">
-                        {signedInEmail}
-                      </p>
-                    </div>
-                  </div>
-                  <a
-                    href="#guest-profile"
-                    className="shrink-0 rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
+                  <Link
+                    href={`/book/status/${latestBooking.id}`}
+                    className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
                   >
-                    Edit profile
-                  </a>
-                </div>
-              </article>
-            </aside>
+                    View trip
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/map"
+                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+                  >
+                    Open the map
+                  </Link>
+                  <Link
+                    href="/concierge"
+                    className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                  >
+                    Ask concierge
+                  </Link>
+                </>
+              )}
+            </div>
           </section>
         ) : null}
 
@@ -1074,10 +751,10 @@ export default function AccountPage() {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
-                  Profile
+                  Profile and settings
                 </p>
                 <h2 className="mt-1 text-2xl font-black text-[#0B3C5D]">
-                  Edit profile
+                  Name, photo, and sign out.
                 </h2>
               </div>
               <span className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]">
@@ -1166,23 +843,26 @@ export default function AccountPage() {
         ) : null}
 
         {hasSignedIn ? (
-          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+          <section
+            id="guest-plans"
+            className="mt-6 rounded-[1.5rem] bg-white p-6 shadow-xl shadow-[#0B3C5D]/5 sm:p-8"
+          >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
-                  Saved map plans
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Your plans
                 </p>
-                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                  Your Roatan days from the map.
+                <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                  Trips and saved map ideas.
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-gray-600">
-                  Save a plan from Roatan Day Map and come back to it here from
-                  any signed-in device.
+                  Keep the overview light. Open a trip when you need payments,
+                  invoices, change requests, or a full packet.
                 </p>
               </div>
               <Link
                 href="/map"
-                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-white"
+                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-white"
               >
                 Open map
               </Link>
@@ -1194,18 +874,18 @@ export default function AccountPage() {
               </p>
             ) : null}
 
-            {tripPlans.length === 0 ? (
+            {tripPlans.length === 0 && bookings.length === 0 ? (
               <div className="mt-5 rounded-2xl border border-dashed border-[#D6B56D]/50 bg-[#FFF8E8] p-5">
-                <p className="font-black text-[#0B3C5D]">
-                  No saved map plans yet.
-                </p>
+                <p className="font-black text-[#0B3C5D]">No plans yet.</p>
                 <p className="mt-2 text-sm leading-6 text-gray-600">
-                  Open the map, save a few stops, then tap Save plan.
+                  Start with the map, save a few stops, or ask concierge for a
+                  hand-built day.
                 </p>
               </div>
-            ) : (
-              <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                {tripPlans.map((plan) => {
+            ) : null}
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                {tripPlans.slice(0, 2).map((plan) => {
                   const conciergeRequested =
                     plan.status === "concierge_requested" ||
                     Boolean(plan.conciergeLeadId);
@@ -1219,7 +899,7 @@ export default function AccountPage() {
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                       <div>
                         <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
-                          {(plan.status || "saved").replaceAll("_", " ")}
+                          Map plan
                         </p>
                         <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
                           {plan.name}
@@ -1304,114 +984,136 @@ export default function AccountPage() {
                   </article>
                   );
                 })}
-              </div>
-            )}
+                {latestBooking ? (
+                  <article className="rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-5">
+                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                          Latest trip
+                        </p>
+                        <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
+                          {latestBooking.tour_date} at {latestBooking.tour_time}
+                        </h3>
+                        <p className="mt-2 text-sm font-semibold text-gray-600">
+                          {latestBooking.guests} guests
+                          {latestBooking.deposit_status
+                            ? ` - deposit ${latestBooking.deposit_status}`
+                            : ""}
+                        </p>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black capitalize ${statusBadgeClass(
+                          latestBooking.status,
+                        )}`}
+                      >
+                        {latestBooking.status || "new"}
+                      </span>
+                    </div>
+                    <p className="mt-4 rounded-xl bg-white/70 px-4 py-3 text-sm text-gray-600">
+                      {latestThreadSummary?.lastMessagePreview ||
+                        "Open the trip for payment details, pickup notes, and next steps."}
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedBookingId(latestBooking.id);
+                          setChatOpen(true);
+                        }}
+                        className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-white"
+                      >
+                        Open messages
+                      </button>
+                      <Link
+                        href={`/book/status/${latestBooking.id}`}
+                        className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white"
+                      >
+                        View trip
+                      </Link>
+                    </div>
+                  </article>
+                ) : null}
+            </div>
+
+            {bookings.length > 0 ? (
+              <details className="mt-5 rounded-2xl border border-gray-200 bg-[#FFFDF7] p-4">
+                <summary className="cursor-pointer list-none text-sm font-black text-[#0B3C5D]">
+                  View all trips
+                </summary>
+                <div className="mt-4 grid gap-3">
+                  {bookings.map((booking) => (
+                    <article
+                      key={booking.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4"
+                    >
+                      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                        <div>
+                          <p className="font-black text-[#0B3C5D]">
+                            {booking.tour_date} at {booking.tour_time}
+                          </p>
+                          <p className="mt-1 text-sm capitalize text-gray-600">
+                            {booking.guests} guests -{" "}
+                            {booking.deposit_status || "deposit not requested"}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black capitalize ${statusBadgeClass(
+                              booking.status,
+                            )}`}
+                          >
+                            {booking.status || "new"}
+                          </span>
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black ${threadBadgeClass(
+                              threadSummaries[booking.id],
+                            )}`}
+                          >
+                            {threadSummaries[booking.id]?.badgeLabel ||
+                              "No messages"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBookingId(booking.id);
+                            setChatOpen(true);
+                          }}
+                          className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-bold text-white"
+                        >
+                          Open messages
+                        </button>
+                        <Link
+                          href={`/book/status/${booking.id}`}
+                          className="rounded-lg border border-[#00A8A8] px-4 py-2 text-sm font-bold text-[#007B7B]"
+                        >
+                          View trip
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </details>
+            ) : null}
           </section>
         ) : null}
 
-        <section className="mt-6 rounded-[1.5rem] bg-white p-6 shadow-xl shadow-[#0B3C5D]/5 sm:p-8">
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+        {(!hasSignedIn || isUpdatingPassword) ? (
+          <section className="mt-6 rounded-[1.5rem] bg-white p-6 shadow-xl shadow-[#0B3C5D]/5 sm:p-8">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-                Private itinerary
+                Sign in
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
-                Your trips.
+                Access your Roatan plans.
               </h2>
-            </div>
-            {hasSignedIn ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="rounded-xl bg-[#EEF7F6] px-4 py-2 text-sm font-bold text-[#0B3C5D]">
-                  Signed in as {signedInEmail}
-                </p>
-                <button
-                  type="button"
-                  onClick={signOut}
-                  disabled={signOutLoading}
-                  className="rounded-xl border border-[#0B3C5D]/20 bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] transition hover:-translate-y-0.5 hover:border-[#00A8A8] disabled:opacity-50"
-                >
-                  {getGuestSignOutLabel(signOutLoading)}
-                </button>
-              </div>
-            ) : null}
-          </div>
-
-          {signOutError ? (
-            <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-              {signOutError}
-            </p>
-          ) : null}
-
-          {hasSignedIn ? (
-            <section className="mt-6 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-5">
-              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
-                    Guest balance tracking
-                  </p>
-                  <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                    Payments, invoices, and receipts.
-                  </h3>
-                </div>
-                <span className="rounded-full bg-white px-4 py-2 text-sm font-black text-[#0B3C5D]">
-                  {guestBalanceSummary.label}
-                </span>
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                {[
-                  ["Paid", formatMoneyCents(guestBalanceSummary.paidCents)],
-                  [
-                    "Balance due",
-                    formatMoneyCents(guestBalanceSummary.balanceDueCents),
-                  ],
-                  [
-                    "Refund pending",
-                    formatMoneyCents(guestBalanceSummary.refundPendingCents),
-                  ],
-                  ["Next due", guestBalanceSummary.nextDueDate || "None"],
-                ].map(([label, value]) => (
-                  <div key={label} className="rounded-xl bg-white p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.12em] text-gray-500">
-                      {label}
-                    </p>
-                    <p className="mt-2 font-black text-[#0B3C5D]">{value}</p>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {hasSignedIn ? (
-            <section className="mt-6 rounded-2xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-5">
-              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
-                    Need help?
-                  </p>
-                  <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                    Support is one tap away.
-                  </h3>
-                  <p className="mt-2 text-sm font-semibold text-gray-600">
-                    {supportTicketSummary.label} -{" "}
-                    {supportTicketSummary.resolvedCount} resolved
-                  </p>
-                </div>
-                <Link
-                  href="/support"
-                  className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-center text-sm font-black text-white"
-                >
-                  Get support
-                </Link>
-              </div>
-
-              <p className="mt-4 rounded-xl border border-dashed border-[#D6B56D]/50 bg-white/70 px-4 py-3 text-sm text-gray-600">
-                {supportTicketMessage ||
-                  "For pickup changes, timing questions, cancellations, or trip-day help, open support and we will keep the conversation organized."}
+              <p className="mt-2 text-sm leading-6 text-gray-600">
+                Use the same email from your booking request to see messages and trip details.
               </p>
-            </section>
-          ) : null}
+            </div>
 
-          {isUpdatingPassword || (bookings.length === 0 && !hasSignedIn) ? (
             <form
               onSubmit={
                 authMode === "signup"
@@ -1520,257 +1222,28 @@ export default function AccountPage() {
                 {getGuestAuthSubmitLabel(authMode, authLoading)}
               </button>
             </form>
-          ) : bookings.length === 0 ? (
-            <div className="mt-8">
-              <EmptyState
-                title="No bookings found yet."
-                text={`We did not find any booking requests for ${signedInEmail}. Browse listings or use the map to start planning.`}
-                primaryHref="/map"
-                primaryLabel="Explore the map"
-                secondaryHref="/"
-                secondaryLabel="Browse listings"
-              />
-            </div>
-          ) : (
-            <div className="mt-8 grid gap-4">
-              {bookings.map((booking) => {
-                const nextAction = bookingNextAction({
-                  status: booking.status,
-                  depositStatus: booking.deposit_status,
-                  canReview: Boolean(
-                    booking.status === "completed" && booking.listing_id,
-                  ),
-                });
-                const changeRequests = changeRequestsByBooking[booking.id] || [];
-                const changeSummary =
-                  getBookingChangeRequestSummary(changeRequests);
-                const changeForm = changeRequestForms[booking.id] || {
-                  tourDate: "",
-                  tourTime: "",
-                  guests: "",
-                  pickupNote: "",
-                  reason: "",
-                };
-                const moneySnapshot = getBookingMoneySnapshot(booking);
+          </section>
+        ) : null}
 
-                return (
-                <article
-                  key={booking.id}
-                  className="rounded-xl border border-gray-200 p-5 transition hover:-translate-y-0.5 hover:border-[#00A8A8] hover:shadow-lg"
-                >
-                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                    <div>
-                      <p className="font-bold text-[#0B3C5D]">
-                        {booking.tour_date} at {booking.tour_time}
-                      </p>
-                      <p className="mt-2 text-sm capitalize text-gray-600">
-                        {booking.guests} guests - deposit{" "}
-                        {booking.deposit_status || "not requested"}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusBadgeClass(
-                          booking.status,
-                        )}`}
-                      >
-                        {booking.status || "new"}
-                      </span>
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-bold ${threadBadgeClass(
-                          threadSummaries[booking.id],
-                        )}`}
-                      >
-                        {threadSummaries[booking.id]?.badgeLabel || "No messages"}
-                      </span>
-                    </div>
-                  </div>
-                  <details className="mt-4 rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-4">
-                    <summary className="cursor-pointer list-none text-sm font-black text-[#0B3C5D]">
-                      Payment and trip tools
-                    </summary>
-                  <div className="mt-4 grid gap-3 sm:grid-cols-4">
-                    {[
-                      ["Payment", moneySnapshot.paymentLabel],
-                      [
-                        "Balance due",
-                        formatMoneyCents(moneySnapshot.balanceDueCents),
-                      ],
-                      ["Invoice", moneySnapshot.invoiceNumber],
-                      ["Receipt", moneySnapshot.receiptNumber],
-                    ].map(([label, value]) => (
-                      <div key={label}>
-                        <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
-                          {label}
-                        </p>
-                        <p className="mt-1 text-sm font-black text-[#0B3C5D]">
-                          {value}
-                        </p>
-                      </div>
-                    ))}
-                    <div className="sm:col-span-4 flex flex-wrap gap-2">
-                      <Link
-                        href={`/book/invoice/${booking.id}`}
-                        className="rounded-lg bg-white px-3 py-2 text-xs font-black text-[#0B3C5D]"
-                      >
-                        Open invoice
-                      </Link>
-                      <Link
-                        href={`/book/receipt/${booking.id}`}
-                        className="rounded-lg bg-white px-3 py-2 text-xs font-black text-[#0B3C5D]"
-                      >
-                        Open receipt
-                      </Link>
-                      <Link
-                        href={`/book/trip/${booking.id}`}
-                        className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-xs font-black text-white"
-                      >
-                        Trip packet
-                      </Link>
-                    </div>
-                  </div>
-                  </details>
-                  <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">
-                    {threadSummaries[booking.id]?.lastMessagePreview ||
-                      "No booking messages yet."}
-                  </p>
-                  <div
-                    className={`mt-4 rounded-xl border px-4 py-3 text-sm ${nextActionClass(
-                      nextAction.tone,
-                    )}`}
-                  >
-                    <p className="font-black">{nextAction.label}</p>
-                    <p className="mt-1 leading-6">{nextAction.text}</p>
-                  </div>
-                  <details className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
-                    <summary className="cursor-pointer list-none text-sm font-black text-[#0B3C5D]">
-                      Request a change
-                    </summary>
-                  <form
-                    onSubmit={(event) => submitChangeRequest(event, booking)}
-                    className="mt-4"
-                  >
-                    <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-                      <div>
-                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
-                          Request changes
-                        </p>
-                        <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
-                          {changeSummary.totalCount > 0
-                            ? `${changeSummary.latestLabel} - ${changeSummary.pendingCount} pending`
-                            : "Need a different date, time, guest count, or pickup detail?"}
-                        </p>
-                      </div>
-                      {changeSummary.needsAction ? (
-                        <span className="rounded-full bg-[#D6B56D] px-3 py-1 text-xs font-black text-[#0B3C5D]">
-                          Pending review
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <input
-                        type="date"
-                        value={changeForm.tourDate}
-                        onChange={(event) =>
-                          updateChangeRequestForm(booking.id, {
-                            tourDate: event.target.value,
-                          })
-                        }
-                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
-                        aria-label="Requested date"
-                      />
-                      <input
-                        value={changeForm.tourTime}
-                        onChange={(event) =>
-                          updateChangeRequestForm(booking.id, {
-                            tourTime: event.target.value,
-                          })
-                        }
-                        placeholder="Requested time"
-                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
-                      />
-                      <input
-                        type="number"
-                        min="1"
-                        value={changeForm.guests}
-                        onChange={(event) =>
-                          updateChangeRequestForm(booking.id, {
-                            guests: event.target.value,
-                          })
-                        }
-                        placeholder="Guests"
-                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
-                      />
-                      <input
-                        value={changeForm.pickupNote}
-                        onChange={(event) =>
-                          updateChangeRequestForm(booking.id, {
-                            pickupNote: event.target.value,
-                          })
-                        }
-                        placeholder="Pickup/details"
-                        className="rounded-lg border border-white px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-                    <textarea
-                      value={changeForm.reason}
-                      onChange={(event) =>
-                        updateChangeRequestForm(booking.id, {
-                          reason: event.target.value,
-                        })
-                      }
-                      placeholder="Reason for the change"
-                      rows={2}
-                      className="mt-3 w-full rounded-lg border border-white px-3 py-2 text-sm outline-none"
-                    />
-                    {changeRequestMessages[booking.id] ? (
-                      <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#0B3C5D]">
-                        {changeRequestMessages[booking.id]}
-                      </p>
-                    ) : null}
-                    <button
-                      type="submit"
-                      disabled={savingChangeRequestId === booking.id}
-                      className="mt-3 rounded-lg bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
-                    >
-                      {savingChangeRequestId === booking.id
-                        ? "Sending..."
-                        : "Send change request"}
-                    </button>
-                  </form>
-                  </details>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedBookingId(booking.id);
-                        setChatOpen(true);
-                      }}
-                      className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-bold text-white"
-                    >
-                      Open inbox
-                    </button>
-                    <Link
-                      href={`/book/status/${booking.id}`}
-                      className="rounded-lg border border-[#00A8A8] px-4 py-2 text-sm font-bold text-[#007B7B]"
-                    >
-                      Open trip details
-                    </Link>
-                    {booking.status === "completed" && booking.listing_id ? (
-                      <Link
-                        href={`/listings/${booking.listing_id}#review`}
-                        className="rounded-lg bg-[#D6B56D] px-4 py-2 text-sm font-bold text-[#0B3C5D]"
-                      >
-                        Leave review
-                      </Link>
-                    ) : null}
-                  </div>
-                </article>
-                );
-              })}
+        {hasSignedIn ? (
+          <section className="mt-6 flex flex-col justify-between gap-4 rounded-2xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-5 sm:flex-row sm:items-center">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+                Need help?
+              </p>
+              <p className="mt-2 text-sm font-semibold text-gray-600">
+                Concierge support can help with pickup notes, timing, cancellations, or trip-day questions.
+              </p>
             </div>
-          )}
-        </section>
+            <Link
+              href="/support"
+              className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-center text-sm font-black text-white"
+            >
+              Contact concierge
+            </Link>
+          </section>
+        ) : null}
+
         {hasSignedIn ? (
           <BookingChatDrawer
             threads={chatThreads}
