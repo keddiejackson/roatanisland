@@ -34,7 +34,7 @@ export async function GET(request: Request) {
   const { data, error } = await supabaseServer
     .from("guest_trip_plans")
     .select(
-      "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, concierge_lead_id, stops, created_at, updated_at",
+      "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, stops, created_at, updated_at",
     )
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
@@ -84,7 +84,7 @@ export async function POST(request: Request) {
       updated_at: now,
     })
     .select(
-      "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, concierge_lead_id, stops, created_at, updated_at",
+      "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, stops, created_at, updated_at",
     )
     .single();
 

@@ -49,7 +49,7 @@ export type GuestTripPlanRow = {
   guest_count: number | null;
   source: string | null;
   status: string | null;
-  concierge_lead_id: string | null;
+  concierge_lead_id?: string | null;
   stops: GuestTripPlanStop[] | null;
   created_at: string;
   updated_at: string;
