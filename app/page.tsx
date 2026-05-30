@@ -588,12 +588,18 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-              <input
-                type="date"
-                value={travelDate}
-                onChange={(e) => setTravelDate(e.target.value)}
-                className="brand-input min-h-12"
-              />
+              <label className="relative block">
+                <span className="pointer-events-none absolute left-4 top-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                  Trip date
+                </span>
+                <input
+                  type="date"
+                  aria-label="Trip date"
+                  value={travelDate}
+                  onChange={(e) => setTravelDate(e.target.value)}
+                  className="brand-input min-h-12 pt-5"
+                />
+              </label>
               <input
                 type="number"
                 min="1"
