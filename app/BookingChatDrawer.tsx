@@ -435,7 +435,7 @@ export default function BookingChatDrawer({
         {drawerOpen ? (
         <motion.div
           key="booking-chat-backdrop"
-          className="fixed inset-0 z-50 bg-[#071F2F]/35 backdrop-blur-sm"
+          className="mobile-chat-shell bg-[#071F2F]/35 backdrop-blur-sm"
           onClick={() => changeOpen(false)}
           initial="closed"
           animate="open"
@@ -443,22 +443,22 @@ export default function BookingChatDrawer({
           variants={chatBackdropVariants}
         >
           <motion.aside
-            className="fixed inset-x-0 bottom-0 flex h-[min(100dvh,720px)] max-h-[100dvh] flex-col overflow-hidden rounded-t-2xl bg-[#F7F3EA] shadow-2xl ring-1 ring-[#071F2F]/10 md:inset-y-4 md:left-auto md:right-4 md:h-auto md:w-[min(540px,calc(100vw-2rem))] md:rounded-2xl xl:w-[560px]"
+            className="mobile-chat-panel bg-[#F7F3EA] shadow-2xl ring-1 ring-[#071F2F]/10 xl:w-[560px]"
             onClick={(event) => event.stopPropagation()}
             variants={
               reduceMotion ? reducedChatDrawerVariants : chatDrawerVariants
             }
           >
-            <div className="shrink-0 bg-[#071F2F] p-4 text-white sm:p-5">
+            <div className="mobile-chat-header shrink-0 bg-[#071F2F] px-4 py-3 text-white sm:p-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#D6B56D]">
+                  <p className="hidden text-[11px] font-bold uppercase tracking-[0.16em] text-[#D6B56D] sm:block">
                     Booking chat
                   </p>
-                  <h2 className="mt-1 truncate text-2xl font-black leading-tight">
+                  <h2 className="mt-1 truncate text-xl font-black leading-tight sm:text-2xl">
                     Messages
                   </h2>
-                  <p className="mt-1 text-sm leading-5 text-white/70">
+                  <p className="mt-1 text-xs leading-5 text-white/70 sm:text-sm">
                     {stats.unreadCount > 0
                       ? `${stats.unreadCount} unread across ${stats.threadCount} thread${
                           stats.threadCount === 1 ? "" : "s"
@@ -473,7 +473,7 @@ export default function BookingChatDrawer({
                     viewerProfile ? (
                       <Link
                         href={accountPath}
-                        className="mt-3 inline-flex max-w-full items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-left ring-1 ring-white/10 transition hover:bg-white/15"
+                        className="mobile-chat-profile mt-2 hidden max-w-full items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-left ring-1 ring-white/10 transition hover:bg-white/15 sm:inline-flex"
                       >
                         <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
                           {viewerProfile.profileImageUrl ? (
@@ -511,7 +511,7 @@ export default function BookingChatDrawer({
                 <button
                   type="button"
                   onClick={() => changeOpen(false)}
-                  className="grid size-9 shrink-0 place-items-center rounded-full bg-white/10 text-xl font-black leading-none text-white transition hover:bg-white/20"
+                  className="grid size-8 shrink-0 place-items-center rounded-full bg-white/10 text-xl font-black leading-none text-white transition hover:bg-white/20 sm:size-9"
                   aria-label="Close booking messages"
                 >
                   x
@@ -519,20 +519,21 @@ export default function BookingChatDrawer({
               </div>
             </div>
 
-            <div className="grid min-h-0 flex-1 grid-rows-[auto_auto_1fr_auto]">
-              <div className="shrink-0 border-b border-[#D6B56D]/20 bg-white p-3">
-                <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center">
+            <div className="mobile-chat-body">
+              <div className="mobile-chat-thread-picker shrink-0 border-b border-[#D6B56D]/20 bg-white px-3 py-2">
+                <div className="grid gap-1.5 sm:grid-cols-[auto_1fr] sm:items-center">
                   <label
                     htmlFor="booking-chat-thread"
-                    className="text-[11px] font-black uppercase tracking-[0.14em] text-[#007B7B]"
+                    className="hidden text-[11px] font-black uppercase tracking-[0.14em] text-[#007B7B] sm:block"
                   >
                     Thread
                   </label>
                   <select
                     id="booking-chat-thread"
+                    aria-label="Choose booking thread"
                     value={selectedThread?.id || ""}
                     onChange={(event) => changeSelectedThread(event.target.value)}
-                    className="min-h-11 w-full min-w-0 rounded-xl border border-gray-200 bg-[#F7F3EA] px-3 py-2 text-sm font-bold text-[#0B3C5D] outline-none focus:border-[#00A8A8]"
+                    className="min-h-10 w-full min-w-0 rounded-xl border border-gray-200 bg-[#F7F3EA] px-3 py-2 text-sm font-bold text-[#0B3C5D] outline-none focus:border-[#00A8A8]"
                   >
                     {threads.map((thread) => (
                       <option key={thread.id} value={thread.id}>
@@ -544,13 +545,13 @@ export default function BookingChatDrawer({
               </div>
 
               {selectedThread ? (
-                <div className="shrink-0 border-b border-[#D6B56D]/20 bg-[#F7F3EA]/95 px-4 py-3">
+                <div className="mobile-chat-thread-meta shrink-0 border-b border-[#D6B56D]/20 bg-[#F7F3EA]/95 px-3 py-2 sm:px-4 sm:py-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black text-[#0B3C5D]">
                         {selectedThread.title}
                       </p>
-                      <p className="mt-0.5 truncate text-xs text-gray-600">
+                      <p className="mt-0.5 hidden truncate text-xs text-gray-600 sm:block">
                         {selectedThread.subtitle}
                       </p>
                     </div>
@@ -562,7 +563,7 @@ export default function BookingChatDrawer({
                       {selectedThread.summary?.badgeLabel || "No messages"}
                     </span>
                   </div>
-                  <p className="mt-2 text-[11px] font-semibold text-gray-500">
+                  <p className="mt-2 hidden text-[11px] font-semibold text-gray-500 sm:block">
                     {refreshing
                       ? "Refreshing..."
                       : lastReadAt
@@ -580,7 +581,7 @@ export default function BookingChatDrawer({
                 </div>
               ) : null}
 
-              <div className="min-h-0 overflow-y-auto px-3 py-4 sm:px-4">
+              <div className="mobile-chat-messages px-3 py-3 sm:px-4 sm:py-4">
                 {!selectedThread ? (
                   <p className="rounded-xl border border-dashed border-gray-300 bg-white p-5 text-center text-sm leading-6 text-gray-600">
                     {emptyText}
@@ -662,7 +663,7 @@ export default function BookingChatDrawer({
 
               <form
                 onSubmit={sendMessage}
-                className="mobile-safe-bottom shrink-0 border-t border-[#D6B56D]/20 bg-white p-3 sm:p-4"
+                className="mobile-chat-composer mobile-safe-bottom shrink-0 border-t border-[#D6B56D]/20 bg-white px-3 py-2 sm:p-4"
               >
                 <div className="mobile-chat-replies mb-2">
                   {quickReplies.map((reply) => (
@@ -722,7 +723,7 @@ export default function BookingChatDrawer({
                   disabled={
                     sending || !draft.trim() || !selectedThread || !viewerProfile
                   }
-                  className="mt-3 w-full rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white transition hover:bg-[#008F8F] disabled:opacity-50"
+                  className="mt-2 w-full rounded-xl bg-[#00A8A8] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#008F8F] disabled:opacity-50 sm:py-3"
                 >
                   {sending ? "Sending..." : "Send message"}
                 </button>
