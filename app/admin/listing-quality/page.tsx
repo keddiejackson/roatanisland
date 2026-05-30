@@ -10,6 +10,7 @@ import {
   sortListingsByQuality,
   type ListingQualityListing,
 } from "@/lib/listing-quality";
+import { getPremiumListingCardPolish } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
 
 type QualityListing = ListingQualityListing & {
@@ -18,6 +19,8 @@ type QualityListing = ListingQualityListing & {
 
 const filterOptions = [
   "Needs attention",
+  "Needs media",
+  "Needs trust",
   "Keep off homepage",
   "Needs photo",
   "Extreme price",
@@ -25,6 +28,12 @@ const filterOptions = [
   "Showcase ready",
   "All",
 ];
+
+const trustFlagCodes = ["pricing", "location", "map", "times"];
+
+function hasTrustGap(flags: string[]) {
+  return trustFlagCodes.some((flag) => flags.includes(flag));
+}
 
 export default function AdminListingQualityPage() {
   const router = useRouter();
@@ -81,6 +90,7 @@ export default function AdminListingQualityPage() {
     const scored = listings.map((listing) => ({
       listing,
       quality: getListingQualitySummary(listing),
+      polish: getPremiumListingCardPolish(listing),
     }));
 
     return {
@@ -91,6 +101,7 @@ export default function AdminListingQualityPage() {
       needsPhoto: scored.filter((item) =>
         item.quality.issues.some((issue) => issue.code === "missing_photo"),
       ).length,
+      needsTrust: scored.filter((item) => hasTrustGap(item.polish.adminFlags)).length,
     };
   }, [listings]);
 
@@ -110,9 +121,12 @@ export default function AdminListingQualityPage() {
         .toLowerCase()
         .includes(normalizedSearch);
       const issueCodes = quality.issues.map((issue) => issue.code);
+      const polish = getPremiumListingCardPolish(listing);
       const matchesFilter =
         filter === "All" ||
         (filter === "Needs attention" && quality.issues.length > 0) ||
+        (filter === "Needs media" && polish.adminFlags.includes("media")) ||
+        (filter === "Needs trust" && hasTrustGap(polish.adminFlags)) ||
         (filter === "Keep off homepage" && quality.label === "Keep off homepage") ||
         (filter === "Needs photo" && issueCodes.includes("missing_photo")) ||
         (filter === "Extreme price" && issueCodes.includes("extreme_price")) ||
@@ -142,13 +156,13 @@ export default function AdminListingQualityPage() {
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#00A8A8]">
-                Homepage readiness
+                Marketplace polish queue
               </p>
-              <h1 className="mt-2 text-4xl font-black">Quality checklist</h1>
+              <h1 className="mt-2 text-4xl font-black">Guest-facing fixes</h1>
               <p className="mt-2 max-w-2xl text-gray-600">
-                Keep rough listings off the luxury homepage until titles,
-                photos, prices, locations, times, and vendor links look ready
-                for guests.
+                Keep rough listings off the luxury marketplace until media,
+                price clarity, pickup details, map pins, and tour times feel
+                ready for guests.
               </p>
             </div>
             <Link
@@ -162,8 +176,8 @@ export default function AdminListingQualityPage() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <SummaryCard label="Total listings" value={summary.total} />
             <SummaryCard label="Showcase ready" value={summary.ready} />
-            <SummaryCard label="Keep off homepage" value={summary.offHomepage} />
-            <SummaryCard label="Need photos" value={summary.needsPhoto} />
+            <SummaryCard label="Need media" value={summary.needsPhoto} />
+            <SummaryCard label="Need trust" value={summary.needsTrust} />
           </div>
 
           <div className="mt-6 grid gap-3 lg:grid-cols-[1fr_280px]">
@@ -226,6 +240,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 
 function QualityRow({ listing }: { listing: QualityListing }) {
   const quality = getListingQualitySummary(listing);
+  const polish = getPremiumListingCardPolish(listing);
   const tone =
     quality.label === "Showcase ready"
       ? "bg-emerald-50 text-emerald-700"
@@ -244,10 +259,16 @@ function QualityRow({ listing }: { listing: QualityListing }) {
             <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black text-[#007B7B]">
               {quality.score}/100
             </span>
+            <span className="rounded-full bg-[#FFF3D2] px-3 py-1 text-xs font-black text-[#0B3C5D]">
+              {polish.primaryBadge}
+            </span>
           </div>
           <h2 className="mt-3 text-xl font-black">{listing.title || "Untitled listing"}</h2>
           <p className="mt-1 text-sm text-gray-600">
             {listing.location || "No location"} - {listing.category || "No category"}
+          </p>
+          <p className="mt-2 max-w-2xl text-sm font-semibold text-[#0B3C5D]">
+            {polish.benefitLine}
           </p>
         </div>
         <Link
@@ -257,6 +278,25 @@ function QualityRow({ listing }: { listing: QualityListing }) {
           Edit in listings
         </Link>
       </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {polish.trustBadges.map((badge) => (
+          <span key={badge} className="brand-badge brand-badge-teal">
+            {badge}
+          </span>
+        ))}
+      </div>
+
+      {polish.adminFlags.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-[#D6B56D]/30 bg-[#FFF8E6] p-3">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#8A6A13]">
+            Next polish pass
+          </p>
+          <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
+            Fix {polish.adminFlags.join(", ")} before this feels premium.
+          </p>
+        </div>
+      ) : null}
 
       {quality.issues.length > 0 ? (
         <div className="mt-4 grid gap-2 md:grid-cols-2">

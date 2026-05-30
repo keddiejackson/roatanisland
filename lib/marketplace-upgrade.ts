@@ -81,6 +81,15 @@ export type LuxuryListingDetailProfile = {
   planningNotes: string[];
 };
 
+export type PremiumListingCardPolish = {
+  imageLabel: "Premium photo ready" | "Premium photo pending";
+  priceLabel: string;
+  primaryBadge: "Guest-ready" | "Needs media" | "Needs trust";
+  benefitLine: string;
+  trustBadges: string[];
+  adminFlags: string[];
+};
+
 const travelerPersonaPresets: TravelerPersonaPreset[] = [
   {
     id: "luxury-private",
@@ -509,6 +518,100 @@ export function getListingTrustBadges(listing: MarketplaceListing) {
   if (listing.max_guests) badges.push("Capacity set");
 
   return badges.slice(0, 4);
+}
+
+function formatPremiumListingPrice(price?: number | null) {
+  if (!price || price <= 0) return "Request quote";
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
+function getPremiumListingBenefitLine(listing: MarketplaceListing) {
+  const text = [
+    listing.title,
+    listing.description,
+    listing.category,
+    listing.location,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  if (text.includes("private") || text.includes("charter") || text.includes("vip")) {
+    return "Private pacing, clearer pickup, and operator context before you request.";
+  }
+
+  if (text.includes("airport") || text.includes("transfer")) {
+    return "Airport-aware timing with pickup expectations before you book.";
+  }
+
+  if (text.includes("family")) {
+    return "Family-friendly pacing with key details confirmed before your day.";
+  }
+
+  const firstSentence = (listing.description || "")
+    .split(".")
+    .map((sentence) => sentence.trim())
+    .find(Boolean);
+
+  if (firstSentence && firstSentence.length >= 24) {
+    return firstSentence.length > 120
+      ? `${firstSentence.slice(0, 117).trim()}...`
+      : firstSentence;
+  }
+
+  return "Concierge can confirm timing and pickup before you commit.";
+}
+
+export function getPremiumListingCardPolish(
+  listing: MarketplaceListing,
+): PremiumListingCardPolish {
+  const hasImage = Boolean(listing.image_url);
+  const hasPrice = Boolean(listing.price && listing.price > 0);
+  const hasLocation = Boolean((listing.location || "").trim());
+  const hasMapPin = listing.latitude != null && listing.longitude != null;
+  const hasTimes = (listing.tour_times || []).length > 0;
+  const hasCapacity = Boolean(listing.max_guests);
+  const adminFlags: string[] = [];
+
+  if (!hasImage) adminFlags.push("media");
+  if (!hasPrice) adminFlags.push("pricing");
+  if (!hasLocation) adminFlags.push("location");
+  if (!hasMapPin) adminFlags.push("map");
+  if (!hasTimes) adminFlags.push("times");
+
+  const trustBadges = uniqueValues([
+    listing.is_featured || (listing.rating || 0) >= 4.8
+      ? "Guest favorite"
+      : "",
+    (listing.reviews_count || 0) >= 3 ? "Verified reviews" : "",
+    hasMapPin ? "Exact map pin" : "",
+    hasTimes ? "Times listed" : "",
+    hasCapacity ? "Capacity clear" : "",
+    hasLocation ? "Clear pickup" : "",
+    hasImage ? "Premium media" : "Premium media needed",
+    hasPrice ? "Price clear" : "Quote clarity needed",
+    ...getListingTrustBadges(listing),
+  ]).slice(0, 5);
+
+  const primaryBadge = !hasImage
+    ? "Needs media"
+    : adminFlags.length > 0
+      ? "Needs trust"
+      : "Guest-ready";
+
+  return {
+    imageLabel: hasImage ? "Premium photo ready" : "Premium photo pending",
+    priceLabel: formatPremiumListingPrice(listing.price),
+    primaryBadge,
+    benefitLine: getPremiumListingBenefitLine(listing),
+    trustBadges,
+    adminFlags,
+  };
 }
 
 export function getListingConversionTags(

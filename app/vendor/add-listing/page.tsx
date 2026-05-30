@@ -207,16 +207,21 @@ export default function AddListingPage() {
 
         <section className="mb-8 rounded-2xl bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10">
           <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#9EE8E3]">
-            Partner onboarding
+            Guest trust tips
           </p>
           <h1 className="mt-2 text-3xl font-bold sm:text-5xl">
             Add a polished listing guests can trust.
           </h1>
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-white/75">
+            Premium listing score improves when guests can see real photos,
+            clear pickup details, tour times, and a quick path to a response.
+          </p>
+          <div className="mt-5 grid gap-3 md:grid-cols-4">
             {[
-              ["Photos", "Show the actual experience or meeting point."],
-              ["Times", "Set clear tour times and blocked dates."],
-              ["Map pin", "Place the start point near pickup or check-in."],
+              ["Real photos", "Show the actual experience, vehicle, boat, or meeting point."],
+              ["Clear pickup", "Name the beach, dock, hotel zone, or airport area."],
+              ["Tour times", "Set clear start times and blocked dates."],
+              ["Fast replies", "Give guests enough detail to request with confidence."],
             ].map(([title, text]) => (
               <div
                 key={title}

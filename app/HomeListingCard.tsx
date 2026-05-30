@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { HomeListing } from "@/lib/home-listings";
 import type { HomepageControls } from "@/lib/homepage-settings";
-import { getListingTrustBadges } from "@/lib/marketplace-upgrade";
+import { getPremiumListingCardPolish } from "@/lib/marketplace-upgrade";
 
 export type HomePageListing = HomeListing & {
   image_url: string | null;
@@ -28,18 +28,6 @@ const listingCardVariants: Variants = {
   },
 };
 
-function formatPrice(price: number | null) {
-  if (!price) {
-    return "Ask";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
-
 function listingBadge(
   listing: HomePageListing,
   homepageControls: HomepageControls,
@@ -61,7 +49,7 @@ export default function HomeListingCard({
   featured = false,
 }: HomeListingCardProps) {
   const reduceMotion = useReducedMotion();
-  const trustBadges = getListingTrustBadges(listing);
+  const cardPolish = getPremiumListingCardPolish(listing);
 
   return (
     <motion.div
@@ -102,13 +90,16 @@ export default function HomeListingCard({
                 className="object-cover transition duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.04)_0%,rgba(7,31,47,0.24)_100%)]" />
+              <span className="absolute left-4 bottom-4 rounded-full bg-white/90 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#0B3C5D] shadow">
+                Premium photo pending
+              </span>
             </>
           )}
           <span className="brand-badge absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs uppercase shadow">
             {listingBadge(listing, homepageControls)}
           </span>
           <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
-            {formatPrice(listing.price)}
+            {cardPolish.priceLabel}
           </span>
         </div>
 
@@ -120,22 +111,22 @@ export default function HomeListingCard({
                 {listing.title}
               </h3>
             </div>
-            <span className="brand-badge brand-badge-teal shrink-0">
-              {listing.rating ?? 5}/5
+            <span className="brand-badge brand-badge-teal shrink-0 text-center">
+              {cardPolish.primaryBadge}
             </span>
           </div>
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
-            {listing.description || "Details coming soon."}
+            {cardPolish.benefitLine}
           </p>
           <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
             <span className="font-bold text-gray-500">
               {listing.category || "Listing"}
             </span>
-            <span className="font-black text-[#007B7B]">Quick view</span>
+            <span className="font-black text-[#007B7B]">View details</span>
           </div>
-          {trustBadges.length > 0 ? (
+          {cardPolish.trustBadges.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {trustBadges.slice(0, 2).map((badge) => (
+              {cardPolish.trustBadges.slice(0, 3).map((badge) => (
                 <span key={badge} className="brand-badge brand-badge-teal">
                   {badge}
                 </span>

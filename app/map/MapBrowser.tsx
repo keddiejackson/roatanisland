@@ -1830,8 +1830,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                   className="object-cover"
                 />
               ) : (
-                <div className="flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
-                  No image yet
+                <div className="flex h-full items-center justify-center text-center text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D]/65">
+                  Premium photo pending
                 </div>
               )}
             </div>
@@ -1863,7 +1863,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               ))}
             </div>
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-gray-600">
-              {selectedPin.description || "Details coming soon."}
+              {selectedPin.description ||
+                "Concierge can confirm timing and pickup before you commit."}
             </p>
             <div className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3 text-sm text-[#0B3C5D]">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">

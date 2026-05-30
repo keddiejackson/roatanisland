@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
+import { getPremiumListingCardPolish } from "@/lib/marketplace-upgrade";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type Listing = {
@@ -15,18 +16,6 @@ type Listing = {
   image_url: string | null;
   rating: number | null;
 };
-
-function formatPrice(price: number | null) {
-  if (!price) {
-    return "Ask";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
 
 export default async function CategoryPage({
   category,
@@ -119,49 +108,61 @@ export default async function CategoryPage({
           />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => (
-              <Link
-                key={listing.id}
-                href={`/listings/${listing.id}`}
-                className="brand-card-lift group overflow-hidden"
-              >
-                <div className="relative h-56 bg-[#D8EFEC]">
-                  {listing.image_url ? (
-                    <Image
-                      src={listing.image_url}
-                      alt={listing.title}
-                      fill
-                      sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                      unoptimized
-                      className="object-cover transition duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="brand-skeleton flex h-full items-center justify-center text-sm text-[#0B3C5D]/60">
-                      No image yet
-                    </div>
-                  )}
-                  <span className="absolute bottom-4 right-4 rounded-full bg-[#0B3C5D] px-3 py-1 text-sm font-bold text-white shadow">
-                    {formatPrice(listing.price)}
-                  </span>
-                </div>
-                <div className="p-5">
-                  <h3 className="text-lg font-bold text-[#0B3C5D]">
-                    {listing.title}
-                  </h3>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
-                    {listing.description || "Details coming soon."}
-                  </p>
-                  <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
-                    <span className="text-gray-500">
-                      {listing.location || "Roatan"}
-                    </span>
-                    <span className="brand-badge brand-badge-teal">
-                      {listing.rating ?? 5}/5
+            {listings.map((listing) => {
+              const cardPolish = getPremiumListingCardPolish({
+                ...listing,
+                category,
+              });
+
+              return (
+                <Link
+                  key={listing.id}
+                  href={`/listings/${listing.id}`}
+                  className="brand-card-lift group overflow-hidden"
+                >
+                  <div className="relative h-56 bg-[#D8EFEC]">
+                    {listing.image_url ? (
+                      <Image
+                        src={listing.image_url}
+                        alt={listing.title}
+                        fill
+                        sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                        unoptimized
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="brand-skeleton flex h-full items-center justify-center text-center text-sm font-black uppercase tracking-[0.12em] text-[#0B3C5D]/65">
+                        Premium photo pending
+                      </div>
+                    )}
+                    <span className="absolute bottom-4 right-4 rounded-full bg-[#0B3C5D] px-3 py-1 text-sm font-bold text-white shadow">
+                      {cardPolish.priceLabel}
                     </span>
                   </div>
-                </div>
-              </Link>
-            ))}
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-lg font-bold text-[#0B3C5D]">
+                        {listing.title}
+                      </h3>
+                      <span className="brand-badge brand-badge-teal shrink-0">
+                        {cardPolish.primaryBadge}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
+                      {cardPolish.benefitLine}
+                    </p>
+                    <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
+                      <span className="text-gray-500">
+                        {listing.location || "Roatan"}
+                      </span>
+                      <span className="font-black text-[#007B7B]">
+                        View details
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
