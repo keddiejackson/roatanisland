@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import BookingChatDrawer, {
   type BookingChatThread,
 } from "@/app/BookingChatDrawer";
-import GuestTravelCommandCenter from "@/app/account/GuestTravelCommandCenter";
 import EmptyState from "@/app/EmptyState";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
@@ -25,10 +24,7 @@ import {
   type BookingChangeRequest,
 } from "@/lib/booking-change-requests";
 import { bookingNextAction } from "@/lib/booking-flow";
-import {
-  getGuestTripHubHero,
-  getGuestTripPrimaryActions,
-} from "@/lib/guest-command-center";
+import { getGuestTripHubHero } from "@/lib/guest-command-center";
 import {
   buildGuestTripPlanMapUrl,
   getGuestTripPlanSummary,
@@ -115,17 +111,16 @@ type ChangeRequestForm = {
   reason: string;
 };
 
-type AccountTab = "trips" | "messages" | "profile" | "help";
+type AccountTab = "overview" | "messages" | "profile";
 
 const accountTabs: Array<{
   id: AccountTab;
   label: string;
   text: string;
 }> = [
-  { id: "trips", label: "Trips", text: "Bookings and saved plans" },
+  { id: "overview", label: "Overview", text: "Trips, plans, and help" },
   { id: "messages", label: "Messages", text: "Chat with the team" },
   { id: "profile", label: "Profile", text: "Name and photo" },
-  { id: "help", label: "Help", text: "Support requests" },
 ];
 
 function statusBadgeClass(status: string | null) {
@@ -237,7 +232,7 @@ export default function AccountPage() {
   const [selectedBookingId, setSelectedBookingId] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [activeAccountTab, setActiveAccountTab] =
-    useState<AccountTab>("trips");
+    useState<AccountTab>("overview");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -844,9 +839,6 @@ export default function AccountPage() {
     nextDate: nextTripDate,
     walletLabel: guestBalanceSummary.label,
   });
-  const topTripActions = latestBooking
-    ? getGuestTripPrimaryActions(latestBooking).slice(0, 5)
-    : [];
   const chatThreads: BookingChatThread[] = bookings.map((booking) => ({
     id: booking.id,
     title: `${booking.tour_date} at ${booking.tour_time}`,
@@ -856,14 +848,23 @@ export default function AccountPage() {
     apiPath: `/api/bookings/${booking.id}/messages`,
     summary: threadSummaries[booking.id],
   }));
+  const messageThreadsNeedingReply = Object.values(threadSummaries).filter(
+    (summary) => summary.needsResponse,
+  ).length;
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
-      <div className="mx-auto max-w-4xl">
-        <header className="mb-8 flex items-center justify-between">
+    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <SiteLogo />
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/" className="rounded-xl bg-white px-4 py-2 font-semibold shadow">
               Home
+            </Link>
+            <Link
+              href="/map"
+              className="rounded-xl bg-white px-4 py-2 font-semibold shadow"
+            >
+              Map
             </Link>
             {hasSignedIn ? (
               <button
@@ -879,57 +880,78 @@ export default function AccountPage() {
         </header>
 
         <section
-          aria-label="Luxury guest trip hub"
-          className="overflow-hidden rounded-2xl bg-[#071F2F] text-white shadow-xl"
+          aria-label="Private guest lounge"
+          className="overflow-hidden rounded-[1.75rem] bg-[#071F2F] text-white shadow-2xl shadow-[#071F2F]/20"
         >
-          <div className="p-8">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
-              {tripHero.eyebrow}
+          <div className="p-6 sm:p-10">
+            <p className="text-sm font-black uppercase tracking-[0.22em] text-[#D6B56D]">
+              Private guest lounge
             </p>
             <div className="mt-3 flex flex-col justify-between gap-5 md:flex-row md:items-end">
               <div>
-                <h1 className="text-3xl font-bold sm:text-5xl">
-                  {tripHero.title}
+                <h1 className="max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
+                  Your Roatan plans, simplified.
                 </h1>
                 <p className="mt-3 max-w-2xl leading-7 text-white/75">
-                  {tripHero.text}
+                  {hasSignedIn
+                    ? tripHero.text
+                    : "Sign in once to keep bookings, messages, saved map plans, and trip details in one calm place."}
                 </p>
               </div>
               <Link
-                href={tripHero.actionHref}
+                href={hasSignedIn ? tripHero.actionHref : "/map"}
                 className="rounded-xl bg-[#D6B56D] px-5 py-3 text-center font-bold text-[#071F2F]"
               >
-                {tripHero.actionLabel}
+                {hasSignedIn ? tripHero.actionLabel : "Start planning"}
               </Link>
             </div>
           </div>
 
-          {hasSignedIn && activeAccountTab === "help" ? (
-            <div className="grid border-t border-white/10 bg-white/10 text-center sm:grid-cols-3">
+          {hasSignedIn ? (
+            <div className="grid border-t border-white/10 bg-white/10 text-center sm:grid-cols-4">
               <div className="p-5">
-                <p className="text-3xl font-bold">{bookings.length}</p>
+                <p className="text-3xl font-black">{bookings.length}</p>
                 <p className="mt-1 text-sm text-white/65">Booking requests</p>
               </div>
               <div className="p-5">
-                <p className="text-3xl font-bold">{confirmedCount}</p>
-                <p className="mt-1 text-sm text-white/65">Confirmed</p>
+                <p className="text-3xl font-black">{tripPlans.length}</p>
+                <p className="mt-1 text-sm text-white/65">Saved map plans</p>
               </div>
               <div className="p-5">
-                <p className="text-3xl font-bold">
-                  {latestBooking?.tour_date || "Ready"}
+                <p className="text-3xl font-black">
+                  {messageThreadsNeedingReply}
                 </p>
-                <p className="mt-1 text-sm text-white/65">Latest activity</p>
+                <p className="mt-1 text-sm text-white/65">Need reply</p>
+              </div>
+              <div className="p-5">
+                <p className="text-3xl font-black">{guestBalanceSummary.label}</p>
+                <p className="mt-1 text-sm text-white/65">Balance</p>
               </div>
             </div>
-          ) : null}
+          ) : (
+            <div className="grid border-t border-white/10 bg-white/10 text-center sm:grid-cols-3">
+              <div className="p-5">
+                <p className="text-lg font-black">Booking status</p>
+                <p className="mt-1 text-sm text-white/65">Check requests fast</p>
+              </div>
+              <div className="p-5">
+                <p className="text-lg font-black">Saved plans</p>
+                <p className="mt-1 text-sm text-white/65">Ready on return</p>
+              </div>
+              <div className="p-5">
+                <p className="text-lg font-black">Concierge help</p>
+                <p className="mt-1 text-sm text-white/65">When you need it</p>
+              </div>
+            </div>
+          )}
         </section>
 
         {hasSignedIn ? (
           <section
-            aria-label="Guest account navigation"
-            className="mt-6 rounded-2xl border border-white/70 bg-white/90 p-2 shadow"
+            aria-label="Guest account sections"
+            className="mt-6 rounded-[1.5rem] border border-white/70 bg-white/90 p-2 shadow-xl shadow-[#0B3C5D]/5"
           >
-            <div role="tablist" className="grid gap-2 sm:grid-cols-4">
+            <div role="tablist" className="grid gap-2 sm:grid-cols-3">
               {accountTabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -937,7 +959,7 @@ export default function AccountPage() {
                   type="button"
                   onClick={() => setActiveAccountTab(tab.id)}
                   aria-selected={activeAccountTab === tab.id}
-                  className={`rounded-xl px-4 py-3 text-left transition ${
+                  className={`rounded-2xl px-4 py-4 text-left transition ${
                     activeAccountTab === tab.id
                       ? "bg-[#071F2F] text-white shadow"
                       : "bg-[#F7F3EA] text-[#0B3C5D] hover:bg-[#EEF7F6]"
@@ -955,75 +977,6 @@ export default function AccountPage() {
                   </span>
                 </button>
               ))}
-            </div>
-          </section>
-        ) : null}
-
-        {hasSignedIn && activeAccountTab === "trips" ? (
-          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
-                  Top trip actions
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                  Everything important, one tap away.
-                </h2>
-              </div>
-              <Link
-                href="/map"
-                className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
-              >
-                Add more stops
-              </Link>
-            </div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {topTripActions.length > 0 ? (
-                topTripActions.map((action) =>
-                  action.kind === "chat" ? (
-                    <button
-                      key={action.label}
-                      type="button"
-                      onClick={() => {
-                        if (latestBooking) {
-                          setSelectedBookingId(latestBooking.id);
-                        }
-                        setChatOpen(true);
-                      }}
-                      className="rounded-2xl bg-[#00A8A8] px-4 py-4 text-left text-sm font-black text-white shadow-sm transition hover:-translate-y-0.5"
-                    >
-                      {action.label}
-                    </button>
-                  ) : (
-                    <Link
-                      key={action.label}
-                      href={action.href}
-                      className={`rounded-2xl px-4 py-4 text-sm font-black shadow-sm transition hover:-translate-y-0.5 ${
-                        action.tone === "gold"
-                          ? "bg-[#D6B56D] text-[#071F2F]"
-                          : "bg-[#EEF7F6] text-[#0B3C5D]"
-                      }`}
-                    >
-                      {action.label}
-                    </Link>
-                  ),
-                )
-              ) : (
-                <>
-                  <Link
-                    href="/map"
-                    className="rounded-2xl bg-[#00A8A8] px-4 py-4 text-sm font-black text-white"
-                  >
-                    Explore the map
-                  </Link>
-                  <Link
-                    href="/concierge"
-                    className="rounded-2xl bg-[#EEF7F6] px-4 py-4 text-sm font-black text-[#0B3C5D]"
-                  >
-                    Request concierge help
-                  </Link>
-                </>
-              )}
             </div>
           </section>
         ) : null}
@@ -1111,14 +1064,7 @@ export default function AccountPage() {
           </section>
         ) : null}
 
-        {hasSignedIn && activeAccountTab === "trips" ? (
-          <GuestTravelCommandCenter
-            bookings={bookings}
-            email={signedInEmail}
-          />
-        ) : null}
-
-        {hasSignedIn && activeAccountTab === "trips" ? (
+        {hasSignedIn && activeAccountTab === "overview" ? (
           <section className="mt-6 rounded-2xl bg-white p-6 shadow">
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
@@ -1340,96 +1286,15 @@ export default function AccountPage() {
           </section>
         ) : null}
 
-        {hasSignedIn && activeAccountTab === "help" ? (
-          <section className="mt-6 rounded-2xl bg-white p-6 shadow">
-            <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-              <div>
-                <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
-                  Help
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                  Support requests and next steps.
-                </h2>
-                <p className="mt-2 text-sm font-semibold text-gray-600">
-                  {supportTicketSummary.label} -{" "}
-                  {supportTicketSummary.resolvedCount} resolved
-                </p>
-              </div>
-              <Link
-                href="/support"
-                className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-center text-sm font-black text-white"
-              >
-                Get support
-              </Link>
-            </div>
-
-            {supportTicketMessage ? (
-              <p className="mt-4 rounded-xl bg-[#FFF8E8] px-4 py-3 text-sm font-bold text-[#7A5A00]">
-                {supportTicketMessage}
-              </p>
-            ) : supportTickets.length === 0 ? (
-              <div className="mt-5 rounded-2xl border border-dashed border-[#D6B56D]/50 bg-[#FFF8E8] p-5">
-                <p className="font-black text-[#0B3C5D]">
-                  No support requests yet.
-                </p>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
-                  If you need help with a booking, pickup, cancellation, vendor
-                  question, or trip day issue, send a request from the support
-                  center.
-                </p>
-              </div>
-            ) : (
-              <div className="mt-5 grid gap-3">
-                {supportTickets.slice(0, 6).map((ticket) => (
-                  <article
-                    key={ticket.id}
-                    className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-4"
-                  >
-                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                      <div>
-                        <p className="font-black text-[#0B3C5D]">
-                          {ticket.intent}
-                        </p>
-                        <p className="mt-1 text-xs text-gray-500">
-                          {new Date(ticket.created_at).toLocaleString()}
-                          {ticket.booking_reference
-                            ? ` - ${ticket.booking_reference}`
-                            : ""}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black capitalize text-[#007B7B]">
-                          {ticket.status.replaceAll("_", " ")}
-                        </span>
-                        <span className="rounded-full bg-[#FFF3D2] px-3 py-1 text-xs font-black capitalize text-[#7A5A00]">
-                          {ticket.priority}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="mt-3 line-clamp-2 text-sm leading-6 text-gray-600">
-                      {ticket.message}
-                    </p>
-                    {ticket.admin_notes ? (
-                      <p className="mt-3 rounded-lg bg-[#F7F3EA] px-3 py-2 text-sm font-semibold text-[#0B3C5D]">
-                        Admin note: {ticket.admin_notes}
-                      </p>
-                    ) : null}
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        ) : null}
-
-        {!hasSignedIn || isUpdatingPassword || activeAccountTab === "trips" ? (
-        <section className="mt-6 rounded-2xl bg-white p-8 shadow">
+        {!hasSignedIn || isUpdatingPassword || activeAccountTab === "overview" ? (
+        <section className="mt-6 rounded-[1.5rem] bg-white p-6 shadow-xl shadow-[#0B3C5D]/5 sm:p-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
-                Guest access
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                Private itinerary
               </p>
-              <h2 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
-                My bookings
+              <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
+                Your bookings and next steps.
               </h2>
             </div>
             {hasSignedIn ? (
@@ -1499,10 +1364,10 @@ export default function AccountPage() {
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
-                    Support requests
+                    Need help?
                   </p>
                   <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                    Help history and next steps.
+                    Support is one tap away.
                   </h3>
                   <p className="mt-2 text-sm font-semibold text-gray-600">
                     {supportTicketSummary.label} -{" "}
@@ -1903,7 +1768,7 @@ export default function AccountPage() {
                       href={`/book/status/${booking.id}`}
                       className="rounded-lg border border-[#00A8A8] px-4 py-2 text-sm font-bold text-[#007B7B]"
                     >
-                      View details
+                      Open trip details
                     </Link>
                     {booking.status === "completed" && booking.listing_id ? (
                       <Link
