@@ -588,8 +588,8 @@ export default function Home() {
                   </option>
                 ))}
               </select>
-              <label className="relative block">
-                <span className="pointer-events-none absolute left-4 top-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-[#007B7B]">
+              <label className="grid gap-1">
+                <span className="text-[11px] font-black uppercase tracking-[0.14em] text-[#007B7B]">
                   Trip date
                 </span>
                 <input
@@ -597,7 +597,7 @@ export default function Home() {
                   aria-label="Trip date"
                   value={travelDate}
                   onChange={(e) => setTravelDate(e.target.value)}
-                  className="brand-input min-h-12 pt-5"
+                  className="brand-input min-h-12 py-3"
                 />
               </label>
               <input
