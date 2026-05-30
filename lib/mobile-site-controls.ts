@@ -140,7 +140,7 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   mobileNavMapLabel: "Map",
   mobileNavConciergeLabel: "Concierge",
   mobileNavSignInLabel: "Sign in",
-  mobileNavBusinessLabel: "List your business",
+  mobileNavBusinessLabel: "List business",
   showMobileNavListings: true,
   showMobileNavMap: true,
   showMobileNavConcierge: true,
@@ -152,9 +152,9 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   showMobileFinalCta: true,
   compactMobileAdminNav: true,
   compactMobileVendorDashboard: true,
-  useMobileLogoOverrides: false,
-  mobileLogoWidthPx: 228,
-  mobileLogoHeightPx: 72,
+  useMobileLogoOverrides: true,
+  mobileLogoWidthPx: 180,
+  mobileLogoHeightPx: 64,
   mobileLogoPaddingPx: 0,
   mobileLogoRadiusPx: 0,
   mobileLogoBorderWidthPx: 0,
@@ -164,8 +164,8 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   mobileLogoFit: "contain",
   mobileLogoPosition: "center",
   mobileLogoShadow: "none",
-  mobileLogoBackgroundColor: "#ffffff",
-  mobileLogoBorderColor: "#ffffff",
+  mobileLogoBackgroundColor: "transparent",
+  mobileLogoBorderColor: "transparent",
 };
 
 const textFields = Object.keys(defaultMobileSiteControls).filter((key) =>
