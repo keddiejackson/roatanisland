@@ -13,7 +13,10 @@ import {
   type BookingMessageLike,
   type BookingThreadSummary,
 } from "@/lib/booking-communication";
-import { bookingNextAction } from "@/lib/booking-flow";
+import {
+  bookingNextAction,
+  getBookingConfidenceCommandCenter,
+} from "@/lib/booking-flow";
 import {
   buildGuestTripPlanMapUrl,
   getGuestTripPlanSummary,
@@ -604,6 +607,24 @@ export default function AccountPage() {
         ),
       })
     : null;
+  const latestBookingConfidence = latestBooking
+    ? getBookingConfidenceCommandCenter({
+        fullName: latestBooking.full_name,
+        email: latestBooking.email,
+        tourDate: latestBooking.tour_date,
+        tourTime: latestBooking.tour_time,
+        guests: String(latestBooking.guests || ""),
+        pickupPreference: "",
+        guestMessage: "",
+        estimatedTotalLabel: latestBooking.booking_value_cents
+          ? `$${Math.round(latestBooking.booking_value_cents / 100).toLocaleString()}`
+          : "",
+        availabilityTone:
+          latestBooking.status === "cancelled" ? "blocked" : "available",
+        hasListing: Boolean(latestBooking.listing_id),
+        depositsEnabled: true,
+      })
+    : null;
   const latestThreadSummary = latestBooking
     ? threadSummaries[latestBooking.id]
     : undefined;
@@ -691,6 +712,20 @@ export default function AccountPage() {
                   <p className="mt-4 rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm text-gray-600">
                     {latestThreadSummary.lastMessagePreview}
                   </p>
+                ) : null}
+                {latestBookingConfidence ? (
+                  <div className="mt-4 rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] px-4 py-3">
+                    <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                      Guest booking confidence
+                    </p>
+                    <p className="mt-1 font-black text-[#0B3C5D]">
+                      {latestBookingConfidence.label} -{" "}
+                      {latestBookingConfidence.score}/100
+                    </p>
+                    <p className="mt-1 text-sm leading-6 text-gray-600">
+                      {latestBookingConfidence.primaryText}
+                    </p>
+                  </div>
                 ) : null}
               </div>
               {latestBooking ? (

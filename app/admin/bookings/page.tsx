@@ -33,7 +33,10 @@ import {
   type BookingMessageLike,
   type BookingThreadSummary,
 } from "@/lib/booking-communication";
-import { formatBookingStatus } from "@/lib/booking-flow";
+import {
+  formatBookingStatus,
+  getBookingOpsPriority,
+} from "@/lib/booking-flow";
 import { supabase } from "@/lib/supabase";
 
 type BookingRow = {
@@ -836,6 +839,31 @@ export default function AdminBookingsPage() {
                               (booking.commission_amount_cents || 0),
                           )}
                         </p>
+                        {(() => {
+                          const opsPriority = getBookingOpsPriority({
+                            status: booking.status,
+                            depositStatus: booking.deposit_status,
+                            threadNeedsResponse: Boolean(
+                              threadSummaries[booking.id]?.needsResponse,
+                            ),
+                            paymentIssue: booking.payment_issue_flag,
+                            tourDate: booking.tour_date,
+                          });
+
+                          return (
+                            <div className="mt-3 rounded-lg border border-[#00A8A8]/15 bg-white p-3">
+                              <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                                Command cue
+                              </p>
+                              <p className="mt-1 font-black text-[#0B3C5D]">
+                                {opsPriority.label}
+                              </p>
+                              <p className="mt-1 text-sm leading-6 text-gray-600">
+                                {opsPriority.text}
+                              </p>
+                            </div>
+                          );
+                        })()}
                         <div className="mt-3 grid gap-2 rounded-lg bg-white p-3 text-sm sm:grid-cols-3">
                           {(() => {
                             const snapshot = getBookingMoneySnapshot(booking);

@@ -7,6 +7,7 @@ import {
   formatBookingCents,
   formatBookingStatus,
   formatDepositStatus,
+  getBookingConfidenceCommandCenter,
 } from "@/lib/booking-flow";
 import {
   formatMoneyCents,
@@ -120,6 +121,23 @@ export default async function BookingStatusPage({
     : [];
   const moneySnapshot = getBookingMoneySnapshot(booking);
   const experienceTitle = listing?.title || "Your Roatan experience";
+  const confidenceSnapshot = getBookingConfidenceCommandCenter({
+    fullName: booking.full_name,
+    email: booking.email,
+    tourDate: booking.tour_date,
+    tourTime: booking.tour_time,
+    guests: String(booking.guests || ""),
+    pickupPreference: booking.guest_message?.includes("Pickup preference:")
+      ? booking.guest_message.split("Guest message:")[0]?.replace("Pickup preference:", "").trim() || ""
+      : "",
+    guestMessage: booking.guest_message || "",
+    estimatedTotalLabel: formatBookingCents(
+      booking.booking_value_cents || booking.balance_due_cents,
+    ),
+    availabilityTone: booking.status === "cancelled" ? "blocked" : "available",
+    hasListing: Boolean(booking.listing_id),
+    depositsEnabled: true,
+  });
   const realTimeline = bookingTimeline({
     booking,
     events: (eventRows as BookingEventLike[] | null) || [],
@@ -191,6 +209,37 @@ export default async function BookingStatusPage({
             </p>
             <h2 className="mt-2 text-2xl font-black">{nextAction.label}</h2>
             <p className="mt-2 leading-7">{nextAction.text}</p>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-5">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+              <div>
+                <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
+                  Travel confidence snapshot
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                  {confidenceSnapshot.headline}
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+                  {confidenceSnapshot.operatorPrompt}
+                </p>
+              </div>
+              <span className="rounded-2xl bg-[#071F2F] px-5 py-4 text-center text-2xl font-black text-white">
+                {confidenceSnapshot.score}%
+              </span>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {confidenceSnapshot.signals.map((signal) => (
+                <div key={signal.label} className="rounded-xl bg-white p-4">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-[#00A8A8]">
+                    {signal.label}
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-gray-600">
+                    {signal.text}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="mt-8 rounded-2xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-5">

@@ -27,6 +27,7 @@ import {
   formatBookingCents,
   formatBookingStatus,
   formatDepositStatus,
+  getBookingOpsPriority,
 } from "@/lib/booking-flow";
 import {
   getBookingMoneySnapshot,
@@ -2382,6 +2383,31 @@ export default function VendorDashboardPage() {
                           {threadSummaries[booking.id]?.lastMessagePreview ||
                             "No thread messages yet."}
                         </p>
+                        {(() => {
+                          const cue = getBookingOpsPriority({
+                            status: booking.status,
+                            depositStatus: booking.deposit_status,
+                            threadNeedsResponse: Boolean(
+                              threadSummaries[booking.id]?.needsResponse,
+                            ),
+                            paymentIssue: false,
+                            tourDate: booking.tour_date,
+                          });
+
+                          return (
+                            <div className="mt-3 rounded-lg border border-[#00A8A8]/15 bg-white p-3">
+                              <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                                Guest confidence cue
+                              </p>
+                              <p className="mt-1 font-black text-[#0B3C5D]">
+                                {cue.label}
+                              </p>
+                              <p className="mt-1 text-sm leading-6 text-gray-600">
+                                {cue.text}
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </article>
                     ))}
                   </div>

@@ -54,6 +54,36 @@ export type BookingPaymentClarityCard = {
   text: string;
 };
 
+export type BookingConfidenceSignal = {
+  label: string;
+  text: string;
+  tone: "good" | "watch" | "urgent";
+};
+
+export type BookingConfidenceCommandCenter = {
+  score: number;
+  label: "Guest-ready request" | "Almost ready" | "Needs a few details";
+  headline: string;
+  primaryAction: string;
+  primaryText: string;
+  guestPromise: string;
+  operatorPrompt: string;
+  missingItems: string[];
+  signals: BookingConfidenceSignal[];
+};
+
+export type BookingSuccessNextStep = {
+  label: string;
+  text: string;
+  href: string;
+};
+
+export type BookingOpsPriority = {
+  label: string;
+  text: string;
+  tone: "urgent" | "money" | "review" | "ready";
+};
+
 const bookingStatusLabels: Record<string, string> = {
   new: "Request received",
   confirmed: "Confirmed",
@@ -314,6 +344,229 @@ export function getBookingRecoveryPrompt({
         ? "Your name, date, and guest count are saved on this device. Add the missing details when you are ready."
         : "Some booking details are saved on this device. Finish the request when you are ready.",
     shouldShow: hasAnyDetails && !isComplete,
+  };
+}
+
+export function getBookingConfidenceCommandCenter({
+  fullName,
+  email,
+  tourDate,
+  tourTime,
+  guests,
+  pickupPreference,
+  guestMessage,
+  estimatedTotalLabel,
+  availabilityTone,
+  hasListing,
+  depositsEnabled,
+}: {
+  fullName: string;
+  email: string;
+  tourDate: string;
+  tourTime: string;
+  guests: string;
+  pickupPreference: string;
+  guestMessage: string;
+  estimatedTotalLabel: string;
+  availabilityTone?: string | null;
+  hasListing: boolean;
+  depositsEnabled: boolean;
+}): BookingConfidenceCommandCenter {
+  const readiness = getBookingCheckoutReadiness({
+    fullName,
+    email,
+    tourDate,
+    tourTime,
+    guests,
+    pickupPreference,
+  });
+  const missingItems = [
+    ...readiness.missingItems,
+    ...(hasListing ? [] : ["Experience"]),
+  ];
+  const hasEstimate = estimatedTotalLabel !== "Pending";
+  const score = Math.max(
+    0,
+    Math.min(
+      100,
+      readiness.score +
+        (hasListing ? 8 : 0) +
+        (hasEstimate ? 6 : 0) +
+        (guestMessage.trim() ? 4 : 0) -
+        (availabilityTone === "blocked" || availabilityTone === "full" ? 18 : 0),
+    ),
+  );
+  const cruiseAware =
+    [pickupPreference, guestMessage].join(" ").toLowerCase().includes("cruise") ||
+    [pickupPreference, guestMessage].join(" ").toLowerCase().includes("ship");
+  const label =
+    score >= 92 && missingItems.length === 0
+      ? "Guest-ready request"
+      : score >= 67
+        ? "Almost ready"
+        : "Needs a few details";
+
+  return {
+    score,
+    label,
+    headline:
+      label === "Guest-ready request"
+        ? "This request has the details operators answer fastest."
+        : label === "Almost ready"
+          ? "A few details will make this easier to confirm."
+          : "Add the trip basics before sending.",
+    primaryAction:
+      label === "Guest-ready request"
+        ? "Send request"
+        : label === "Almost ready"
+          ? "Review missing details"
+          : "Add trip basics",
+    primaryText:
+      label === "Guest-ready request"
+        ? "Date, time, pickup, guest count, and payment expectations are clear."
+        : "Complete the highlighted fields so the operator can reply with confidence.",
+    guestPromise:
+      depositsEnabled
+        ? "No surprise checkout: deposit or full payment appears after your request is created."
+        : "No card is charged here. Payment timing is shared after operator review.",
+    operatorPrompt:
+      label === "Guest-ready request"
+        ? "Confirm availability, pickup timing, and payment next steps."
+        : "Ask for the missing details before confirming.",
+    missingItems,
+    signals: [
+      {
+        label: "Pickup clarity",
+        text: pickupPreference
+          ? pickupPreference
+          : "Add hotel, cruise port, airport, or meeting point.",
+        tone: pickupPreference ? "good" : "watch",
+      },
+      {
+        label: "Payment clarity",
+        text: hasEstimate
+          ? `${estimatedTotalLabel} estimate shown before sending.`
+          : "Quote or final total is confirmed after review.",
+        tone: "good",
+      },
+      {
+        label: cruiseAware ? "Cruise timing" : "Timing fit",
+        text: cruiseAware
+          ? "Cruise timing is noted so return time can be reviewed."
+          : tourDate && tourTime
+            ? "Date and time are ready for availability review."
+            : "Choose date and time for a stronger request.",
+        tone: cruiseAware || (tourDate && tourTime) ? "good" : "watch",
+      },
+      {
+        label: "Operator response",
+        text:
+          availabilityTone === "blocked" || availabilityTone === "full"
+            ? "This slot may not be available. Choose another time."
+            : "The operator can confirm, ask a question, or send payment next steps.",
+        tone:
+          availabilityTone === "blocked" || availabilityTone === "full"
+            ? "urgent"
+            : "good",
+      },
+    ],
+  };
+}
+
+export function getBookingSuccessNextSteps({
+  bookingId,
+  depositsEnabled,
+  hasEmail,
+}: {
+  bookingId?: string | null;
+  depositsEnabled: boolean;
+  hasEmail: boolean;
+}): BookingSuccessNextStep[] {
+  const statusHref = bookingId ? `/book/status/${bookingId}` : "/account";
+
+  return [
+    {
+      label: "Open booking status",
+      text: "Track confirmation, pickup notes, payment, and messages in one place.",
+      href: statusHref,
+    },
+    {
+      label: "Watch for operator reply",
+      text: "The local operator confirms availability or asks for anything missing.",
+      href: "/account",
+    },
+    {
+      label: "Review payment options",
+      text: depositsEnabled
+        ? "Deposit or full payment checkout appears when the booking is ready."
+        : "Payment timing is shared after review; no card was charged here.",
+      href: statusHref,
+    },
+    {
+      label: hasEmail ? "Create guest account" : "Add guest email",
+      text: "Use the same email to keep bookings, chat, and map plans together.",
+      href: "/account?mode=signup",
+    },
+  ];
+}
+
+export function getBookingOpsPriority({
+  status,
+  depositStatus,
+  threadNeedsResponse,
+  paymentIssue,
+  tourDate,
+}: {
+  status: string | null | undefined;
+  depositStatus: string | null | undefined;
+  threadNeedsResponse?: boolean;
+  paymentIssue?: boolean | null;
+  tourDate?: string | null;
+}): BookingOpsPriority {
+  if (threadNeedsResponse) {
+    return {
+      label: "Reply first",
+      text: "Guest is waiting for an answer. Open the booking thread before changing anything else.",
+      tone: "urgent",
+    };
+  }
+
+  if (paymentIssue) {
+    return {
+      label: "Fix payment issue",
+      text: "Review the payment note, invoice, or checkout link before confirming next steps.",
+      tone: "money",
+    };
+  }
+
+  if (status === "confirmed" && depositStatus !== "paid") {
+    return {
+      label: "Payment next",
+      text: "Booking is confirmed. Send payment instructions or mark payment status clearly.",
+      tone: "money",
+    };
+  }
+
+  if ((status || "new") === "new") {
+    return {
+      label: "Review request",
+      text: "Check availability, pickup details, and guest count before confirming.",
+      tone: "review",
+    };
+  }
+
+  if (tourDate) {
+    return {
+      label: "Travel-ready",
+      text: "Keep pickup notes and any final instructions attached to the booking.",
+      tone: "ready",
+    };
+  }
+
+  return {
+    label: "Ready",
+    text: "No urgent booking action is waiting.",
+    tone: "ready",
   };
 }
 

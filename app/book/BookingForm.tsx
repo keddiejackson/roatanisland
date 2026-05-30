@@ -7,9 +7,11 @@ import {
   composeBookingGuestMessage,
   estimateBookingTotalCents,
   formatBookingCents,
+  getBookingConfidenceCommandCenter,
   getBookingPaymentClarityCards,
   getBookingCheckoutReadiness,
   getBookingRecoveryPrompt,
+  getBookingSuccessNextSteps,
   getBookingTrustSteps,
   getLuxuryBookingFlowSteps,
 } from "@/lib/booking-flow";
@@ -429,6 +431,24 @@ export default function BookingForm({
     tourTime: recoveredDraft?.tourTime || tourTime,
     guests: recoveredDraft?.guests || guests,
   });
+  const bookingConfidence = getBookingConfidenceCommandCenter({
+    fullName,
+    email,
+    tourDate,
+    tourTime,
+    guests,
+    pickupPreference,
+    guestMessage,
+    estimatedTotalLabel,
+    availabilityTone: availabilityStatus?.tone || "choose",
+    hasListing: Boolean(listingId || listing),
+    depositsEnabled,
+  });
+  const successNextSteps = getBookingSuccessNextSteps({
+    bookingId,
+    depositsEnabled,
+    hasEmail: Boolean(email.trim()),
+  });
   const availabilityPreviewDays = useMemo(
     () =>
       getAvailabilityPreviewDays({
@@ -612,6 +632,56 @@ export default function BookingForm({
         )}
       </section>
 
+      <section className="mt-6 rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FFFDF7] p-5">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Booking Confidence Command Center
+            </p>
+            <h2 className="mt-1 text-2xl font-black text-[#0B3C5D]">
+              {bookingConfidence.headline}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+              {bookingConfidence.primaryText}
+            </p>
+          </div>
+          <div className="rounded-2xl bg-[#071F2F] px-5 py-4 text-white shadow-lg">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-white/55">
+              Confidence
+            </p>
+            <p className="mt-1 text-3xl font-black">
+              {bookingConfidence.score}%
+            </p>
+            <p className="mt-1 text-xs font-bold text-[#9EE8E3]">
+              {bookingConfidence.label}
+            </p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-2">
+          {bookingConfidence.signals.map((signal) => (
+            <div
+              key={signal.label}
+              className={`rounded-2xl border p-4 ${
+                signal.tone === "urgent"
+                  ? "border-red-200 bg-red-50 text-red-800"
+                  : signal.tone === "watch"
+                    ? "border-[#D6B56D]/35 bg-[#FFF8E8] text-[#0B3C5D]"
+                    : "border-[#00A8A8]/20 bg-[#EEF7F6] text-[#0B3C5D]"
+              }`}
+            >
+              <p className="text-xs font-black uppercase tracking-[0.14em]">
+                Smart trip signals
+              </p>
+              <p className="mt-1 font-black">{signal.label}</p>
+              <p className="mt-1 text-sm leading-6 opacity-80">{signal.text}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 rounded-2xl bg-white p-4 text-sm font-semibold leading-6 text-[#0B3C5D] shadow-sm">
+          {bookingConfidence.guestPromise}
+        </div>
+      </section>
+
       {listing ? (
         <div className="mt-6 rounded-xl border border-[#00A8A8]/20 bg-[#00A8A8]/10 p-4">
           <p className="font-semibold text-[#0B3C5D]">{listing.title}</p>
@@ -736,6 +806,18 @@ export default function BookingForm({
                 </div>
               ),
             )}
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2">
+            {successNextSteps.map((step) => (
+              <Link
+                key={step.label}
+                href={step.href}
+                className="rounded-xl bg-white/85 p-4 text-green-950 shadow-sm transition hover:bg-white"
+              >
+                <p className="text-sm font-black">{step.label}</p>
+                <p className="mt-1 text-sm leading-6">{step.text}</p>
+              </Link>
+            ))}
           </div>
           <div className="mt-5 flex flex-wrap gap-3">
             {process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true" &&

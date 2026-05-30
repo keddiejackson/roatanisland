@@ -1,6 +1,7 @@
 import Link from "next/link";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
+import { getBookingSuccessNextSteps } from "@/lib/booking-flow";
 
 export default async function BookingPaymentSuccessPage({
   searchParams,
@@ -8,6 +9,11 @@ export default async function BookingPaymentSuccessPage({
   searchParams: Promise<{ booking?: string }>;
 }) {
   const { booking } = await searchParams;
+  const successNextSteps = getBookingSuccessNextSteps({
+    bookingId: booking,
+    depositsEnabled: process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true",
+    hasEmail: true,
+  });
 
   return (
     <main className="brand-page min-h-screen overflow-hidden px-6 py-10 text-[#17324D]">
@@ -79,18 +85,20 @@ export default async function BookingPaymentSuccessPage({
             </div>
             <div className="mt-6 rounded-[1.5rem] border border-white/15 bg-white/10 p-5">
               <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-                Confirmation checklist
+                Your private trip command center
               </p>
               <div className="mt-4 grid gap-3">
-                {[
-                  "Save your booking status page.",
-                  "Check your email for payment and request details.",
-                  "Watch chat for pickup or timing notes.",
-                  "Open your trip dashboard before travel day.",
-                ].map((item) => (
-                  <div key={item} className="rounded-2xl bg-white/10 p-3 text-sm font-semibold">
-                    {item}
-                  </div>
+                {successNextSteps.map((step) => (
+                  <Link
+                    key={step.label}
+                    href={step.href}
+                    className="rounded-2xl bg-white/10 p-3 text-sm font-semibold transition hover:bg-white/15"
+                  >
+                    <span className="block text-white">{step.label}</span>
+                    <span className="mt-1 block leading-5 text-white/65">
+                      {step.text}
+                    </span>
+                  </Link>
                 ))}
               </div>
             </div>
