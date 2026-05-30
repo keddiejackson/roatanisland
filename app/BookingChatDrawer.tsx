@@ -8,6 +8,7 @@ import {
   bookingChatSignInPath,
   bookingChatStatusLabel,
 } from "@/lib/booking-chat-session";
+import { useMobileSiteControls } from "@/app/SiteBrandingProvider";
 import {
   bookingChatQuickReplies,
   bookingDrawerStats,
@@ -153,6 +154,7 @@ export default function BookingChatDrawer({
   onSelectedThreadIdChange,
 }: BookingChatDrawerProps) {
   const reduceMotion = useReducedMotion();
+  const mobileControls = useMobileSiteControls();
   const [internalOpen, setInternalOpen] = useState(false);
   const [internalSelectedThreadId, setInternalSelectedThreadId] = useState("");
   const [messages, setMessages] = useState<BookingMessageLike[]>([]);
@@ -423,10 +425,12 @@ export default function BookingChatDrawer({
         whileHover={reduceMotion ? undefined : { y: -4 }}
         whileTap={reduceMotion ? undefined : { scale: 0.98 }}
       >
-        <span className="block text-sm leading-none">Messages</span>
+        <span className="block text-sm leading-none">
+          {mobileControls.mobileChatBubbleLabel}
+        </span>
         <span className="mt-1 block text-xs leading-tight text-white/70">
           {stats.needsResponseCount > 0
-            ? `${stats.needsResponseCount} need response`
+            ? `${stats.needsResponseCount} ${mobileControls.mobileChatBubbleNeedsResponseLabel}`
             : `${stats.threadCount} thread${stats.threadCount === 1 ? "" : "s"}`}
         </span>
       </motion.button>
@@ -456,7 +460,10 @@ export default function BookingChatDrawer({
                     Booking chat
                   </p>
                   <h2 className="mt-1 truncate text-xl font-black leading-tight sm:text-2xl">
-                    Messages
+                    <span className="sm:hidden">
+                      {mobileControls.mobileChatBubbleLabel}
+                    </span>
+                    <span className="hidden sm:inline">Messages</span>
                   </h2>
                   <p className="mt-1 text-xs leading-5 text-white/70 sm:text-sm">
                     {stats.unreadCount > 0

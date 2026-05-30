@@ -2,6 +2,10 @@
 
 import Link from "next/link";
 import SiteLogo from "@/app/SiteLogo";
+import {
+  defaultMobileSiteControls,
+  type MobileSiteControls,
+} from "@/lib/mobile-site-controls";
 import { profileInitials } from "@/lib/user-profile";
 
 export type HomeAccountProfile = {
@@ -17,6 +21,7 @@ type HomeHeroHeaderProps = {
   accountLoading: boolean;
   signOutLoading: boolean;
   onSignOut: () => void;
+  mobileControls?: MobileSiteControls;
 };
 
 export default function HomeHeroHeader({
@@ -24,6 +29,7 @@ export default function HomeHeroHeader({
   accountLoading,
   signOutLoading,
   onSignOut,
+  mobileControls = defaultMobileSiteControls,
 }: HomeHeroHeaderProps) {
   return (
     <header className="grid items-start gap-3 sm:flex sm:items-center sm:justify-between">
@@ -37,24 +43,30 @@ export default function HomeHeroHeader({
 
       <nav aria-label="Mobile main navigation" className="w-full sm:hidden">
         <div className="mobile-scroll-row rounded-[1.15rem] border border-white/12 bg-white/[0.09] p-1 text-center text-[13px] font-black text-white/90 shadow-xl shadow-black/10 backdrop-blur-xl">
-          <a
-            href="#marketplace"
-            className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
-          >
-            Listings
-          </a>
-          <Link
-            href="/map"
-            className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
-          >
-            Map
-          </Link>
-          <Link
-            href="/concierge"
-            className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
-          >
-            Concierge
-          </Link>
+          {mobileControls.showMobileNavListings ? (
+            <a
+              href="#marketplace"
+              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+            >
+              {mobileControls.mobileNavListingsLabel}
+            </a>
+          ) : null}
+          {mobileControls.showMobileNavMap ? (
+            <Link
+              href="/map"
+              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+            >
+              {mobileControls.mobileNavMapLabel}
+            </Link>
+          ) : null}
+          {mobileControls.showMobileNavConcierge ? (
+            <Link
+              href="/concierge"
+              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+            >
+              {mobileControls.mobileNavConciergeLabel}
+            </Link>
+          ) : null}
           {accountLoading ? (
             <span className="shrink-0 rounded-xl px-3 py-3 text-white/50">
               ...
@@ -87,20 +99,22 @@ export default function HomeHeroHeader({
                 </button>
               </div>
             </details>
-          ) : (
+          ) : mobileControls.showMobileNavSignIn ? (
             <Link
               href="/signin"
               className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
             >
-              Sign in
+              {mobileControls.mobileNavSignInLabel}
             </Link>
-          )}
-          <Link
-            href="/vendor/signup"
-            className="shrink-0 rounded-xl bg-white px-3 py-3 text-[#071F2F] shadow-lg shadow-black/10"
-          >
-            List business
-          </Link>
+          ) : null}
+          {mobileControls.showMobileNavBusiness ? (
+            <Link
+              href="/vendor/signup"
+              className="shrink-0 rounded-xl bg-white px-3 py-3 text-[#071F2F] shadow-lg shadow-black/10"
+            >
+              {mobileControls.mobileNavBusinessLabel}
+            </Link>
+          ) : null}
         </div>
       </nav>
 

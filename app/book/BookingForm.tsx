@@ -27,6 +27,10 @@ import {
   buildGuestProfileBookingPrefill,
   type GuestTravelProfile,
 } from "@/lib/guest-command-center";
+import {
+  defaultMobileSiteControls,
+  type MobileSiteControls,
+} from "@/lib/mobile-site-controls";
 import { supabase } from "@/lib/supabase";
 
 type BookingFormProps = {
@@ -34,6 +38,7 @@ type BookingFormProps = {
   initialDate?: string;
   initialTime?: string;
   initialGuests?: string;
+  mobileControls?: MobileSiteControls;
 };
 
 type ListingSummary = {
@@ -146,6 +151,7 @@ export default function BookingForm({
   initialDate = "",
   initialTime = "",
   initialGuests = "",
+  mobileControls = defaultMobileSiteControls,
 }: BookingFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -578,16 +584,33 @@ export default function BookingForm({
     <div className="mobile-no-overflow mx-auto grid w-full max-w-7xl gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_390px] lg:pb-0">
       <section className="mobile-no-overflow rounded-[2rem] bg-white p-5 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
         <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-          Private booking request desk
+          <span className="sm:hidden">
+            {mobileControls.mobileBookingHeroEyebrow}
+          </span>
+          <span className="hidden sm:inline">Private booking request desk</span>
         </p>
         <h1 className="mt-2 text-3xl font-black leading-tight text-[#0B3C5D] sm:text-5xl">
-          {listing ? `Request ${listing.title}` : "Request a Roatan experience"}
+          <span className="sm:hidden">
+            {listing
+              ? `${mobileControls.mobileBookingSubmitLabel} ${listing.title}`
+              : mobileControls.mobileBookingHeroTitle}
+          </span>
+          <span className="hidden sm:inline">
+            {listing
+              ? `Request ${listing.title}`
+              : "Request a Roatan experience"}
+          </span>
         </h1>
 
         <p className="mt-3 max-w-3xl leading-7 text-gray-600">
-          A guided booking flow with availability, pickup notes, payment
-          expectations, and guest messaging all connected before the operator
-          confirms your plans.
+          <span className="sm:hidden">
+            {mobileControls.mobileBookingHeroBody}
+          </span>
+          <span className="hidden sm:inline">
+            A guided booking flow with availability, pickup notes, payment
+            expectations, and guest messaging all connected before the operator
+            confirms your plans.
+          </span>
         </p>
 
         <section
@@ -597,10 +620,12 @@ export default function BookingForm({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
-                Mobile booking checkout
+                {mobileControls.mobileBookingStepLabel}
               </p>
               <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
-                {mobileCheckoutCta.label}
+                {mobileCheckoutCta.tone === "ready"
+                  ? mobileControls.mobileBookingStickyReadyLabel
+                  : mobileCheckoutCta.label}
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
@@ -1300,7 +1325,7 @@ export default function BookingForm({
             }
             className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
           >
-            {loading ? "Submitting..." : "Submit Booking Request"}
+            {loading ? "Submitting..." : mobileControls.mobileBookingSubmitLabel}
           </button>
         </form>
       )}
@@ -1391,7 +1416,9 @@ export default function BookingForm({
                 {mobileCheckoutCta.priceLabel}
               </p>
               <p className="truncate text-sm font-black text-[#0B3C5D]">
-                {mobileCheckoutCta.label}
+                {mobileCheckoutCta.tone === "ready"
+                  ? mobileControls.mobileBookingStickyReadyLabel
+                  : mobileCheckoutCta.label}
               </p>
               <p className="truncate text-xs font-semibold text-gray-500">
                 {mobileCheckoutCta.text}
@@ -1404,7 +1431,7 @@ export default function BookingForm({
                 disabled={loading}
                 className="shrink-0 rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20 disabled:opacity-50"
               >
-                {mobileCheckoutCta.actionLabel}
+                {mobileControls.mobileBookingSubmitLabel}
               </button>
             ) : (
               <a

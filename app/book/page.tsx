@@ -5,6 +5,12 @@ import {
   getBookingTrustSteps,
   getLuxuryBookingFlowSteps,
 } from "@/lib/booking-flow";
+import { publishedSiteSettingsKey } from "@/lib/homepage-settings";
+import {
+  defaultMobileSiteControls,
+  normalizeMobileSiteControls,
+} from "@/lib/mobile-site-controls";
+import { supabaseServer } from "@/lib/supabase-server";
 import BookingForm from "./BookingForm";
 
 export default async function BookPage({
@@ -20,6 +26,15 @@ export default async function BookPage({
   const { listing, date, time, guests } = await searchParams;
   const trustSteps = getBookingTrustSteps();
   const luxurySteps = getLuxuryBookingFlowSteps();
+  const { data: siteSettingsData } = await supabaseServer
+    .from("site_settings")
+    .select("value")
+    .eq("key", publishedSiteSettingsKey)
+    .maybeSingle();
+  const mobileControls =
+    siteSettingsData?.value && typeof siteSettingsData.value === "object"
+      ? normalizeMobileSiteControls(siteSettingsData.value)
+      : defaultMobileSiteControls;
 
   return (
     <main className="brand-page min-h-screen overflow-hidden px-4 py-6 sm:px-6 sm:py-10">
@@ -46,15 +61,28 @@ export default async function BookPage({
         <section className="brand-hero-panel mb-6 grid gap-6 overflow-hidden p-4 text-white sm:mb-8 sm:p-6 lg:grid-cols-[1fr_0.78fr] lg:p-10">
           <div>
             <p className="brand-eyebrow-gold">
-              Luxury booking flow
+              <span className="sm:hidden">
+                {mobileControls.mobileBookingHeroEyebrow}
+              </span>
+              <span className="hidden sm:inline">Luxury booking flow</span>
             </p>
             <h1 className="mt-3 max-w-4xl text-4xl font-black leading-[0.98] sm:text-6xl">
-              A private-request experience for your Roatan day.
+              <span className="sm:hidden">
+                {mobileControls.mobileBookingHeroTitle}
+              </span>
+              <span className="hidden sm:inline">
+                A private-request experience for your Roatan day.
+              </span>
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-white/76">
-              Choose the date, time, pickup details, and guest notes in one
-              calm flow. You see payment expectations before sending, and the
-              operator confirms availability before anything is final.
+              <span className="sm:hidden">
+                {mobileControls.mobileBookingHeroBody}
+              </span>
+              <span className="hidden sm:inline">
+                Choose the date, time, pickup details, and guest notes in one
+                calm flow. You see payment expectations before sending, and the
+                operator confirms availability before anything is final.
+              </span>
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
               <a
@@ -140,6 +168,7 @@ export default async function BookPage({
             initialDate={date || ""}
             initialTime={time || ""}
             initialGuests={guests || ""}
+            mobileControls={mobileControls}
           />
         </section>
       </div>

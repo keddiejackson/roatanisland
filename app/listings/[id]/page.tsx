@@ -23,6 +23,11 @@ import {
   getTourTimeLabels,
 } from "@/lib/listing-detail";
 import { getAvailabilityPreviewDays } from "@/lib/booking-availability";
+import { publishedSiteSettingsKey } from "@/lib/homepage-settings";
+import {
+  defaultMobileSiteControls,
+  normalizeMobileSiteControls,
+} from "@/lib/mobile-site-controls";
 import {
   buildListingComparisonFacts,
   getListingConversionScore,
@@ -294,9 +299,18 @@ export default async function ListingPage({
     category: nearby.category || "Experience",
     imageUrl: nearby.image_url,
   }));
+  const { data: siteSettingsData } = await supabaseServer
+    .from("site_settings")
+    .select("value")
+    .eq("key", publishedSiteSettingsKey)
+    .maybeSingle();
+  const mobileControls =
+    siteSettingsData?.value && typeof siteSettingsData.value === "object"
+      ? normalizeMobileSiteControls(siteSettingsData.value)
+      : defaultMobileSiteControls;
 
   return (
-    <main className="min-h-screen bg-[#F8F3EA] text-[#17324D]">
+    <main className="min-h-screen bg-[#F8F3EA] pb-28 text-[#17324D] lg:pb-0">
       <section className="relative min-h-[680px] overflow-hidden sm:min-h-[760px]">
         {listing.image_url ? (
           <Image
@@ -342,7 +356,10 @@ export default async function ListingPage({
 
           <div className="max-w-5xl pb-24 text-white">
             <p className="text-sm font-black uppercase tracking-[0.26em] text-[#D6B56D]">
-              Luxury booking page
+              <span className="sm:hidden">
+                {mobileControls.mobileListingHeroEyebrow}
+              </span>
+              <span className="hidden sm:inline">Luxury booking page</span>
             </p>
             <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
               {listing.category || "Roatan experience"}
@@ -370,7 +387,12 @@ export default async function ListingPage({
                 </span>
               ) : null}
               <span className="rounded-full border border-white/15 bg-white/15 px-4 py-2 backdrop-blur">
-                Request reviewed before confirmation
+                <span className="sm:hidden">
+                  {mobileControls.mobileListingTrustLine}
+                </span>
+                <span className="hidden sm:inline">
+                  Request reviewed before confirmation
+                </span>
               </span>
               {readiness.score >= 90 ? (
                 <span className="rounded-full bg-[#D6B56D] px-4 py-2 text-[#071F2F]">
@@ -391,14 +413,22 @@ export default async function ListingPage({
                   Experience overview
                 </p>
                 <h2 className="mt-2 text-4xl font-black text-[#0B3C5D] sm:text-5xl">
-                  A polished look at the day.
+                  <span className="sm:hidden">
+                    {mobileControls.mobileListingOverviewTitle}
+                  </span>
+                  <span className="hidden sm:inline">
+                    A polished look at the day.
+                  </span>
                 </h2>
               </div>
               <Link
                 href={`/book?listing=${listing.id}`}
                 className="rounded-full bg-[#00A8A8] px-5 py-3 text-center font-bold text-white transition hover:bg-[#078F8F]"
               >
-                Request this listing
+                <span className="sm:hidden">
+                  {mobileControls.mobileListingStickyCtaLabel}
+                </span>
+                <span className="hidden sm:inline">Request this listing</span>
               </Link>
             </div>
             <p className="mt-5 text-lg leading-8 text-gray-700">
@@ -883,7 +913,7 @@ export default async function ListingPage({
               href={`/book?listing=${listing.id}`}
               className="mt-6 block w-full rounded-full bg-[#00A8A8] px-6 py-4 text-center text-lg font-bold text-white transition hover:bg-[#078F8F]"
             >
-              Request booking
+              {mobileControls.mobileListingStickyCtaLabel}
             </Link>
             <p className="mt-3 text-sm leading-6 text-white/70">
               Submit your preferred date and group size. The operator confirms
@@ -1034,6 +1064,30 @@ export default async function ListingPage({
           <ReportListingForm listingId={listing.id} />
         </aside>
       </section>
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/95 px-3 py-3 shadow-2xl shadow-[#071F2F]/20 backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-black text-[#0B3C5D]">
+              {listing.title}
+            </p>
+            <p className="mt-0.5 text-xs font-bold text-[#007B7B]">
+              {priceLabel} · {mobileControls.mobileListingTrustLine}
+            </p>
+          </div>
+          <Link
+            href={`/map?selected=${listing.id}`}
+            className="rounded-2xl border border-[#00A8A8]/25 bg-[#EEF7F6] px-4 py-3 text-sm font-black text-[#0B3C5D]"
+          >
+            {mobileControls.mobileListingMapLabel}
+          </Link>
+          <Link
+            href={`/book?listing=${listing.id}`}
+            className="rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
+          >
+            {mobileControls.mobileListingStickyCtaLabel}
+          </Link>
+        </div>
+      </div>
       <SiteFooter />
     </main>
   );

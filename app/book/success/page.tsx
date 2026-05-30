@@ -2,6 +2,12 @@ import Link from "next/link";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import { getBookingSuccessNextSteps } from "@/lib/booking-flow";
+import { publishedSiteSettingsKey } from "@/lib/homepage-settings";
+import {
+  defaultMobileSiteControls,
+  normalizeMobileSiteControls,
+} from "@/lib/mobile-site-controls";
+import { supabaseServer } from "@/lib/supabase-server";
 
 export default async function BookingPaymentSuccessPage({
   searchParams,
@@ -14,6 +20,15 @@ export default async function BookingPaymentSuccessPage({
     depositsEnabled: process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true",
     hasEmail: true,
   });
+  const { data: siteSettingsData } = await supabaseServer
+    .from("site_settings")
+    .select("value")
+    .eq("key", publishedSiteSettingsKey)
+    .maybeSingle();
+  const mobileControls =
+    siteSettingsData?.value && typeof siteSettingsData.value === "object"
+      ? normalizeMobileSiteControls(siteSettingsData.value)
+      : defaultMobileSiteControls;
 
   return (
     <main className="brand-page min-h-screen overflow-hidden px-6 py-10 text-[#17324D]">
@@ -31,15 +46,28 @@ export default async function BookingPaymentSuccessPage({
         <section className="grid gap-6 overflow-hidden rounded-[2rem] bg-white p-6 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 lg:grid-cols-[1fr_0.72fr] lg:p-8">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-              Trip request concierge
+              <span className="sm:hidden">
+                {mobileControls.mobileBookingSuccessEyebrow}
+              </span>
+              <span className="hidden sm:inline">Trip request concierge</span>
             </p>
             <h1 className="mt-3 text-4xl font-black leading-tight text-[#0B3C5D] sm:text-6xl">
-              Your Roatan request is moving.
+              <span className="sm:hidden">
+                {mobileControls.mobileBookingSuccessTitle}
+              </span>
+              <span className="hidden sm:inline">
+                Your Roatan request is moving.
+              </span>
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-8 text-gray-600">
-              Payment or request details have been saved. The local operator
-              still confirms availability, pickup notes, and final next steps
-              before your plans are complete.
+              <span className="sm:hidden">
+                {mobileControls.mobileBookingSuccessBody}
+              </span>
+              <span className="hidden sm:inline">
+                Payment or request details have been saved. The local operator
+                still confirms availability, pickup notes, and final next steps
+                before your plans are complete.
+              </span>
             </p>
             {booking ? (
               <p className="mt-6 rounded-2xl bg-[#F7F3EA] px-4 py-3 text-sm font-black text-[#0B3C5D]">
@@ -51,7 +79,10 @@ export default async function BookingPaymentSuccessPage({
                 href={booking ? `/book/status/${booking}` : "/"}
                 className="brand-button-primary"
               >
-                View booking status
+                <span className="sm:hidden">
+                  {mobileControls.mobileBookingSuccessPrimaryLabel}
+                </span>
+                <span className="hidden sm:inline">View booking status</span>
               </Link>
               <Link
                 href="/account"

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import BookingChatDrawer, {
   type BookingChatThread,
 } from "@/app/BookingChatDrawer";
+import { useMobileSiteControls } from "@/app/SiteBrandingProvider";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import {
@@ -137,6 +138,7 @@ function summarizeThreads(
 
 export default function AccountPage() {
   const router = useRouter();
+  const mobileControls = useMobileSiteControls();
   const [email, setEmail] = useState("");
   const [signedInEmail, setSignedInEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -668,26 +670,50 @@ export default function AccountPage() {
           className="rounded-[1.75rem] bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/20 sm:p-8"
         >
           <p className="text-sm font-black uppercase tracking-[0.22em] text-[#D6B56D]">
-            Private guest lounge
+            <span className="sm:hidden">
+              {mobileControls.mobileAccountEyebrow}
+            </span>
+            <span className="hidden sm:inline">Private guest lounge</span>
           </p>
           <div className="mt-4 flex flex-col justify-between gap-5 md:flex-row md:items-end">
             <div>
               <h1 className="max-w-3xl text-3xl font-black leading-tight sm:text-5xl">
-                {hasSignedIn
-                  ? `Welcome back, ${profileDisplayName}.`
-                  : "Your Roatan trip, beautifully handled."}
+                <span className="sm:hidden">
+                  {hasSignedIn
+                    ? mobileControls.mobileAccountHeadline
+                    : mobileControls.mobileAccountSignedOutHeadline}
+                </span>
+                <span className="hidden sm:inline">
+                  {hasSignedIn
+                    ? `Welcome back, ${profileDisplayName}.`
+                    : "Your Roatan trip, beautifully handled."}
+                </span>
               </h1>
               <p className="mt-3 max-w-2xl leading-7 text-white/75">
-                {hasSignedIn
-                  ? "Your next trip, saved plans, and messages are gathered in one quiet place."
-                  : "Sign in once to keep bookings, messages, saved map plans, and trip details in one calm place."}
+                <span className="sm:hidden">
+                  {hasSignedIn
+                    ? mobileControls.mobileAccountIntro
+                    : mobileControls.mobileAccountSignedOutIntro}
+                </span>
+                <span className="hidden sm:inline">
+                  {hasSignedIn
+                    ? "Your next trip, saved plans, and messages are gathered in one quiet place."
+                    : "Sign in once to keep bookings, messages, saved map plans, and trip details in one calm place."}
+                </span>
               </p>
             </div>
             <Link
               href={hasSignedIn ? "#guest-plans" : "/map"}
               className="rounded-xl bg-[#D6B56D] px-5 py-3 text-center font-bold text-[#071F2F]"
             >
-              {hasSignedIn ? "View all trips" : "Start planning"}
+              <span className="sm:hidden">
+                {hasSignedIn
+                  ? mobileControls.mobileAccountPrimaryActionLabel
+                  : "Start planning"}
+              </span>
+              <span className="hidden sm:inline">
+                {hasSignedIn ? "View all trips" : "Start planning"}
+              </span>
             </Link>
           </div>
         </section>

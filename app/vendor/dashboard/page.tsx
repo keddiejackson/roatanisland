@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import BookingChatDrawer, {
   type BookingChatThread,
 } from "@/app/BookingChatDrawer";
+import { useMobileSiteControls } from "@/app/SiteBrandingProvider";
 import PinPicker from "@/app/map/PinPicker";
 import SiteLogo from "@/app/SiteLogo";
 import VendorProCommandCenter from "@/app/vendor/VendorProCommandCenter";
@@ -257,6 +258,7 @@ function threadBadgeClass(summary?: BookingThreadSummary) {
 
 export default function VendorDashboardPage() {
   const router = useRouter();
+  const mobileControls = useMobileSiteControls();
   const [vendorAccount, setVendorAccount] = useState<VendorAccount | null>(null);
   const [profileForm, setProfileForm] = useState({
     businessName: "",
@@ -1319,7 +1321,13 @@ export default function VendorDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+    <main
+      className={`min-h-screen bg-[#F7F3EA] text-[#17324D] ${
+        mobileControls.compactMobileVendorDashboard
+          ? "px-3 py-5 sm:px-6 sm:py-10"
+          : "px-6 py-10"
+      }`}
+    >
       <div className="mx-auto max-w-5xl">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <SiteLogo />

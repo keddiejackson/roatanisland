@@ -16,6 +16,11 @@ import {
   type HomepageTrustPoint,
 } from "@/lib/homepage-settings";
 import {
+  defaultMobileSiteControls,
+  normalizeMobileSiteControls,
+  type MobileSiteControls,
+} from "@/lib/mobile-site-controls";
+import {
   brandingForPlacement,
   defaultSiteBranding,
   logoFits,
@@ -42,6 +47,7 @@ const defaultSettings = {
   commissionRate: "0.10",
   ...defaultSiteBranding,
   ...defaultHomepageControls,
+  ...defaultMobileSiteControls,
 };
 
 const logoSizePresets: Record<
@@ -200,6 +206,202 @@ const homepageTextFields = [
   { field: "topRatedBadgeLabel", label: "Top Rated Badge Label", rows: 1 },
 ] as const;
 
+const mobileTextFields: {
+  field: keyof Pick<
+    MobileSiteControls,
+    | "mobileHeroEyebrow"
+    | "mobileHeroHeadline"
+    | "mobileHeroSubhead"
+    | "mobilePrimaryCtaLabel"
+    | "mobileSecondaryCtaLabel"
+    | "mobileHeroCountLabel"
+    | "mobileHeroMapLabel"
+    | "mobileHeroSupportLabel"
+    | "mobileListingsTitle"
+    | "mobileListingsIntro"
+    | "mobileListingsSearchPlaceholder"
+    | "mobileListingsMapButtonLabel"
+    | "mobileListingsFilterButtonLabel"
+    | "mobileListingsResultLabel"
+    | "mobileFinalCtaTitle"
+    | "mobileFinalCtaBody"
+    | "mobileFinalCtaPrimaryLabel"
+    | "mobileListingHeroEyebrow"
+    | "mobileListingTrustLine"
+    | "mobileListingOverviewTitle"
+    | "mobileListingStickyCtaLabel"
+    | "mobileListingMapLabel"
+    | "mobileBookingHeroEyebrow"
+    | "mobileBookingHeroTitle"
+    | "mobileBookingHeroBody"
+    | "mobileBookingSubmitLabel"
+    | "mobileBookingStickyReadyLabel"
+    | "mobileBookingStepLabel"
+    | "mobileBookingSuccessEyebrow"
+    | "mobileBookingSuccessTitle"
+    | "mobileBookingSuccessBody"
+    | "mobileBookingSuccessPrimaryLabel"
+    | "mobileAccountEyebrow"
+    | "mobileAccountHeadline"
+    | "mobileAccountSignedOutHeadline"
+    | "mobileAccountIntro"
+    | "mobileAccountSignedOutIntro"
+    | "mobileAccountPrimaryActionLabel"
+    | "mobileChatBubbleLabel"
+    | "mobileChatBubbleNeedsResponseLabel"
+    | "mobileNavListingsLabel"
+    | "mobileNavMapLabel"
+    | "mobileNavConciergeLabel"
+    | "mobileNavSignInLabel"
+    | "mobileNavBusinessLabel"
+  >;
+  label: string;
+  group: string;
+  rows: number;
+}[] = [
+  { field: "mobileHeroEyebrow", label: "Hero eyebrow", group: "Home", rows: 1 },
+  { field: "mobileHeroHeadline", label: "Hero headline", group: "Home", rows: 2 },
+  { field: "mobileHeroSubhead", label: "Hero subhead", group: "Home", rows: 2 },
+  { field: "mobilePrimaryCtaLabel", label: "Primary button", group: "Home", rows: 1 },
+  { field: "mobileSecondaryCtaLabel", label: "Secondary button", group: "Home", rows: 1 },
+  { field: "mobileHeroCountLabel", label: "Hero count pill", group: "Home", rows: 1 },
+  { field: "mobileHeroMapLabel", label: "Hero map pill", group: "Home", rows: 1 },
+  { field: "mobileHeroSupportLabel", label: "Hero support pill", group: "Home", rows: 1 },
+  { field: "mobileListingsTitle", label: "Listings title", group: "Search", rows: 2 },
+  { field: "mobileListingsIntro", label: "Listings intro", group: "Search", rows: 2 },
+  { field: "mobileListingsSearchPlaceholder", label: "Search placeholder", group: "Search", rows: 1 },
+  { field: "mobileListingsMapButtonLabel", label: "Map button", group: "Search", rows: 1 },
+  { field: "mobileListingsFilterButtonLabel", label: "Filters button", group: "Search", rows: 1 },
+  { field: "mobileListingsResultLabel", label: "Result summary", group: "Search", rows: 1 },
+  { field: "mobileFinalCtaTitle", label: "Final CTA title", group: "Home", rows: 2 },
+  { field: "mobileFinalCtaBody", label: "Final CTA body", group: "Home", rows: 2 },
+  { field: "mobileFinalCtaPrimaryLabel", label: "Final CTA button", group: "Home", rows: 1 },
+  { field: "mobileListingHeroEyebrow", label: "Listing hero eyebrow", group: "Listing", rows: 1 },
+  { field: "mobileListingTrustLine", label: "Listing trust line", group: "Listing", rows: 1 },
+  { field: "mobileListingOverviewTitle", label: "Listing overview title", group: "Listing", rows: 1 },
+  { field: "mobileListingStickyCtaLabel", label: "Sticky request button", group: "Listing", rows: 1 },
+  { field: "mobileListingMapLabel", label: "Sticky map button", group: "Listing", rows: 1 },
+  { field: "mobileBookingHeroEyebrow", label: "Booking eyebrow", group: "Booking", rows: 1 },
+  { field: "mobileBookingHeroTitle", label: "Booking title", group: "Booking", rows: 2 },
+  { field: "mobileBookingHeroBody", label: "Booking body", group: "Booking", rows: 2 },
+  { field: "mobileBookingSubmitLabel", label: "Submit button", group: "Booking", rows: 1 },
+  { field: "mobileBookingStickyReadyLabel", label: "Sticky ready label", group: "Booking", rows: 1 },
+  { field: "mobileBookingStepLabel", label: "Step panel label", group: "Booking", rows: 1 },
+  { field: "mobileBookingSuccessEyebrow", label: "Success eyebrow", group: "Booking", rows: 1 },
+  { field: "mobileBookingSuccessTitle", label: "Success title", group: "Booking", rows: 2 },
+  { field: "mobileBookingSuccessBody", label: "Success body", group: "Booking", rows: 2 },
+  { field: "mobileBookingSuccessPrimaryLabel", label: "Success main button", group: "Booking", rows: 1 },
+  { field: "mobileAccountEyebrow", label: "Account eyebrow", group: "Account", rows: 1 },
+  { field: "mobileAccountHeadline", label: "Signed-in headline", group: "Account", rows: 2 },
+  { field: "mobileAccountSignedOutHeadline", label: "Signed-out headline", group: "Account", rows: 2 },
+  { field: "mobileAccountIntro", label: "Signed-in intro", group: "Account", rows: 2 },
+  { field: "mobileAccountSignedOutIntro", label: "Signed-out intro", group: "Account", rows: 2 },
+  { field: "mobileAccountPrimaryActionLabel", label: "Primary action", group: "Account", rows: 1 },
+  { field: "mobileChatBubbleLabel", label: "Chat bubble title", group: "Chat", rows: 1 },
+  { field: "mobileChatBubbleNeedsResponseLabel", label: "Chat response text", group: "Chat", rows: 1 },
+  { field: "mobileNavListingsLabel", label: "Nav listings", group: "Nav", rows: 1 },
+  { field: "mobileNavMapLabel", label: "Nav map", group: "Nav", rows: 1 },
+  { field: "mobileNavConciergeLabel", label: "Nav concierge", group: "Nav", rows: 1 },
+  { field: "mobileNavSignInLabel", label: "Nav sign in", group: "Nav", rows: 1 },
+  { field: "mobileNavBusinessLabel", label: "Nav business", group: "Nav", rows: 1 },
+];
+
+const mobileToggleFields: {
+  field: keyof Pick<
+    MobileSiteControls,
+    | "showMobileNavListings"
+    | "showMobileNavMap"
+    | "showMobileNavConcierge"
+    | "showMobileNavSignIn"
+    | "showMobileNavBusiness"
+    | "showMobileHeroPills"
+    | "showMobileTrustBar"
+    | "showMobileHomepageSearch"
+    | "showMobileFinalCta"
+  | "compactMobileAdminNav"
+  | "compactMobileVendorDashboard"
+    | "useMobileLogoOverrides"
+  >;
+  label: string;
+  help: string;
+}[] = [
+  {
+    field: "showMobileNavListings",
+    label: "Show Listings in mobile nav",
+    help: "Controls the top mobile menu on the homepage.",
+  },
+  {
+    field: "showMobileNavMap",
+    label: "Show Map in mobile nav",
+    help: "Keep the mobile header focused on the paths guests use most.",
+  },
+  {
+    field: "showMobileNavConcierge",
+    label: "Show Concierge in mobile nav",
+    help: "Useful when concierge is a main sales path.",
+  },
+  {
+    field: "showMobileNavSignIn",
+    label: "Show Sign in in mobile nav",
+    help: "Signed-in guests still see their account menu.",
+  },
+  {
+    field: "showMobileNavBusiness",
+    label: "Show List your business",
+    help: "Hide this if you want the phone view to be guest-only.",
+  },
+  {
+    field: "showMobileHeroPills",
+    label: "Show hero trust pills",
+    help: "Turn off for the cleanest first screen.",
+  },
+  {
+    field: "showMobileTrustBar",
+    label: "Show trust bar",
+    help: "Hides the white trust strip under the hero on phones.",
+  },
+  {
+    field: "showMobileHomepageSearch",
+    label: "Show homepage search form",
+    help: "Hide it to make mobile guests start with map or concierge.",
+  },
+  {
+    field: "showMobileFinalCta",
+    label: "Show final CTA",
+    help: "Controls the last large call-to-action panel on phones.",
+  },
+  {
+    field: "useMobileLogoOverrides",
+    label: "Use separate mobile logo controls",
+    help: "Lets the phone header use its own logo size, crop, shape, and spacing.",
+  },
+  {
+    field: "compactMobileAdminNav",
+    label: "Compact admin nav on phones",
+    help: "Makes admin tools easier to scan on small screens.",
+  },
+  {
+    field: "compactMobileVendorDashboard",
+    label: "Compact vendor dashboard on phones",
+    help: "Keeps vendor screens tighter on mobile.",
+  },
+];
+
+const mobileLogoNumberControls = [
+  { field: "mobileLogoWidthPx", label: "Mobile logo width", min: 24, max: 2400, step: 1 },
+  { field: "mobileLogoHeightPx", label: "Mobile logo height", min: 24, max: 1200, step: 1 },
+  { field: "mobileLogoPaddingPx", label: "Mobile logo padding", min: 0, max: 240, step: 1 },
+  { field: "mobileLogoRadiusPx", label: "Mobile logo radius", min: 0, max: 2000, step: 1 },
+  { field: "mobileLogoBorderWidthPx", label: "Mobile logo border", min: 0, max: 80, step: 1 },
+  { field: "mobileLogoOpacity", label: "Mobile logo opacity", min: 0.25, max: 1, step: 0.05 },
+  { field: "mobileLogoRotateDeg", label: "Mobile logo rotation", min: -180, max: 180, step: 1 },
+  { field: "mobileLogoScale", label: "Mobile logo scale", min: 0.1, max: 4, step: 0.05 },
+] as const;
+
+type MobileLogoNumberField = (typeof mobileLogoNumberControls)[number]["field"];
+
+const mobileControlGroups = ["Home", "Search", "Listing", "Booking", "Account", "Chat", "Nav"];
+
 export default function AdminSettingsPage() {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
@@ -290,6 +492,7 @@ export default function AdminSettingsPage() {
           ...savedSettings,
           ...normalizeHomepageControls(savedSettings),
           ...normalizeSiteBranding(savedSettings),
+          ...normalizeMobileSiteControls(savedSettings),
         });
       }
 
@@ -321,6 +524,14 @@ export default function AdminSettingsPage() {
   }
 
   function updateNumericLogoSetting(field: NumericLogoField, value: string) {
+    const numericValue = Number.parseFloat(value);
+    updateSetting(field, Number.isFinite(numericValue) ? numericValue : 0);
+  }
+
+  function updateNumericMobileLogoSetting(
+    field: MobileLogoNumberField,
+    value: string,
+  ) {
     const numericValue = Number.parseFloat(value);
     updateSetting(field, Number.isFinite(numericValue) ? numericValue : 0);
   }
@@ -546,7 +757,26 @@ export default function AdminSettingsPage() {
     },
   );
   const previewBranding = normalizeSiteBranding(settings);
+  const mobileControlsPreview = normalizeMobileSiteControls(settings);
   const sitePreviewBranding = brandingForPlacement(previewBranding, "site");
+  const mobileLogoPreviewBranding = mobileControlsPreview.useMobileLogoOverrides
+    ? {
+        ...sitePreviewBranding,
+        logoWidthPx: mobileControlsPreview.mobileLogoWidthPx,
+        logoHeightPx: mobileControlsPreview.mobileLogoHeightPx,
+        logoPaddingPx: mobileControlsPreview.mobileLogoPaddingPx,
+        logoRadiusPx: mobileControlsPreview.mobileLogoRadiusPx,
+        logoBorderWidthPx: mobileControlsPreview.mobileLogoBorderWidthPx,
+        logoOpacity: mobileControlsPreview.mobileLogoOpacity,
+        logoRotateDeg: mobileControlsPreview.mobileLogoRotateDeg,
+        logoScale: mobileControlsPreview.mobileLogoScale,
+        logoFit: mobileControlsPreview.mobileLogoFit,
+        logoPosition: mobileControlsPreview.mobileLogoPosition,
+        logoShadow: mobileControlsPreview.mobileLogoShadow,
+        logoBackgroundColor: mobileControlsPreview.mobileLogoBackgroundColor,
+        logoBorderColor: mobileControlsPreview.mobileLogoBorderColor,
+      }
+    : sitePreviewBranding;
   const faviconPreviewBranding = brandingForPlacement(
     previewBranding,
     "favicon",
@@ -1477,6 +1707,271 @@ export default function AdminSettingsPage() {
                   </div>
                 ))}
               </div>
+            </section>
+            <section className="space-y-6 rounded-lg border border-[#d7e6ea] bg-white p-6 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#0fa9b6]">
+                    Mobile Site Controls
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold text-[#053c5e]">
+                    Edit the phone experience
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm text-slate-600">
+                    Control the mobile homepage, booking buttons, account copy,
+                    chat bubble, phone navigation, and mobile-only logo sizing
+                    from one place.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSettings((current) => ({
+                      ...current,
+                      ...defaultMobileSiteControls,
+                    }))
+                  }
+                  className="rounded-xl border border-[#d7e6ea] bg-white px-4 py-2 text-sm font-black text-[#053c5e]"
+                >
+                  Restore mobile defaults
+                </button>
+              </div>
+
+              <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
+                <div className="rounded-[2rem] border border-[#0B3C5D]/10 bg-[#071F2F] p-4 text-white shadow-xl shadow-[#071F2F]/10">
+                  <div className="rounded-[1.5rem] bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="max-w-[70%]">
+                        {sitePreviewBranding.logoUrl ? (
+                          <div className="mb-5 origin-top-left scale-[0.72]">
+                            <span style={logoFrameStyle(mobileLogoPreviewBranding)}>
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={mobileLogoPreviewBranding.logoUrl}
+                                alt=""
+                                style={logoImageStyle(mobileLogoPreviewBranding)}
+                              />
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="mb-5 rounded-xl bg-white px-3 py-2 text-xs font-black text-[#053c5e]">
+                            Logo preview
+                          </div>
+                        )}
+                        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D6B56D]">
+                          {mobileControlsPreview.mobileHeroEyebrow}
+                        </p>
+                        <h3 className="mt-2 text-3xl font-black leading-none">
+                          {mobileControlsPreview.mobileHeroHeadline}
+                        </h3>
+                        <p className="mt-3 text-sm leading-6 text-white/72">
+                          {mobileControlsPreview.mobileHeroSubhead}
+                        </p>
+                      </div>
+                      <div className="grid gap-2 text-[10px] font-black">
+                        <span className="rounded-full bg-white/10 px-3 py-2">
+                          {mobileControlsPreview.mobileNavMapLabel}
+                        </span>
+                        <span className="rounded-full bg-white px-3 py-2 text-[#071F2F]">
+                          {mobileControlsPreview.mobileNavBusinessLabel}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-5 grid gap-2">
+                      <span className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black">
+                        {mobileControlsPreview.mobilePrimaryCtaLabel}
+                      </span>
+                      <span className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-center text-sm font-black">
+                        {mobileControlsPreview.mobileSecondaryCtaLabel}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-3">
+                  <h3 className="text-lg font-bold text-[#053c5e]">
+                    Mobile visibility
+                  </h3>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {mobileToggleFields.map(({ field, label, help }) => (
+                      <label
+                        key={field}
+                        className="flex items-start gap-3 rounded-xl border border-[#d7e6ea] bg-[#f6fbfc] p-3"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={Boolean(settings[field])}
+                          onChange={(e) => updateSetting(field, e.target.checked)}
+                          className="mt-1 h-4 w-4 accent-[#0fa9b6]"
+                        />
+                        <span>
+                          <span className="block text-sm font-black text-[#053c5e]">
+                            {label}
+                          </span>
+                          <span className="mt-1 block text-xs leading-5 text-slate-500">
+                            {help}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-4 rounded-2xl border border-[#d7e6ea] bg-[#f6fbfc] p-4">
+                <div>
+                  <h3 className="text-lg font-bold text-[#053c5e]">
+                    Mobile logo editor
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600">
+                    These controls only apply on phone-sized screens when the
+                    separate mobile logo toggle is on.
+                  </p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <label>
+                    <span className="text-sm font-semibold text-[#053c5e]">
+                      Mobile logo fit
+                    </span>
+                    <select
+                      value={settings.mobileLogoFit}
+                      onChange={(e) =>
+                        updateSetting("mobileLogoFit", e.target.value as LogoFit)
+                      }
+                      className="mt-2 w-full rounded-lg border border-[#d7e6ea] bg-white px-4 py-3 text-[#082f49]"
+                    >
+                      {logoFits.map((fit) => (
+                        <option key={fit} value={fit}>
+                          {fit}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="text-sm font-semibold text-[#053c5e]">
+                      Mobile logo position
+                    </span>
+                    <select
+                      value={settings.mobileLogoPosition}
+                      onChange={(e) =>
+                        updateSetting(
+                          "mobileLogoPosition",
+                          e.target.value as LogoPosition,
+                        )
+                      }
+                      className="mt-2 w-full rounded-lg border border-[#d7e6ea] bg-white px-4 py-3 text-[#082f49]"
+                    >
+                      {logoPositions.map((position) => (
+                        <option key={position} value={position}>
+                          {position}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="text-sm font-semibold text-[#053c5e]">
+                      Mobile logo shadow
+                    </span>
+                    <select
+                      value={settings.mobileLogoShadow}
+                      onChange={(e) =>
+                        updateSetting(
+                          "mobileLogoShadow",
+                          e.target.value as LogoShadow,
+                        )
+                      }
+                      className="mt-2 w-full rounded-lg border border-[#d7e6ea] bg-white px-4 py-3 text-[#082f49]"
+                    >
+                      {logoShadows.map((shadow) => (
+                        <option key={shadow} value={shadow}>
+                          {shadow}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  {mobileLogoNumberControls.map(
+                    ({ field, label, min, max, step }) => (
+                      <label key={field}>
+                        <span className="text-sm font-semibold text-[#053c5e]">
+                          {label}
+                        </span>
+                        <input
+                          type="number"
+                          min={min}
+                          max={max}
+                          step={step}
+                          value={settings[field]}
+                          onChange={(e) =>
+                            updateNumericMobileLogoSetting(field, e.target.value)
+                          }
+                          className="mt-2 w-full rounded-lg border border-[#d7e6ea] bg-white px-4 py-3 text-[#082f49]"
+                        />
+                      </label>
+                    ),
+                  )}
+                </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <label>
+                    <span className="text-sm font-semibold text-[#053c5e]">
+                      Mobile logo background
+                    </span>
+                    <input
+                      value={settings.mobileLogoBackgroundColor}
+                      onChange={(e) =>
+                        updateSetting("mobileLogoBackgroundColor", e.target.value)
+                      }
+                      placeholder="#ffffff or transparent"
+                      className="mt-2 w-full rounded-lg border border-[#d7e6ea] bg-white px-4 py-3 text-[#082f49]"
+                    />
+                  </label>
+                  <label>
+                    <span className="text-sm font-semibold text-[#053c5e]">
+                      Mobile logo border color
+                    </span>
+                    <input
+                      value={settings.mobileLogoBorderColor}
+                      onChange={(e) =>
+                        updateSetting("mobileLogoBorderColor", e.target.value)
+                      }
+                      placeholder="#ffffff"
+                      className="mt-2 w-full rounded-lg border border-[#d7e6ea] bg-white px-4 py-3 text-[#082f49]"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {mobileControlGroups.map((group) => (
+                <div
+                  key={group}
+                  className="grid gap-4 rounded-2xl border border-[#d7e6ea] bg-white p-4"
+                >
+                  <h3 className="text-lg font-bold text-[#053c5e]">
+                    {group} mobile copy
+                  </h3>
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {mobileTextFields
+                      .filter((field) => field.group === group)
+                      .map(({ field, label, rows }) => (
+                        <label
+                          key={field}
+                          className={rows > 1 ? "lg:col-span-2" : ""}
+                        >
+                          <span className="text-sm font-semibold text-[#053c5e]">
+                            {label}
+                          </span>
+                          <textarea
+                            value={String(settings[field])}
+                            rows={rows}
+                            onChange={(e) => updateSetting(field, e.target.value)}
+                            className="mt-2 w-full resize-y rounded-lg border border-[#d7e6ea] px-4 py-3 text-[#082f49] outline-none transition focus:border-[#0fa9b6] focus:ring-2 focus:ring-[#0fa9b6]/20"
+                          />
+                        </label>
+                      ))}
+                  </div>
+                </div>
+              ))}
             </section>
             {businessSettingFields.map(({ field, label, rows }) => (
               <div key={field}>

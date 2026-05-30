@@ -3,12 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useSiteBranding } from "@/app/SiteBrandingProvider";
+import {
+  useMobileSiteControls,
+  useSiteBranding,
+} from "@/app/SiteBrandingProvider";
 import {
   brandingForPlacement,
   logoFrameStyle,
   logoImageStyle,
   shouldUseCustomLogo,
+  type SiteBranding,
 } from "@/lib/site-branding";
 
 type SiteLogoProps = {
@@ -27,7 +31,26 @@ export default function SiteLogo({
   className = "",
 }: SiteLogoProps) {
   const branding = useSiteBranding();
+  const mobileControls = useMobileSiteControls();
   const siteBranding = brandingForPlacement(branding, "site");
+  const mobileLogoBranding: SiteBranding = mobileControls.useMobileLogoOverrides
+    ? {
+        ...siteBranding,
+        logoWidthPx: mobileControls.mobileLogoWidthPx,
+        logoHeightPx: mobileControls.mobileLogoHeightPx,
+        logoPaddingPx: mobileControls.mobileLogoPaddingPx,
+        logoRadiusPx: mobileControls.mobileLogoRadiusPx,
+        logoBorderWidthPx: mobileControls.mobileLogoBorderWidthPx,
+        logoOpacity: mobileControls.mobileLogoOpacity,
+        logoRotateDeg: mobileControls.mobileLogoRotateDeg,
+        logoScale: mobileControls.mobileLogoScale,
+        logoFit: mobileControls.mobileLogoFit,
+        logoPosition: mobileControls.mobileLogoPosition,
+        logoShadow: mobileControls.mobileLogoShadow,
+        logoBackgroundColor: mobileControls.mobileLogoBackgroundColor,
+        logoBorderColor: mobileControls.mobileLogoBorderColor,
+      }
+    : siteBranding;
   const [failedLogoUrl, setFailedLogoUrl] = useState("");
   const showCustomLogo =
     shouldUseCustomLogo(branding, "site") &&
@@ -41,6 +64,19 @@ export default function SiteLogo({
   const textClass =
     variant === "light" ? "text-[#082A44]" : "text-[#082A44]";
   const markClass = compact ? "h-11 w-11" : "h-12 w-12";
+  const renderCustomLogo = (logoBranding: SiteBranding) => (
+    <span style={logoFrameStyle(logoBranding)}>
+      {/* Uploaded logos can come from any public Supabase asset URL. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logoBranding.logoUrl}
+        alt="Roatan Island Life"
+        style={logoImageStyle(logoBranding)}
+        onError={() => setFailedLogoUrl(siteBranding.logoUrl)}
+      />
+    </span>
+  );
+
   return (
     <Link
       href={href}
@@ -48,16 +84,20 @@ export default function SiteLogo({
       className={`inline-flex shrink-0 items-center gap-3 ${variantClass} ${className}`}
     >
       {showCustomLogo ? (
-        <span style={logoFrameStyle(siteBranding)}>
-          {/* Uploaded logos can come from any public Supabase asset URL. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={siteBranding.logoUrl}
-            alt="Roatan Island Life"
-            style={logoImageStyle(siteBranding)}
-            onError={() => setFailedLogoUrl(siteBranding.logoUrl)}
-          />
-        </span>
+        <>
+          <span
+            className={
+              mobileControls.useMobileLogoOverrides ? "hidden sm:inline" : ""
+            }
+          >
+            {renderCustomLogo(siteBranding)}
+          </span>
+          {mobileControls.useMobileLogoOverrides ? (
+            <span className="sm:hidden">
+              {renderCustomLogo(mobileLogoBranding)}
+            </span>
+          ) : null}
+        </>
       ) : (
         <>
           <Image

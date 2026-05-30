@@ -26,6 +26,10 @@ import {
   type HomepageSectionKey,
 } from "@/lib/homepage-settings";
 import {
+  defaultMobileSiteControls,
+  normalizeMobileSiteControls,
+} from "@/lib/mobile-site-controls";
+import {
   applyTravelerPersonaToFilters,
   buildDateAwareMapUrl,
   getTravelerPersonaPresets,
@@ -103,6 +107,9 @@ export default function Home() {
   const [homepageControls, setHomepageControls] = useState(
     defaultHomepageControls,
   );
+  const [mobileControls, setMobileControls] = useState(
+    defaultMobileSiteControls,
+  );
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
   const [maxPrice, setMaxPrice] = useState("");
@@ -155,6 +162,7 @@ export default function Home() {
 
       if (settingsData?.value && typeof settingsData.value === "object") {
         setHomepageControls(normalizeHomepageControls(settingsData.value));
+        setMobileControls(normalizeMobileSiteControls(settingsData.value));
       }
     }
 
@@ -431,6 +439,7 @@ export default function Home() {
             accountLoading={homeAccountLoading}
             signOutLoading={homeSignOutLoading}
             onSignOut={signOutHomeAccount}
+            mobileControls={mobileControls}
           />
 
           <motion.div
@@ -442,45 +451,88 @@ export default function Home() {
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="text-sm font-black uppercase tracking-[0.26em] text-[#D6B56D]"
               >
-                {homepageControls.heroEyebrow}
+                <span className="sm:hidden">
+                  {mobileControls.mobileHeroEyebrow}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.heroEyebrow}
+                </span>
               </motion.p>
               <motion.h1
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-5 max-w-5xl text-[clamp(3.25rem,17vw,6rem)] font-black leading-[0.9] tracking-normal sm:text-8xl lg:text-[7.8rem]"
               >
-                {homepageControls.homepageHeadline}
+                <span className="sm:hidden">
+                  {mobileControls.mobileHeroHeadline}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.homepageHeadline}
+                </span>
               </motion.h1>
               <motion.p
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-6 max-w-3xl text-base leading-7 text-white/84 sm:mt-7 sm:text-2xl sm:leading-10"
               >
-                {homepageControls.homepageSubhead}
+                <span className="sm:hidden">
+                  {mobileControls.mobileHeroSubhead}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.homepageSubhead}
+                </span>
               </motion.p>
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap"
               >
                 <a href={homepageControls.primaryCtaHref} className="brand-button-primary">
-                  {homepageControls.primaryCtaLabel}
+                  <span className="sm:hidden">
+                    {mobileControls.mobilePrimaryCtaLabel}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {homepageControls.primaryCtaLabel}
+                  </span>
                 </a>
                 <a href={homepageControls.secondaryCtaHref} className="brand-button-ghost">
-                  {homepageControls.secondaryCtaLabel}
+                  <span className="sm:hidden">
+                    {mobileControls.mobileSecondaryCtaLabel}
+                  </span>
+                  <span className="hidden sm:inline">
+                    {homepageControls.secondaryCtaLabel}
+                  </span>
                 </a>
               </motion.div>
 
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className="mobile-scroll-row mt-9 text-sm font-bold text-white/85 sm:mt-12 sm:flex-wrap"
+                className={`mobile-scroll-row mt-9 text-sm font-bold text-white/85 sm:mt-12 sm:flex-wrap ${
+                  mobileControls.showMobileHeroPills ? "" : "hidden sm:flex"
+                }`}
               >
-                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                  {navListingCount} {homepageControls.heroCountLabel}
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                  {homepageControls.heroMapLabel}
-                </span>
-                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                  {homepageControls.heroSupportLabel}
-                </span>
+                  <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                    {navListingCount}{" "}
+                    <span className="sm:hidden">
+                      {mobileControls.mobileHeroCountLabel}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {homepageControls.heroCountLabel}
+                    </span>
+                  </span>
+                  <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                    <span className="sm:hidden">
+                      {mobileControls.mobileHeroMapLabel}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {homepageControls.heroMapLabel}
+                    </span>
+                  </span>
+                  <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                    <span className="sm:hidden">
+                      {mobileControls.mobileHeroSupportLabel}
+                    </span>
+                    <span className="hidden sm:inline">
+                      {homepageControls.heroSupportLabel}
+                    </span>
+                  </span>
               </motion.div>
             </div>
           </motion.div>
@@ -495,7 +547,9 @@ export default function Home() {
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
         style={homepageSectionStyle("trustBar")}
-        className="relative z-20 -mt-10 px-5 pb-12 sm:px-6"
+        className={`relative z-20 -mt-10 px-5 pb-12 sm:px-6 ${
+          mobileControls.showMobileTrustBar ? "" : "hidden sm:block"
+        }`}
       >
         <div className="mx-auto grid max-w-5xl gap-2 rounded-[1.25rem] border border-[#D6B56D]/20 bg-white p-3 shadow-xl shadow-[#071F2F]/8 md:grid-cols-3">
           {homepageControls.trustPoints.slice(0, 3).map((signal) => (
@@ -529,10 +583,20 @@ export default function Home() {
                 {homepageControls.listingsEyebrow}
               </p>
               <h2 className="brand-display mt-2 max-w-4xl text-4xl sm:text-6xl">
-                {homepageControls.listingsTitle}
+                <span className="sm:hidden">
+                  {mobileControls.mobileListingsTitle}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.listingsTitle}
+                </span>
               </h2>
               <p className="brand-subtitle mt-3 max-w-2xl">
-                {homepageControls.listingsIntro}
+                <span className="sm:hidden">
+                  {mobileControls.mobileListingsIntro}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.listingsIntro}
+                </span>
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -543,7 +607,10 @@ export default function Home() {
                 href={mapUrl}
                 className="brand-button-secondary"
               >
-                Open matched map
+                <span className="sm:hidden">
+                  {mobileControls.mobileListingsMapButtonLabel}
+                </span>
+                <span className="hidden sm:inline">Open matched map</span>
               </Link>
             </div>
           </motion.div>
@@ -556,12 +623,14 @@ export default function Home() {
             variants={
               reduceMotion ? reducedMotionVariants : marketplaceSearchVariants
             }
-            className="brand-card p-4 sm:p-5"
+            className={`brand-card p-4 sm:p-5 ${
+              mobileControls.showMobileHomepageSearch ? "" : "hidden sm:block"
+            }`}
           >
             <div className="grid gap-3 lg:grid-cols-[1.5fr_0.85fr_0.95fr_0.8fr_0.65fr]">
               <input
                 type="text"
-                placeholder="Search by tour, stay, transport, or location"
+                placeholder={mobileControls.mobileListingsSearchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="brand-input min-h-12"
@@ -622,7 +691,9 @@ export default function Home() {
                 onClick={() => setShowAdvancedFilters((current) => !current)}
                 className="brand-button-secondary min-h-12 px-4 py-2 text-sm"
               >
-                {showAdvancedFilters ? "Hide filters" : "More filters"}
+                {showAdvancedFilters
+                  ? "Hide filters"
+                  : mobileControls.mobileListingsFilterButtonLabel}
               </button>
             </div>
 
@@ -687,7 +758,13 @@ export default function Home() {
 
             <div className="mt-4 flex flex-col justify-between gap-3 rounded-[1rem] bg-[#EEF7F6] p-4 sm:flex-row sm:items-center">
               <p className="text-sm font-bold text-[#0B3C5D]">
-                {featuredHomeListings.length} curated matches ready.
+                {featuredHomeListings.length}{" "}
+                <span className="sm:hidden">
+                  {mobileControls.mobileListingsResultLabel}
+                </span>
+                <span className="hidden sm:inline">
+                  curated matches ready.
+                </span>
               </p>
               <div className="flex flex-wrap gap-2">
                 {hasActiveFilters ? (
@@ -700,11 +777,34 @@ export default function Home() {
                   </button>
                 ) : null}
                 <Link href={mapUrl} className="brand-button-primary px-4 py-2 text-sm">
-                  Compare on map
+                  <span className="sm:hidden">
+                    {mobileControls.mobileListingsMapButtonLabel}
+                  </span>
+                  <span className="hidden sm:inline">Compare on map</span>
                 </Link>
               </div>
             </div>
           </motion.form>
+
+          {!mobileControls.showMobileHomepageSearch ? (
+            <div className="brand-card grid gap-3 p-4 sm:hidden">
+              <p className="text-sm font-bold leading-6 text-[#0B3C5D]">
+                Search is simplified on mobile. Open the island map or ask the
+                concierge for a matched plan.
+              </p>
+              <div className="grid gap-2">
+                <Link href={mapUrl} className="brand-button-primary justify-center">
+                  {mobileControls.mobileListingsMapButtonLabel}
+                </Link>
+                <Link
+                  href="/concierge"
+                  className="brand-button-secondary justify-center"
+                >
+                  Plan with concierge
+                </Link>
+              </div>
+            </div>
+          ) : null}
 
           <div className="mt-10">
             {featuredHomeListings.length === 0 ? (
@@ -759,7 +859,9 @@ export default function Home() {
         viewport={viewportOnce}
         variants={reduceMotion ? reducedMotionVariants : sectionRevealVariants}
         style={homepageSectionStyle("finalCta")}
-        className="px-5 pb-20 sm:px-6"
+        className={`px-5 pb-20 sm:px-6 ${
+          mobileControls.showMobileFinalCta ? "" : "hidden sm:block"
+        }`}
       >
         <div className="brand-hero-panel relative mx-auto max-w-7xl overflow-hidden p-6 text-white sm:p-10">
           {homepageControls.finalCtaImageUrl ? (
@@ -781,10 +883,20 @@ export default function Home() {
                 {homepageControls.finalCtaEyebrow}
               </p>
               <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight sm:text-6xl">
-                {homepageControls.finalCtaTitle}
+                <span className="sm:hidden">
+                  {mobileControls.mobileFinalCtaTitle}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.finalCtaTitle}
+                </span>
               </h2>
               <p className="mt-4 max-w-2xl text-base leading-7 text-white/72">
-                {homepageControls.finalCtaBody}
+                <span className="sm:hidden">
+                  {mobileControls.mobileFinalCtaBody}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.finalCtaBody}
+                </span>
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:min-w-72">
@@ -792,7 +904,12 @@ export default function Home() {
                 href={homepageControls.finalCtaPrimaryHref}
                 className="brand-button-primary justify-center px-8 py-4"
               >
-                {homepageControls.finalCtaPrimaryLabel}
+                <span className="sm:hidden">
+                  {mobileControls.mobileFinalCtaPrimaryLabel}
+                </span>
+                <span className="hidden sm:inline">
+                  {homepageControls.finalCtaPrimaryLabel}
+                </span>
               </a>
               <div className="flex justify-center gap-4 text-sm font-black text-white/72">
                 <a

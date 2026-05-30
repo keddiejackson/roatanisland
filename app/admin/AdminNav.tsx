@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useMobileSiteControls } from "@/app/SiteBrandingProvider";
 import { supabase } from "@/lib/supabase";
 
 const navItems = [
@@ -31,6 +32,7 @@ const navItems = [
 export default function AdminNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const mobileControls = useMobileSiteControls();
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -38,7 +40,13 @@ export default function AdminNav() {
   }
 
   return (
-    <nav className="mb-8 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+    <nav
+      className={`mb-8 grid gap-2 sm:flex sm:flex-wrap sm:gap-3 ${
+        mobileControls.compactMobileAdminNav
+          ? "grid-cols-3"
+          : "grid-cols-2"
+      }`}
+    >
       {navItems.map((item) => {
         const active = item.href !== "/" && pathname === item.href;
 
@@ -46,7 +54,7 @@ export default function AdminNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`rounded-xl px-4 py-2 text-center text-sm font-semibold ${
+            className={`rounded-xl px-3 py-2 text-center text-xs font-semibold sm:px-4 sm:text-sm ${
               active
                 ? "bg-[#0B3C5D] text-white"
                 : "bg-white text-[#0B3C5D] shadow"
@@ -59,7 +67,7 @@ export default function AdminNav() {
       <button
         type="button"
         onClick={signOut}
-        className="rounded-xl bg-[#071F2F] px-4 py-2 text-center text-sm font-semibold text-white shadow"
+        className="rounded-xl bg-[#071F2F] px-3 py-2 text-center text-xs font-semibold text-white shadow sm:px-4 sm:text-sm"
       >
         Sign out
       </button>
