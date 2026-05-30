@@ -25,6 +25,30 @@ export type BookingCheckoutReadiness = {
   missingItems: string[];
 };
 
+export type BookingMobileCheckoutStepState =
+  | "complete"
+  | "current"
+  | "upcoming"
+  | "blocked";
+
+export type BookingMobileCheckoutStep = {
+  key: "guest" | "date" | "pickup" | "review";
+  label: string;
+  text: string;
+  href: string;
+  state: BookingMobileCheckoutStepState;
+};
+
+export type BookingMobileStickyCta = {
+  label: string;
+  text: string;
+  actionLabel: string;
+  href: string;
+  canSubmit: boolean;
+  priceLabel: string;
+  tone: "missing" | "ready" | "blocked" | "loading" | "sent";
+};
+
 export type BookingConversionChecklistItem = {
   label: string;
   text: string;
@@ -198,6 +222,198 @@ export function getBookingCheckoutReadiness({
     missingItems: checks
       .filter((check) => !check.complete)
       .map((check) => check.label),
+  };
+}
+
+export function getMobileBookingCheckoutSteps({
+  fullName,
+  email,
+  tourDate,
+  tourTime,
+  guests,
+  pickupPreference,
+  availabilityBlocked,
+}: {
+  fullName: string;
+  email: string;
+  tourDate: string;
+  tourTime: string;
+  guests: string;
+  pickupPreference: string;
+  availabilityBlocked: boolean;
+}): BookingMobileCheckoutStep[] {
+  const stepChecks = [
+    {
+      key: "guest" as const,
+      label: "Guest",
+      text: "Name and email",
+      href: "#booking-guest",
+      complete: hasText(fullName) && hasValidEmail(email),
+    },
+    {
+      key: "date" as const,
+      label: "Date",
+      text: "Time and group",
+      href: "#booking-date",
+      complete:
+        hasText(tourDate) &&
+        hasText(tourTime) &&
+        Number.isFinite(Number(guests)) &&
+        Number(guests) > 0,
+    },
+    {
+      key: "pickup" as const,
+      label: "Pickup",
+      text: "Meetup details",
+      href: "#booking-pickup",
+      complete: hasText(pickupPreference),
+    },
+    {
+      key: "review" as const,
+      label: "Review",
+      text: "Send request",
+      href: "#booking-review",
+      complete: false,
+    },
+  ];
+  const firstIncompleteIndex = stepChecks.findIndex((step) => !step.complete);
+  const currentIndex =
+    firstIncompleteIndex === -1 ? stepChecks.length - 1 : firstIncompleteIndex;
+
+  return stepChecks.map((step, index) => {
+    let state: BookingMobileCheckoutStepState =
+      index < currentIndex
+        ? "complete"
+        : index === currentIndex
+          ? "current"
+          : "upcoming";
+
+    if (availabilityBlocked && step.key === "review") {
+      state = "blocked";
+    }
+
+    return {
+      key: step.key,
+      label: step.label,
+      text: step.text,
+      href: step.href,
+      state,
+    };
+  });
+}
+
+function getFirstMissingBookingHref(missingItems: string[]) {
+  if (
+    missingItems.some((item) => item === "Name" || item === "Email")
+  ) {
+    return {
+      href: "#booking-guest",
+      actionLabel: "Add guest details",
+      label: "Guest details needed",
+      text: "Add the traveler name and email so updates go to the right place.",
+    };
+  }
+
+  if (
+    missingItems.some((item) =>
+      ["Date", "Time", "Guest count"].includes(item),
+    )
+  ) {
+    return {
+      href: "#booking-date",
+      actionLabel: "Choose date",
+      label: "Date and group needed",
+      text: "Pick a date, time, and guest count before sending.",
+    };
+  }
+
+  if (missingItems.includes("Pickup preference")) {
+    return {
+      href: "#booking-pickup",
+      actionLabel: "Add pickup",
+      label: "Pickup needed",
+      text: "Choose how the operator should plan your pickup or meeting point.",
+    };
+  }
+
+  return {
+    href: "#booking-review",
+    actionLabel: "Review details",
+    label: "Review request",
+    text: "Check the final request summary before sending.",
+  };
+}
+
+export function getMobileBookingStickyCta({
+  submitted,
+  loading,
+  availabilityBlocked,
+  readinessScore,
+  missingItems,
+  estimatedTotalLabel,
+}: {
+  submitted: boolean;
+  loading: boolean;
+  availabilityBlocked: boolean;
+  readinessScore: number;
+  missingItems: string[];
+  estimatedTotalLabel: string;
+}): BookingMobileStickyCta {
+  if (submitted) {
+    return {
+      label: "Request sent",
+      text: "Open your status page for updates and messages.",
+      actionLabel: "View status",
+      href: "#booking-review",
+      canSubmit: false,
+      priceLabel: estimatedTotalLabel,
+      tone: "sent",
+    };
+  }
+
+  if (loading) {
+    return {
+      label: "Sending request",
+      text: "Hold tight while the booking request is saved.",
+      actionLabel: "Sending...",
+      href: "#booking-review",
+      canSubmit: false,
+      priceLabel: estimatedTotalLabel,
+      tone: "loading",
+    };
+  }
+
+  if (availabilityBlocked) {
+    return {
+      label: "Choose another slot",
+      text: "This date or time is not ready to send yet.",
+      actionLabel: "Review availability",
+      href: "#booking-date",
+      canSubmit: false,
+      priceLabel: estimatedTotalLabel,
+      tone: "blocked",
+    };
+  }
+
+  if (missingItems.length > 0 || readinessScore < 100) {
+    const next = getFirstMissingBookingHref(missingItems);
+
+    return {
+      ...next,
+      canSubmit: false,
+      priceLabel: estimatedTotalLabel,
+      tone: "missing",
+    };
+  }
+
+  return {
+    label: "Ready to send",
+    text: "All basics are ready for the operator to review.",
+    actionLabel: "Send request",
+    href: "#booking-review",
+    canSubmit: true,
+    priceLabel: estimatedTotalLabel,
+    tone: "ready",
   };
 }
 

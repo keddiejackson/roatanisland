@@ -14,6 +14,8 @@ import {
   getBookingSuccessNextSteps,
   getBookingTrustSteps,
   getLuxuryBookingFlowSteps,
+  getMobileBookingCheckoutSteps,
+  getMobileBookingStickyCta,
 } from "@/lib/booking-flow";
 import {
   checkBookingAvailability,
@@ -416,6 +418,23 @@ export default function BookingForm({
     guests,
     pickupPreference,
   });
+  const mobileCheckoutSteps = getMobileBookingCheckoutSteps({
+    fullName,
+    email,
+    tourDate,
+    tourTime,
+    guests,
+    pickupPreference,
+    availabilityBlocked: availabilityBlocksBooking,
+  });
+  const mobileCheckoutCta = getMobileBookingStickyCta({
+    submitted,
+    loading,
+    availabilityBlocked: availabilityBlocksBooking,
+    readinessScore: bookingReadiness.score,
+    missingItems: bookingReadiness.missingItems,
+    estimatedTotalLabel,
+  });
   const conversionChecklist = bookingConversionChecklist({
     hasListing: Boolean(listingId || listing),
     hasAvailability: Boolean(availabilityStatus || !listingId),
@@ -556,7 +575,7 @@ export default function BookingForm({
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[minmax(0,1fr)_390px]">
+    <div className="mx-auto grid max-w-7xl gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_390px] lg:pb-0">
       <section className="rounded-[2rem] bg-white p-5 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
         <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
           Private booking request desk
@@ -571,11 +590,63 @@ export default function BookingForm({
           confirms your plans.
         </p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <section
+          aria-label="Mobile booking checkout"
+          className="mt-6 rounded-[1.5rem] border border-[#00A8A8]/20 bg-[#EEF7F6] p-3 lg:hidden"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
+                Mobile booking checkout
+              </p>
+              <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
+                {mobileCheckoutCta.label}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
+              {bookingReadiness.score}%
+            </span>
+          </div>
+          <div className="mobile-scroll-row mt-3 flex gap-2 overflow-x-auto pb-1">
+            {mobileCheckoutSteps.map((step) => (
+              <a
+                key={step.key}
+                href={step.href}
+                className={`min-w-32 rounded-2xl border px-3 py-2 text-left transition ${
+                  step.state === "complete"
+                    ? "border-[#00A8A8]/20 bg-white text-[#0B3C5D]"
+                    : step.state === "current"
+                      ? "border-[#00A8A8] bg-[#071F2F] text-white"
+                      : step.state === "blocked"
+                        ? "border-red-200 bg-red-50 text-red-800"
+                        : "border-white/80 bg-white/65 text-[#0B3C5D]/70"
+                }`}
+              >
+                <span className="block text-xs font-black uppercase tracking-[0.12em]">
+                  {step.state === "complete"
+                    ? "Done"
+                    : step.state === "current"
+                      ? "Now"
+                      : step.state === "blocked"
+                        ? "Check"
+                        : "Next"}
+                </span>
+                <span className="mt-1 block text-sm font-black">
+                  {step.label}
+                </span>
+                <span className="mt-0.5 block text-xs opacity-75">
+                  {step.text}
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <div className="mobile-scroll-row mt-6 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 xl:grid-cols-5">
           {luxurySteps.map((step) => (
           <div
             key={step.label}
-            className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4"
+            className="min-w-64 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4 sm:min-w-0"
           >
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
               Step {step.number}
@@ -707,7 +778,10 @@ export default function BookingForm({
         ))}
       </section>
 
-      <div className="mt-6 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-5">
+      <div
+        id="booking-review"
+        className="mt-6 scroll-mt-24 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-5"
+      >
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
@@ -896,8 +970,15 @@ export default function BookingForm({
           </form>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-8 grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2">
+        <form
+          id="booking-request-form"
+          onSubmit={handleSubmit}
+          className="mt-8 grid gap-6 md:grid-cols-2"
+        >
+          <div
+            id="booking-guest"
+            className="scroll-mt-24 rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2"
+          >
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
               Guest details
             </p>
@@ -931,7 +1012,10 @@ export default function BookingForm({
             />
           </div>
 
-          <div className="rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2">
+          <div
+            id="booking-date"
+            className="scroll-mt-24 rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2"
+          >
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
               Date and availability
             </p>
@@ -1105,7 +1189,7 @@ export default function BookingForm({
             </div>
           ) : null}
 
-          <div className="md:col-span-2">
+          <div id="booking-pickup" className="scroll-mt-24 md:col-span-2">
             <label className="mb-2 block font-medium">Pickup preference</label>
             <div className="grid gap-2 sm:grid-cols-3">
               {PICKUP_OPTIONS.map((option) => (
@@ -1299,6 +1383,44 @@ export default function BookingForm({
           </div>
         </div>
       </aside>
+      {!submitted ? (
+        <div className="mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/95 px-3 pt-3 shadow-2xl shadow-[#071F2F]/20 backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                {mobileCheckoutCta.priceLabel}
+              </p>
+              <p className="truncate text-sm font-black text-[#0B3C5D]">
+                {mobileCheckoutCta.label}
+              </p>
+              <p className="truncate text-xs font-semibold text-gray-500">
+                {mobileCheckoutCta.text}
+              </p>
+            </div>
+            {mobileCheckoutCta.canSubmit ? (
+              <button
+                type="submit"
+                form="booking-request-form"
+                disabled={loading}
+                className="shrink-0 rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20 disabled:opacity-50"
+              >
+                {mobileCheckoutCta.actionLabel}
+              </button>
+            ) : (
+              <a
+                href={mobileCheckoutCta.href}
+                className={`shrink-0 rounded-2xl px-4 py-3 text-sm font-black shadow-lg ${
+                  mobileCheckoutCta.tone === "blocked"
+                    ? "bg-red-600 text-white shadow-red-200"
+                    : "bg-[#071F2F] text-white shadow-[#071F2F]/20"
+                }`}
+              >
+                {mobileCheckoutCta.actionLabel}
+              </a>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
