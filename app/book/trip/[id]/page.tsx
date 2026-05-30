@@ -30,10 +30,10 @@ async function loadTripPacket(id: string) {
     .maybeSingle();
 
   if (!booking) {
-    return { booking: null, listingTitle: "Roatan booking" };
+    return { booking: null, listingTitle: "Your Roatan experience" };
   }
 
-  let listingTitle = "Roatan booking";
+  let listingTitle = "Your Roatan experience";
 
   if (booking.listing_id) {
     const { data: listing } = await supabaseServer
@@ -85,7 +85,7 @@ export default async function TripPacketPage({
     booking,
     listingTitle,
     statusUrl,
-    chatUrl: "/account",
+    chatUrl: "/account#guest-plans",
   });
 
   return (
@@ -101,12 +101,18 @@ export default async function TripPacketPage({
           </Link>
         </div>
 
-        <section className="rounded-2xl bg-[#071F2F] p-8 text-white shadow-xl">
+        <section
+          aria-label="Trip Packet"
+          className="rounded-2xl bg-[#071F2F] p-8 text-white shadow-xl"
+        >
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-            Travel-ready packet
+            Private day packet
           </p>
           <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#9EE8E3]">
+                Luxury trip packet
+              </p>
               <h1 className="text-4xl font-black sm:text-5xl">
                 {packet.title}
               </h1>
@@ -115,14 +121,20 @@ export default async function TripPacketPage({
                 and day-of-trip details.
               </p>
             </div>
-            <span className="rounded-xl bg-white/10 px-4 py-3 text-sm font-black">
-              {packet.guestName}
-            </span>
+            <div className="grid gap-2">
+              <span className="rounded-xl bg-white/10 px-4 py-3 text-sm font-black">
+                {packet.guestName}
+              </span>
+              <span className="rounded-xl border border-white/15 px-4 py-3 text-sm font-black text-white/80">
+                Save this page
+              </span>
+            </div>
           </div>
           <div className="mt-6 rounded-2xl border border-white/15 bg-white/10 p-5">
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9EE8E3]">
-              {packet.readiness.label}
+              Travel confidence
             </p>
+            <h2 className="mt-2 text-xl font-black">{packet.readiness.label}</h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-white/72">
               {packet.readiness.text}
             </p>
@@ -192,7 +204,7 @@ export default async function TripPacketPage({
                       : "bg-[#EEF7F6] text-[#0B3C5D]"
                   }`}
                 >
-                  {action.label}
+                  {action.label === "Open chat" ? "Open guest chat" : action.label}
                 </Link>
               ))}
             </div>

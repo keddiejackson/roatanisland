@@ -147,7 +147,7 @@ function buildDayOfSections(
 
 export function buildTripPacket({
   booking,
-  listingTitle = "Roatan booking",
+  listingTitle = "Your Roatan experience",
   statusUrl,
   chatUrl,
 }: {
@@ -159,9 +159,13 @@ export function buildTripPacket({
   const money = moneySnapshot(booking);
   const listingId = booking.listing_id || "";
   const readiness = tripReadiness(booking);
+  const safeListingTitle =
+    listingTitle && listingTitle !== "Roatan booking"
+      ? listingTitle
+      : "Your Roatan experience";
 
   return {
-    title: `${listingTitle} trip packet`,
+    title: `${safeListingTitle} trip packet`,
     guestName: booking.full_name || "Guest",
     readiness,
     summary: [
@@ -181,7 +185,7 @@ export function buildTripPacket({
     ],
     notes: [
       {
-        label: "Guest notes",
+        label: "Private day notes",
         value: booking.guest_message || "No guest notes yet.",
       },
       {
@@ -203,7 +207,7 @@ export function buildTripPacket({
         : "Payment is recorded",
       "Watch chat for pickup or timing notes",
       "Confirm exact meeting point before departure",
-      "Save this trip packet for the day of travel",
+      "Save this page for the day of travel",
     ],
     dayOfSections: buildDayOfSections(booking, money.balanceDueCents),
   };

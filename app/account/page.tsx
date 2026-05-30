@@ -722,6 +722,12 @@ export default function AccountPage() {
                   >
                     View trip
                   </Link>
+                  <Link
+                    href={`/book/trip/${latestBooking.id}`}
+                    className="rounded-xl border border-[#D6B56D]/50 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                  >
+                    Trip packet
+                  </Link>
                 </>
               ) : (
                 <>
@@ -1030,6 +1036,12 @@ export default function AccountPage() {
                       >
                         View trip
                       </Link>
+                      <Link
+                        href={`/book/trip/${latestBooking.id}`}
+                        className="rounded-xl border border-[#D6B56D]/50 px-4 py-2 text-sm font-black text-[#0B3C5D]"
+                      >
+                        Trip packet
+                      </Link>
                     </div>
                   </article>
                 ) : null}
@@ -1090,6 +1102,12 @@ export default function AccountPage() {
                           className="rounded-lg border border-[#00A8A8] px-4 py-2 text-sm font-bold text-[#007B7B]"
                         >
                           View trip
+                        </Link>
+                        <Link
+                          href={`/book/trip/${booking.id}`}
+                          className="rounded-lg border border-[#D6B56D]/50 px-4 py-2 text-sm font-bold text-[#0B3C5D]"
+                        >
+                          Trip packet
                         </Link>
                       </div>
                     </article>

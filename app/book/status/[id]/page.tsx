@@ -119,6 +119,7 @@ export default async function BookingStatusPage({
     ? booking.selected_addons
     : [];
   const moneySnapshot = getBookingMoneySnapshot(booking);
+  const experienceTitle = listing?.title || "Your Roatan experience";
   const realTimeline = bookingTimeline({
     booking,
     events: (eventRows as BookingEventLike[] | null) || [],
@@ -140,17 +141,17 @@ export default async function BookingStatusPage({
         </div>
         <section className="rounded-[2rem] bg-white p-6 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-            Trip command center
+            Private trip lounge
           </p>
           <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
             <div>
               <h1 className="text-4xl font-black leading-tight text-[#0B3C5D] sm:text-6xl">
-                {listing?.title || "Roatan booking"}
+                {experienceTitle}
               </h1>
               <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600">
-                Keep this polished status page for the full request story:
-                confirmation stage, payment records, pickup notes, guest
-                messages, and trip packet actions.
+                Everything you need before, during, and after your Roatan day:
+                status, payment clarity, pickup notes, guest chat, and your
+                travel-ready packet.
               </p>
             </div>
             <div className="rounded-2xl bg-[#071F2F] px-5 py-4 text-white shadow-xl shadow-[#071F2F]/10">
@@ -163,6 +164,27 @@ export default async function BookingStatusPage({
             </div>
           </div>
 
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/account#guest-plans"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+            >
+              Open guest chat
+            </Link>
+            <Link
+              href={`/book/trip/${booking.id}`}
+              className="rounded-xl bg-[#071F2F] px-5 py-3 text-sm font-black text-white"
+            >
+              Luxury trip packet
+            </Link>
+            <Link
+              href="/support"
+              className="rounded-xl border border-[#0B3C5D]/15 px-5 py-3 text-sm font-black text-[#0B3C5D]"
+            >
+              Concierge support
+            </Link>
+          </div>
+
           <div className={`mt-6 rounded-2xl border p-5 ${nextActionClass}`}>
             <p className="text-sm font-bold uppercase tracking-[0.16em]">
               Next step
@@ -171,26 +193,54 @@ export default async function BookingStatusPage({
             <p className="mt-2 leading-7">{nextAction.text}</p>
           </div>
 
-          <div className="mt-8 grid gap-3 lg:grid-cols-4">
-            {steps.map((step) => (
-              <div
-                key={step.key}
-                className={`rounded-xl border p-4 ${
-                  step.state === "current"
-                    ? "border-[#00A8A8] bg-[#00A8A8]/10"
-                    : step.state === "complete"
-                      ? "border-green-200 bg-green-50"
-                      : "border-gray-200 bg-white"
-                }`}
-              >
-                <p className="text-sm font-black text-[#0B3C5D]">
-                  {step.label}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-gray-600">
-                  {step.text}
+          <div className="mt-8 rounded-2xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-5">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
+              Travel confidence
+            </p>
+            <div className="mt-4 grid gap-3 lg:grid-cols-4">
+              {steps.map((step) => (
+                <div
+                  key={step.key}
+                  className={`rounded-xl border p-4 ${
+                    step.state === "current"
+                      ? "border-[#00A8A8] bg-white"
+                      : step.state === "complete"
+                        ? "border-green-200 bg-green-50"
+                        : "border-gray-200 bg-white/75"
+                  }`}
+                >
+                  <p className="text-sm font-black text-[#0B3C5D]">
+                    {step.label}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-gray-600">
+                    {step.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-5">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Messages and concierge
+            </p>
+            <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+              <div>
+                <h2 className="text-2xl font-black text-[#0B3C5D]">
+                  Keep every trip question in one quiet thread.
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-600">
+                  Open guest chat for pickup notes, timing questions, operator
+                  updates, or anything that should stay attached to this trip.
                 </p>
               </div>
-            ))}
+              <Link
+                href="/account#guest-plans"
+                className="rounded-xl bg-[#0B3C5D] px-5 py-3 text-center text-sm font-black text-white"
+              >
+                Open guest chat
+              </Link>
+            </div>
           </div>
 
           <div className="mt-8 rounded-2xl border border-[#D6B56D]/20 bg-[#FFF8E8] p-5">
@@ -282,7 +332,11 @@ export default async function BookingStatusPage({
             </div>
           </div>
 
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-5">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+              Itinerary essentials
+            </p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {[
               ["Name", booking.full_name],
               ["Email", booking.email],
@@ -301,6 +355,7 @@ export default async function BookingStatusPage({
                 </p>
               </div>
             ))}
+            </div>
           </div>
 
           {selectedAddons.length > 0 ||
@@ -346,6 +401,33 @@ export default async function BookingStatusPage({
               ) : null}
             </div>
           ) : null}
+
+          <div className="mt-8 rounded-2xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-5">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
+              Need a change?
+            </p>
+            <div className="mt-3 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+              <p className="max-w-2xl text-sm leading-6 text-gray-700">
+                For date, time, guest count, pickup, or special request changes,
+                message the team first so the full conversation stays with this
+                booking.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/account#guest-plans"
+                  className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+                >
+                  Open guest chat
+                </Link>
+                <Link
+                  href="/support"
+                  className="rounded-xl border border-[#0B3C5D]/15 bg-white px-5 py-3 text-sm font-black text-[#0B3C5D]"
+                >
+                  Contact concierge
+                </Link>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
