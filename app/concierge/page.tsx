@@ -2,13 +2,14 @@ import Link from "next/link";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import ConciergePlanner from "@/app/concierge/ConciergePlanner";
+import RoaConcierge from "@/app/concierge/RoaConcierge";
 import type { ConciergeListing } from "@/lib/guest-concierge";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const metadata = {
-  title: "Roatan Concierge Planner | RoatanIsland.life",
+  title: "Roa AI Concierge | RoatanIsland.life",
   description:
-    "Build a Roatan day plan for cruise visitors, airport arrivals, families, private charters, and island stays.",
+    "Meet Roa, your personal Roatan concierge for trip planning, cruise timing, airport pickup, local recommendations, and concierge requests.",
 };
 
 export default async function ConciergePage() {
@@ -51,21 +52,22 @@ export default async function ConciergePage() {
 
         <section className="mb-8 overflow-hidden rounded-[2rem] bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
-            Luxury Concierge Trip Builder
+            Roa AI Concierge
           </p>
           <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_0.72fr] lg:items-end">
             <div>
               <h1 className="max-w-4xl text-4xl font-black leading-tight sm:text-6xl">
-                Build a $50 million-feeling Roatan day in minutes.
+                Your Personal Roatan Concierge.
               </h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-white/75">
-                Choose a polished trip style, tune the details, compare real
-                island matches, save the itinerary, and send an admin-ready
-                concierge request when you want help turning it into a booked day.
+                Ask Roa anything about your island day. It can plan around your
+                ship time, flight arrival, hotel pickup, family needs, budget,
+                beach style, private-charter dreams, and the real marketplace
+                listings on RoatanIsland.life.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              {["Curated trip styles", "Smart itinerary", "Concierge quote"].map(
+              {["Ask anything", "Match local options", "Send to concierge"].map(
                 (item, index) => (
                   <div
                     key={item}
@@ -80,6 +82,29 @@ export default async function ConciergePage() {
               )}
             </div>
           </div>
+        </section>
+
+        <RoaConcierge listings={(data || []) as ConciergeListing[]} />
+
+        <section className="mb-5 flex flex-col justify-between gap-3 rounded-[1.5rem] bg-white/80 p-5 shadow-lg shadow-[#071F2F]/5 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              Structured backup planner
+            </p>
+            <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+              Prefer forms over chat?
+            </h2>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-gray-600">
+              Use the classic planner below to build a route step by step and
+              send it into the same concierge dashboard.
+            </p>
+          </div>
+          <Link
+            href="/account"
+            className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-center text-sm font-black text-white"
+          >
+            Open my trips
+          </Link>
         </section>
 
         <ConciergePlanner listings={(data || []) as ConciergeListing[]} />

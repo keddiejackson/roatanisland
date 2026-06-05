@@ -1,0 +1,475 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ConciergeListing } from "@/lib/guest-concierge";
+import type {
+  RoaChatMessage,
+  RoaSuggestedListing,
+  RoaTravelerContext,
+} from "@/lib/roa-concierge";
+import { supabase } from "@/lib/supabase";
+
+const quickPrompts = [
+  "Plan a cruise day that gets me back on time",
+  "Build a luxury private Roatan day",
+  "Help with airport pickup and a first-day plan",
+  "Find a family beach day with easy pickup",
+  "What should I bring for a Roatan tour?",
+];
+
+function cleanLocalProfile() {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const profile = JSON.parse(localStorage.getItem("roatan-guest-profile") || "{}");
+
+    return profile && typeof profile === "object" ? profile : {};
+  } catch {
+    return {};
+  }
+}
+
+function moneyLabel(price: number | null) {
+  if (!price) return "Price pending";
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: Number.isInteger(price) ? 0 : 2,
+  }).format(price);
+}
+
+function transcript(messages: RoaChatMessage[]) {
+  return messages
+    .map(
+      (message) =>
+        `${message.role === "assistant" ? "Roa" : "Guest"}: ${message.content}`,
+    )
+    .join("\n\n");
+}
+
+export default function RoaConcierge({
+  listings,
+}: {
+  listings: ConciergeListing[];
+}) {
+  const [traveler, setTraveler] = useState<RoaTravelerContext>(() => {
+    const profile = cleanLocalProfile() as {
+      guestName?: string;
+      displayName?: string;
+      phone?: string;
+      pickupArea?: string;
+      guests?: string;
+      guestCount?: string;
+      notes?: string;
+    };
+
+    return {
+      name: profile.displayName || profile.guestName || "",
+      phone: profile.phone || "",
+      guests: profile.guests || profile.guestCount || "2",
+      pickupArea: profile.pickupArea || "",
+      notes: profile.notes || "",
+    };
+  });
+  const [messages, setMessages] = useState<RoaChatMessage[]>([
+    {
+      role: "assistant",
+      content:
+        "Hi, I am Roa. Tell me your dates, guest count, pickup point, and the kind of Roatan day you want. I can build the plan, suggest local options, and send it to the concierge team when you are ready.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [suggestions, setSuggestions] = useState<RoaSuggestedListing[]>([]);
+  const [sources, setSources] = useState<{ title: string; url: string }[]>([]);
+  const [mode, setMode] = useState<"ai" | "fallback" | "idle">("idle");
+  const [sending, setSending] = useState(false);
+  const [handoffStatus, setHandoffStatus] = useState("");
+  const messageEndRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const email = data.user?.email || "";
+      setTraveler((current) => ({
+        ...current,
+        email: current.email || email,
+        name:
+          current.name ||
+          data.user?.user_metadata?.display_name ||
+          data.user?.email?.split("@")[0] ||
+          "",
+      }));
+    });
+  }, []);
+
+  useEffect(() => {
+    messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages, sending]);
+
+  const featuredListings = useMemo(
+    () =>
+      listings.slice(0, 3).map((listing) => ({
+        id: listing.id,
+        title: listing.title,
+        category: listing.category,
+        location: listing.location,
+        price: listing.price,
+        rating: listing.rating,
+        reasons: [listing.category || "Local option"].filter(Boolean),
+      })),
+    [listings],
+  );
+  const visibleSuggestions =
+    suggestions.length > 0 ? suggestions : featuredListings;
+
+  function updateTraveler(field: keyof RoaTravelerContext, value: string) {
+    setTraveler((current) => ({ ...current, [field]: value }));
+  }
+
+  async function sendMessage(prompt?: string) {
+    const content = (prompt || input).trim();
+    if (!content || sending) return;
+
+    const nextMessages: RoaChatMessage[] = [
+      ...messages,
+      { role: "user", content },
+    ];
+    setMessages(nextMessages);
+    setInput("");
+    setSending(true);
+    setHandoffStatus("");
+
+    try {
+      const response = await fetch("/api/roa", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: nextMessages,
+          traveler,
+        }),
+      });
+      const result = await response.json();
+
+      setMode(result.mode || "fallback");
+      setSuggestions(result.suggestedListings || []);
+      setSources(result.sources || []);
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content:
+            result.reply ||
+            "I can help with that. Tell me your date, pickup point, and what kind of day you want.",
+        },
+      ]);
+    } catch {
+      setMode("fallback");
+      setMessages((current) => [
+        ...current,
+        {
+          role: "assistant",
+          content:
+            "I am having trouble reaching the AI service, but I can still help gather the details for the concierge team.",
+        },
+      ]);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function sendToConciergeTeam() {
+    if (!traveler.name || !traveler.email) {
+      setHandoffStatus("Add your name and email first.");
+      return;
+    }
+
+    setHandoffStatus("Sending Roa plan...");
+
+    const response = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: traveler.name,
+        email: traveler.email,
+        phone: traveler.phone,
+        interest: "Roa AI concierge request",
+        message: [
+          "Roa AI concierge transcript",
+          "",
+          transcript(messages),
+          "",
+          traveler.notes ? `Guest notes: ${traveler.notes}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        leadType: "concierge_plan",
+        travelDate: traveler.tripDate,
+        guests: traveler.guests,
+        pickupArea: traveler.pickupArea,
+        arrivalType: traveler.arrivalType,
+        tripStyle: traveler.tripStyle,
+        budget: traveler.budget,
+        plan: {
+          source: "roa_ai_concierge",
+          messages,
+          suggestions,
+          traveler,
+        },
+        sourcePath: "/concierge",
+      }),
+    });
+    const result = await response.json();
+
+    if (!response.ok) {
+      setHandoffStatus(result.error || "Unable to send this to concierge.");
+      return;
+    }
+
+    setHandoffStatus("Sent. The concierge team can now review the Roa plan.");
+  }
+
+  return (
+    <section className="mb-8 grid gap-5 lg:grid-cols-[1.1fr_0.75fr]">
+      <div className="overflow-hidden rounded-[2rem] bg-white shadow-2xl shadow-[#071F2F]/10">
+        <div className="bg-[#071F2F] p-5 text-white sm:p-6">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#D6B56D]">
+                Roa AI Concierge
+              </p>
+              <h2 className="mt-2 text-3xl font-black sm:text-4xl">
+                Your Personal Roatan Concierge.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">
+                Ask Roa anything: cruise timing, private days, family-friendly
+                stops, airport pickup, beach plans, what to bring, or which
+                local operator fits best.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-white/10 px-4 py-3 text-sm font-black ring-1 ring-white/15">
+              {mode === "ai"
+                ? "AI online"
+                : mode === "fallback"
+                  ? "Smart fallback"
+                  : `${listings.length} listings ready`}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid min-h-[620px] grid-rows-[auto_1fr_auto]">
+          <div className="flex gap-2 overflow-x-auto border-b border-[#E8DDC6] bg-[#FBF7EC] p-3">
+            {quickPrompts.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => sendMessage(prompt)}
+                className="shrink-0 rounded-full border border-[#D6B56D]/30 bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] shadow-sm transition hover:-translate-y-0.5 hover:border-[#00A8A8]"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+
+          <div className="max-h-[520px] space-y-4 overflow-y-auto bg-[#F7F3EA] p-4 sm:p-5">
+            {messages.map((message, index) => (
+              <div
+                key={`${message.role}-${index}`}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[88%] rounded-[1.35rem] px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[74%] ${
+                    message.role === "user"
+                      ? "bg-[#00A8A8] text-white"
+                      : "bg-white text-[#17324D]"
+                  }`}
+                >
+                  {message.role === "assistant" ? (
+                    <p className="mb-1 text-[0.68rem] font-black uppercase tracking-[0.16em] text-[#007B7B]">
+                      Roa
+                    </p>
+                  ) : null}
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                </div>
+              </div>
+            ))}
+            {sending ? (
+              <div className="inline-flex rounded-full bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] shadow-sm">
+                Roa is planning...
+              </div>
+            ) : null}
+            <div ref={messageEndRef} />
+          </div>
+
+          <div className="border-t border-[#E8DDC6] bg-white p-3 sm:p-4">
+            {sources.length > 0 ? (
+              <div className="mb-3 flex flex-wrap gap-2">
+                {sources.map((source) => (
+                  <a
+                    key={source.url}
+                    href={source.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-bold text-[#007B7B]"
+                  >
+                    {source.title}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <textarea
+                value={input}
+                onChange={(event) => setInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && !event.shiftKey) {
+                    event.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                rows={2}
+                placeholder="Ask Roa to plan your day..."
+                className="min-h-20 flex-1 resize-none rounded-2xl border border-gray-300 px-4 py-3 text-base outline-none focus:border-[#00A8A8]"
+              />
+              <button
+                type="button"
+                onClick={() => sendMessage()}
+                disabled={sending || !input.trim()}
+                className="rounded-2xl bg-[#00A8A8] px-6 py-4 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20 disabled:opacity-50"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside className="grid gap-4">
+        <div className="rounded-[1.75rem] bg-[#071F2F] p-5 text-white shadow-xl shadow-[#071F2F]/10">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+            Trip context
+          </p>
+          <h3 className="mt-2 text-2xl font-black">Give Roa the basics.</h3>
+          <div className="mt-5 grid gap-3">
+            <input
+              value={traveler.name || ""}
+              onChange={(event) => updateTraveler("name", event.target.value)}
+              placeholder="Name"
+              className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/45 focus:border-[#00A8A8]"
+            />
+            <input
+              type="email"
+              value={traveler.email || ""}
+              onChange={(event) => updateTraveler("email", event.target.value)}
+              placeholder="Email"
+              className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/45 focus:border-[#00A8A8]"
+            />
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+              <input
+                type="date"
+                value={traveler.tripDate || ""}
+                onChange={(event) =>
+                  updateTraveler("tripDate", event.target.value)
+                }
+                className="min-w-0 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-white outline-none focus:border-[#00A8A8]"
+              />
+              <input
+                value={traveler.guests || ""}
+                onChange={(event) => updateTraveler("guests", event.target.value)}
+                placeholder="Guests"
+                className="min-w-0 rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/45 focus:border-[#00A8A8]"
+              />
+            </div>
+            <input
+              value={traveler.pickupArea || ""}
+              onChange={(event) =>
+                updateTraveler("pickupArea", event.target.value)
+              }
+              placeholder="Pickup area, hotel, port, or airport"
+              className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/45 focus:border-[#00A8A8]"
+            />
+            <textarea
+              value={traveler.notes || ""}
+              onChange={(event) => updateTraveler("notes", event.target.value)}
+              rows={3}
+              placeholder="Kids, mobility needs, food preferences, ship time, flight time..."
+              className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/45 focus:border-[#00A8A8]"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={sendToConciergeTeam}
+            className="mt-4 w-full rounded-xl bg-[#D6B56D] px-4 py-3 text-sm font-black text-[#071F2F]"
+          >
+            Send Roa plan to concierge
+          </button>
+          {handoffStatus ? (
+            <p className="mt-3 rounded-xl bg-white/10 px-4 py-3 text-sm font-bold text-white/85">
+              {handoffStatus}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                Roa matches
+              </p>
+              <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                Best local fits.
+              </h3>
+            </div>
+            <Link
+              href="/map"
+              className="rounded-xl bg-[#EEF7F6] px-3 py-2 text-xs font-black text-[#007B7B]"
+            >
+              Map
+            </Link>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {visibleSuggestions.map((listing) => (
+              <article
+                key={listing.id}
+                className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                      {listing.location || listing.category || "Roatan"}
+                    </p>
+                    <h4 className="mt-1 font-black text-[#0B3C5D]">
+                      {listing.title}
+                    </h4>
+                  </div>
+                  <span className="rounded-full bg-[#071F2F] px-3 py-1 text-xs font-black text-white">
+                    {moneyLabel(listing.price)}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                  {listing.reasons.join(" + ") || "Strong local fit"}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Link
+                    href={`/listings/${listing.id}`}
+                    className="rounded-lg bg-[#0B3C5D] px-3 py-2 text-xs font-black text-white"
+                  >
+                    View
+                  </Link>
+                  <Link
+                    href={`/book?listing=${listing.id}`}
+                    className="rounded-lg bg-[#00A8A8] px-3 py-2 text-xs font-black text-white"
+                  >
+                    Request
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </aside>
+    </section>
+  );
+}
