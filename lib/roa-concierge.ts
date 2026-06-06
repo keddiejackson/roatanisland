@@ -204,6 +204,23 @@ function extractGuestCount(text: string) {
   return match?.[1] || "";
 }
 
+export function isRoaReadyListing(listing: ConciergeListing) {
+  const title = cleanText(listing.title, 120);
+  const text = lower([title, listing.location, listing.description].join(" "));
+
+  if (title.length < 4) return false;
+  if (/^(t\d+|test|tester|demo|sample)$/i.test(title)) return false;
+  if (/\b(test|tester|lorem|asdf|dummy)\b/i.test(text)) return false;
+  if (/show me the money/i.test(title)) return false;
+  if ((listing.price || 0) > 20000) return false;
+
+  return true;
+}
+
+export function getRoaReadyListings(listings: ConciergeListing[]) {
+  return listings.filter(isRoaReadyListing);
+}
+
 export function normalizeRoaMessages(messages: RoaChatMessage[]) {
   return messages
     .filter(
@@ -266,7 +283,7 @@ export function deriveRoaPreferencesFromMessage(
 }
 
 export function summarizeListingsForRoa(listings: ConciergeListing[]) {
-  return listings
+  return getRoaReadyListings(listings)
     .slice(0, 40)
     .map((listing, index) =>
       [
@@ -362,7 +379,7 @@ export function getRoaSuggestedListings({
   traveler?: RoaTravelerContext;
 }) {
   return suggestedListingsFromMatches(
-    listings
+    getRoaReadyListings(listings)
       .map((listing) =>
         scoreRoaListing(
           listing,

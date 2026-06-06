@@ -8,13 +8,13 @@ import type {
   RoaSuggestedListing,
   RoaTravelerContext,
 } from "@/lib/roa-concierge";
+import { getRoaReadyListings } from "@/lib/roa-concierge";
 import { supabase } from "@/lib/supabase";
 
 const quickPrompts = [
   "Plan a cruise day that gets me back on time",
   "Build a luxury private Roatan day",
   "Help with airport pickup and a first-day plan",
-  "Find a family beach day with easy pickup",
   "What should I bring for a Roatan tour?",
 ];
 
@@ -77,7 +77,7 @@ export default function RoaConcierge({
     {
       role: "assistant",
       content:
-        "Hi, I am Roa. Tell me your dates, guest count, pickup point, and the kind of Roatan day you want. I can build the plan, suggest local options, and send it to the concierge team when you are ready.",
+        "Hi, I am Roa. Tell me your date, guest count, pickup point, and the kind of Roatan day you want. I will shape the plan and send it to the concierge team when you are ready.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -109,7 +109,7 @@ export default function RoaConcierge({
 
   const featuredListings = useMemo(
     () =>
-      listings.slice(0, 3).map((listing) => ({
+      getRoaReadyListings(listings).slice(0, 3).map((listing) => ({
         id: listing.id,
         title: listing.title,
         category: listing.category,
@@ -230,24 +230,20 @@ export default function RoaConcierge({
   }
 
   return (
-    <section className="mb-8 grid gap-5 lg:grid-cols-[1.1fr_0.75fr]">
+    <section className="mb-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="overflow-hidden rounded-[2rem] bg-white shadow-2xl shadow-[#071F2F]/10">
-        <div className="bg-[#071F2F] p-5 text-white sm:p-6">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+        <div className="bg-[#071F2F] p-4 text-white sm:p-5">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#D6B56D]">
-                Roa AI Concierge
+                Ask Roa
               </p>
-              <h2 className="mt-2 text-3xl font-black sm:text-4xl">
-                Your Personal Roatan Concierge.
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-base">
-                Ask Roa anything: cruise timing, private days, family-friendly
-                stops, airport pickup, beach plans, what to bring, or which
-                local operator fits best.
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-white/75">
+                Chat naturally. Roa will organize the route, pickup, timing,
+                and next step.
               </p>
             </div>
-            <div className="rounded-2xl bg-white/10 px-4 py-3 text-sm font-black ring-1 ring-white/15">
+            <div className="rounded-full bg-white/10 px-4 py-2 text-xs font-black ring-1 ring-white/15">
               {mode === "ai"
                 ? "AI online"
                 : mode === "fallback"
@@ -257,7 +253,7 @@ export default function RoaConcierge({
           </div>
         </div>
 
-        <div className="grid min-h-[620px] grid-rows-[auto_1fr_auto]">
+        <div className="grid min-h-[560px] grid-rows-[auto_1fr_auto]">
           <div className="flex gap-2 overflow-x-auto border-b border-[#E8DDC6] bg-[#FBF7EC] p-3">
             {quickPrompts.map((prompt) => (
               <button
@@ -271,7 +267,7 @@ export default function RoaConcierge({
             ))}
           </div>
 
-          <div className="max-h-[520px] space-y-4 overflow-y-auto bg-[#F7F3EA] p-4 sm:p-5">
+          <div className="max-h-[430px] space-y-4 overflow-y-auto bg-[#F7F3EA] p-4 sm:p-5">
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
@@ -280,7 +276,7 @@ export default function RoaConcierge({
                 }`}
               >
                 <div
-                  className={`max-w-[88%] rounded-[1.35rem] px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[74%] ${
+                  className={`max-w-[90%] rounded-[1.35rem] px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[76%] ${
                     message.role === "user"
                       ? "bg-[#00A8A8] text-white"
                       : "bg-white text-[#17324D]"
@@ -331,7 +327,7 @@ export default function RoaConcierge({
                 }}
                 rows={2}
                 placeholder="Ask Roa to plan your day..."
-                className="min-h-20 flex-1 resize-none rounded-2xl border border-gray-300 px-4 py-3 text-base outline-none focus:border-[#00A8A8]"
+                className="min-h-16 flex-1 resize-none rounded-2xl border border-gray-300 px-4 py-3 text-base outline-none focus:border-[#00A8A8]"
               />
               <button
                 type="button"
@@ -346,12 +342,12 @@ export default function RoaConcierge({
         </div>
       </div>
 
-      <aside className="grid gap-4">
+      <aside className="grid gap-4 lg:content-start">
         <div className="rounded-[1.75rem] bg-[#071F2F] p-5 text-white shadow-xl shadow-[#071F2F]/10">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
             Trip context
           </p>
-          <h3 className="mt-2 text-2xl font-black">Give Roa the basics.</h3>
+          <h3 className="mt-2 text-2xl font-black">The basics.</h3>
           <div className="mt-5 grid gap-3">
             <input
               value={traveler.name || ""}
@@ -430,7 +426,8 @@ export default function RoaConcierge({
             </Link>
           </div>
           <div className="mt-4 grid gap-3">
-            {visibleSuggestions.map((listing) => (
+            {visibleSuggestions.length > 0 ? (
+              visibleSuggestions.map((listing) => (
               <article
                 key={listing.id}
                 className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-4"
@@ -466,7 +463,13 @@ export default function RoaConcierge({
                   </Link>
                 </div>
               </article>
-            ))}
+              ))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[#D6B56D]/50 bg-[#FFFDF7] p-4 text-sm leading-6 text-gray-600">
+                Ask Roa what kind of day you want. Polished local matches will
+                appear here when there are guest-ready listings that fit.
+              </div>
+            )}
           </div>
         </div>
       </aside>

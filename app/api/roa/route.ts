@@ -5,6 +5,7 @@ import {
   buildRoaPromptInput,
   extractRoaOutputText,
   extractRoaSources,
+  getRoaReadyListings,
   getRoaSuggestedListings,
   normalizeRoaMessages,
   type RoaChatMessage,
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
     .order("rating", { ascending: false })
     .limit(80);
 
-  const listings = data || [];
+  const listings = getRoaReadyListings(data || []);
   const suggestedListings = getRoaSuggestedListings({
     listings,
     latestMessage,
@@ -126,15 +127,16 @@ export async function POST(request: Request) {
     const errorMessage =
       payload?.error?.message ||
       "Roa could not reach the AI concierge service yet.";
+    console.warn("Roa AI fallback:", errorMessage);
 
     return NextResponse.json(
       {
         ok: true,
         mode: "fallback",
-        reply: `${buildRoaFallbackReply({
+        reply: buildRoaFallbackReply({
           latestMessage,
           suggestedListings,
-        })}\n\nAI setup note: ${errorMessage}`,
+        }),
         suggestedListings,
         sources: [],
       },
