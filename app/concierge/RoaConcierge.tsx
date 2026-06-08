@@ -131,6 +131,7 @@ export default function RoaConcierge({
     "ai" | "gemini" | "brain" | "fallback" | "idle"
   >("idle");
   const [sending, setSending] = useState(false);
+  const [savedTripPlanId, setSavedTripPlanId] = useState("");
   const [handoffStatus, setHandoffStatus] = useState("");
   const messageEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -271,7 +272,41 @@ export default function RoaConcierge({
     sendMessage(start.prompt, nextTraveler);
   }
 
-  function saveRoaPlan() {
+  function roaTripPlanStops() {
+    const stopsFromBrain =
+      brainPlan?.suggestedStops.map((stop, index) => {
+        const fallbackListing = visibleSuggestions[index];
+        const listing = visibleSuggestions.find(
+          (suggestion) => suggestion.id === stop.listingId,
+        );
+        const matchedListing = listing || fallbackListing;
+
+        return {
+          listingId: stop.listingId || matchedListing?.id || "",
+          title: stop.title || matchedListing?.title || "Roa concierge stop",
+          timeBlock: stop.timeBlock || "Flexible",
+          note: stop.note || matchedListing?.reasons.join(", ") || "",
+          location: matchedListing?.location || "",
+          category: matchedListing?.category || "",
+          price: matchedListing?.price || null,
+        };
+      }) || [];
+    const fallbackStops = visibleSuggestions.map((listing, index) => ({
+      listingId: listing.id,
+      title: listing.title,
+      timeBlock: ["Morning", "Midday", "Afternoon"][index] || "Flexible",
+      note: listing.reasons.join(", ") || "Roa match",
+      location: listing.location || "",
+      category: listing.category || "",
+      price: listing.price,
+    }));
+
+    return (stopsFromBrain.length > 0 ? stopsFromBrain : fallbackStops).filter(
+      (stop) => stop.listingId,
+    );
+  }
+
+  function saveLocalRoaPlan() {
     if (typeof window === "undefined") return;
 
     const savedPlan = {
@@ -283,7 +318,80 @@ export default function RoaConcierge({
     };
 
     localStorage.setItem("roatan-roa-saved-plan", JSON.stringify(savedPlan));
-    setHandoffStatus("Saved. Your Roa plan is saved on this device.");
+  }
+
+  async function saveRoaPlan() {
+    saveLocalRoaPlan();
+
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    const stops = roaTripPlanStops();
+
+    if (!token) {
+      setHandoffStatus(
+        "Saved on this device. Sign in to keep Roa plans in My trips.",
+      );
+      return "";
+    }
+
+    if (stops.length === 0) {
+      setHandoffStatus(
+        "Saved on this device. Ask Roa for a plan with local matches before saving to My trips.",
+      );
+      return "";
+    }
+
+    const response = await fetch("/api/account/trip-plans", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name: brainPlan?.title || "Roa concierge plan",
+        pickupArea: traveler.pickupArea || "Flexible pickup",
+        arrivalType: traveler.arrivalType || brainPlan?.intentLabel || "Roa plan",
+        tripDate: traveler.tripDate || "",
+        guestCount: traveler.guests || "",
+        source: "roa",
+        stops,
+      }),
+    });
+    const result = (await response.json()) as {
+      tripPlan?: { id?: string };
+      error?: string;
+    };
+
+    if (!response.ok || !result.tripPlan?.id) {
+      setHandoffStatus(
+        result.error ||
+          "Saved on this device. I could not add it to My trips yet.",
+      );
+      return "";
+    }
+
+    setSavedTripPlanId(result.tripPlan.id);
+    setHandoffStatus("Saved to My trips. You can reopen it from your account.");
+    return result.tripPlan.id;
+  }
+
+  async function markSavedPlanRequested(planId: string, conciergeLeadId: string) {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    if (!token || !planId) return;
+
+    await fetch(`/api/account/trip-plans/${planId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status: "concierge_requested",
+        conciergeLeadId,
+      }),
+    });
   }
 
   async function copyRoaSummary() {
@@ -309,6 +417,7 @@ export default function RoaConcierge({
     }
 
     setHandoffStatus("Sending Roa plan...");
+    const activeSavedPlanId = savedTripPlanId || (await saveRoaPlan());
 
     const response = await fetch("/api/contact", {
       method: "POST",
@@ -347,6 +456,10 @@ export default function RoaConcierge({
     if (!response.ok) {
       setHandoffStatus(result.error || "Unable to send this to concierge.");
       return;
+    }
+
+    if (result.conciergeLeadId) {
+      await markSavedPlanRequested(activeSavedPlanId, result.conciergeLeadId);
     }
 
     setHandoffStatus("Sent. The concierge team can now review the Roa plan.");
@@ -595,6 +708,24 @@ export default function RoaConcierge({
             {brainPlan.missingDetails.length > 0 ? (
               <div className="mt-4 rounded-2xl bg-[#FFF8E8] px-4 py-3 text-sm font-bold text-[#7A5A12]">
                 Needs: {brainPlan.missingDetails.join(", ")}
+              </div>
+            ) : null}
+            {brainPlan.missingDetails.length > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {brainPlan.missingDetails.slice(0, 3).map((detail) => (
+                  <button
+                    key={detail}
+                    type="button"
+                    onClick={() =>
+                      sendMessage(
+                        `Help me add the missing ${detail.toLowerCase()} for this Roa plan.`,
+                      )
+                    }
+                    className="rounded-full border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-2 text-xs font-black text-[#007B7B]"
+                  >
+                    Add {detail}
+                  </button>
+                ))}
               </div>
             ) : null}
             <div className="mt-4 rounded-2xl bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">

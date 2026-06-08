@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import AnalyticsTracker from "./AnalyticsTracker";
 import GlobalBookingChat from "./GlobalBookingChat";
 import GlobalAccountButton from "./GlobalAccountButton";
+import GlobalRoaButton from "./GlobalRoaButton";
 import SessionIdleTimeout from "./SessionIdleTimeout";
 import SiteBrandingProvider from "./SiteBrandingProvider";
 import "./globals.css";
@@ -41,6 +42,7 @@ export default function RootLayout({
           <SessionIdleTimeout />
           {children}
           <GlobalBookingChat />
+          <GlobalRoaButton />
           <GlobalAccountButton />
         </SiteBrandingProvider>
       </body>

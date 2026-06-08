@@ -8,6 +8,11 @@ import { supabaseServer } from "@/lib/supabase-server";
 
 type TripPlanBody = Parameters<typeof normalizeGuestTripPlanInput>[0];
 
+const tripPlanSelect =
+  "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, concierge_lead_id, stops, created_at, updated_at";
+const legacyTripPlanSelect =
+  "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, stops, created_at, updated_at";
+
 async function getUser(request: Request) {
   const token = request.headers
     .get("authorization")
@@ -24,6 +29,39 @@ async function getUser(request: Request) {
     : null;
 }
 
+function isMissingConciergeLeadColumn(error: { message?: string } | null) {
+  return Boolean(
+    error?.message?.includes("concierge_lead_id") ||
+      error?.message?.includes("guest_trip_plans_concierge_lead_id"),
+  );
+}
+
+async function hydrateTripPlanStatuses(rows: GuestTripPlanRow[]) {
+  const leadIds = rows
+    .map((row) => row.concierge_lead_id)
+    .filter((id): id is string => Boolean(id));
+
+  if (leadIds.length === 0) return rows;
+
+  const { data } = await supabaseServer
+    .from("concierge_leads")
+    .select("id, status")
+    .in("id", leadIds);
+  const statusByLead = new Map(
+    ((data || []) as { id: string; status: string | null }[]).map((lead) => [
+      lead.id,
+      lead.status || "new",
+    ]),
+  );
+
+  return rows.map((row) => ({
+    ...row,
+    status: row.concierge_lead_id
+      ? statusByLead.get(row.concierge_lead_id) || row.status
+      : row.status,
+  }));
+}
+
 export async function GET(request: Request) {
   const user = await getUser(request);
 
@@ -31,21 +69,35 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { data, error } = await supabaseServer
+  let { data, error } = await supabaseServer
     .from("guest_trip_plans")
-    .select(
-      "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, stops, created_at, updated_at",
-    )
+    .select(tripPlanSelect)
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false })
     .limit(20);
+
+  if (isMissingConciergeLeadColumn(error)) {
+    const fallback = await supabaseServer
+      .from("guest_trip_plans")
+      .select(legacyTripPlanSelect)
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(20);
+    data = (fallback.data || []).map((row) => ({
+      ...row,
+      concierge_lead_id: null,
+    }));
+    error = fallback.error;
+  }
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const rows = await hydrateTripPlanStatuses((data as GuestTripPlanRow[]) || []);
+
   return NextResponse.json({
-    tripPlans: ((data as GuestTripPlanRow[]) || []).map(guestTripPlanFromRow),
+    tripPlans: rows.map(guestTripPlanFromRow),
   });
 }
 
@@ -83,9 +135,7 @@ export async function POST(request: Request) {
       stops: plan.stops,
       updated_at: now,
     })
-    .select(
-      "id, user_id, email, name, pickup_area, arrival_type, trip_date, trip_time, guest_count, source, status, stops, created_at, updated_at",
-    )
+    .select(legacyTripPlanSelect)
     .single();
 
   if (error) {
@@ -93,7 +143,12 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { tripPlan: guestTripPlanFromRow(data as GuestTripPlanRow) },
+    {
+      tripPlan: guestTripPlanFromRow({
+        ...(data as GuestTripPlanRow),
+        concierge_lead_id: null,
+      }),
+    },
     { status: 201 },
   );
 }

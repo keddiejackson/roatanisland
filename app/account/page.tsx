@@ -20,6 +20,8 @@ import {
 } from "@/lib/booking-flow";
 import {
   buildGuestTripPlanMapUrl,
+  getGuestTripPlanSourceLabel,
+  getGuestTripPlanStatusLabel,
   getGuestTripPlanSummary,
   type GuestTripPlan,
 } from "@/lib/guest-trip-plans";
@@ -965,9 +967,14 @@ export default function AccountPage() {
                   >
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                       <div>
-                        <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
-                          Map plan
-                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                            {getGuestTripPlanSourceLabel(plan.source)}
+                          </p>
+                          <span className="rounded-full bg-[#EEF7F6] px-2.5 py-1 text-[0.65rem] font-black uppercase text-[#007B7B]">
+                            {getGuestTripPlanStatusLabel(plan.status)}
+                          </span>
+                        </div>
                         <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
                           {plan.name}
                         </h3>

@@ -29,6 +29,15 @@ type PlanStop = {
 type PlanPayload = {
   name?: string;
   notes?: string;
+  source?: string;
+  brainPlan?: {
+    title?: string;
+    confidenceScore?: number;
+    confidenceLabel?: string;
+    summary?: string;
+    nextAction?: string;
+    missingDetails?: string[];
+  };
   stops?: PlanStop[];
 };
 
@@ -142,6 +151,14 @@ function leadPlanStops(plan: PlanPayload | null) {
   return Array.isArray(plan?.stops) ? plan.stops.slice(0, 6) : [];
 }
 
+function isRoaLead(lead: ConciergeLead) {
+  return (
+    lead.plan?.source === "roa_ai_concierge" ||
+    lead.interest?.toLowerCase().includes("roa") ||
+    lead.message.toLowerCase().includes("roa concierge pro")
+  );
+}
+
 function quoteToCents(value: string) {
   const numberValue = Number(value);
   return Number.isFinite(numberValue) && numberValue >= 0
@@ -199,6 +216,7 @@ export default function AdminConciergePage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("All");
   const [priorityFilter, setPriorityFilter] = useState("All");
+  const [sourceFilter, setSourceFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savingAssignmentId, setSavingAssignmentId] = useState<string | null>(
@@ -275,6 +293,9 @@ export default function AdminConciergePage() {
         statusFilter === "All" || lead.status === statusFilter;
       const matchesPriority =
         priorityFilter === "All" || lead.priority === priorityFilter;
+      const matchesSource =
+        sourceFilter === "All" ||
+        (sourceFilter === "Roa" ? isRoaLead(lead) : !isRoaLead(lead));
       const matchesSearch =
         !searchText ||
         [
@@ -297,9 +318,9 @@ export default function AdminConciergePage() {
           .toLowerCase()
           .includes(searchText);
 
-      return matchesStatus && matchesPriority && matchesSearch;
+      return matchesStatus && matchesPriority && matchesSource && matchesSearch;
     });
-  }, [leads, priorityFilter, search, statusFilter]);
+  }, [leads, priorityFilter, search, sourceFilter, statusFilter]);
 
   const summary = useMemo(() => conciergeLeadSummary(leads), [leads]);
   const fulfillmentSummary = useMemo(
@@ -573,6 +594,7 @@ export default function AdminConciergePage() {
               ["Total leads", summary.total],
               ["New", summary.newCount],
               ["Active", summary.activeCount],
+              ["Roa plans", leads.filter(isRoaLead).length],
               ["Booked", summary.bookedCount],
               ["Cruise", summary.cruiseCount],
               ["Airport", summary.airportCount],
@@ -592,7 +614,7 @@ export default function AdminConciergePage() {
             ))}
           </div>
 
-          <div className="mt-8 grid gap-3 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_200px_200px]">
+          <div className="mt-8 grid gap-3 rounded-2xl bg-[#F7F3EA] p-4 lg:grid-cols-[1fr_180px_180px_180px]">
             <input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -623,6 +645,15 @@ export default function AdminConciergePage() {
                 </option>
               ))}
             </select>
+            <select
+              value={sourceFilter}
+              onChange={(event) => setSourceFilter(event.target.value)}
+              className="min-h-12 rounded-xl border border-gray-200 px-4 outline-none"
+            >
+              <option value="All">All sources</option>
+              <option value="Roa">Roa plans</option>
+              <option value="Other">Other leads</option>
+            </select>
           </div>
 
           {message ? (
@@ -641,6 +672,7 @@ export default function AdminConciergePage() {
             <div className="mt-6 grid gap-5">
               {filteredLeads.map((lead) => {
                 const stops = leadPlanStops(lead.plan);
+                const roaLead = isRoaLead(lead);
                 const draft = assignmentDrafts[lead.id] || emptyAssignmentDraft;
                 const leadFulfillment = conciergeFulfillmentSummary(
                   lead.assignments,
@@ -660,6 +692,11 @@ export default function AdminConciergePage() {
                     <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
+                          {roaLead ? (
+                            <span className="rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-black uppercase text-white">
+                              Roa AI plan
+                            </span>
+                          ) : null}
                           <span className="rounded-full bg-[#0B3C5D] px-3 py-1 text-xs font-black uppercase text-white">
                             {lead.status}
                           </span>
@@ -670,6 +707,43 @@ export default function AdminConciergePage() {
                             {new Date(lead.created_at).toLocaleString()}
                           </span>
                         </div>
+
+                        {lead.plan?.brainPlan ? (
+                          <div className="mt-5 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div>
+                                <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                                  Roa Brain summary
+                                </p>
+                                <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
+                                  {lead.plan.brainPlan.title || "Roa concierge plan"}
+                                </h3>
+                              </div>
+                              {lead.plan.brainPlan.confidenceScore ? (
+                                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                                  {lead.plan.brainPlan.confidenceScore}%{" "}
+                                  {lead.plan.brainPlan.confidenceLabel || ""}
+                                </span>
+                              ) : null}
+                            </div>
+                            {lead.plan.brainPlan.summary ? (
+                              <p className="mt-3 text-sm leading-6 text-gray-700">
+                                {lead.plan.brainPlan.summary}
+                              </p>
+                            ) : null}
+                            {lead.plan.brainPlan.missingDetails?.length ? (
+                              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#7A5A12]">
+                                Missing:{" "}
+                                {lead.plan.brainPlan.missingDetails.join(", ")}
+                              </p>
+                            ) : null}
+                            {lead.plan.brainPlan.nextAction ? (
+                              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#0B3C5D]">
+                                {lead.plan.brainPlan.nextAction}
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : null}
                         <h2 className="mt-3 text-2xl font-black text-[#0B3C5D]">
                           {lead.guest_name}
                         </h2>

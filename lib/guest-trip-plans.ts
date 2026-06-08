@@ -37,6 +37,23 @@ export type GuestTripPlan = {
   updated_at?: string;
 };
 
+export const guestTripPlanStatusLabels: Record<string, string> = {
+  saved: "Saved",
+  concierge_requested: "Sent to concierge",
+  new: "Sent to concierge",
+  reviewing: "Being reviewed",
+  contacted: "Vendor contacted",
+  quoted: "Ready to book",
+  booked: "Booked",
+  closed: "Closed",
+};
+
+export const guestTripPlanSourceLabels: Record<string, string> = {
+  map: "Map plan",
+  roa: "Roa plan",
+  guest_trip_plan: "Saved plan",
+};
+
 export type GuestTripPlanRow = {
   id: string;
   user_id?: string;
@@ -122,6 +139,14 @@ export function guestTripPlanFromRow(row: GuestTripPlanRow): GuestTripPlan {
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
+}
+
+export function getGuestTripPlanStatusLabel(status?: string | null) {
+  return guestTripPlanStatusLabels[status || "saved"] || "Saved";
+}
+
+export function getGuestTripPlanSourceLabel(source?: string | null) {
+  return guestTripPlanSourceLabels[source || "map"] || "Saved plan";
 }
 
 function fallbackGuestName(email: string) {

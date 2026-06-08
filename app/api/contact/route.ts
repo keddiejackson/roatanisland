@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { buildConciergeLeadInsert } from "@/lib/concierge-leads";
 import { logAppError } from "@/lib/error-log";
-import { escapeHtml, sendAdminNotification } from "@/lib/notifications";
+import {
+  escapeHtml,
+  sendAdminNotification,
+  sendEmailNotification,
+} from "@/lib/notifications";
 import { supabaseServer } from "@/lib/supabase-server";
 import { buildSupportTicketInsert } from "@/lib/support-tickets";
 
@@ -106,6 +110,39 @@ export async function POST(request: Request) {
       `Message: ${body.message}`,
     ].join("\n"),
   });
+
+  if (isConciergeLead) {
+    await sendEmailNotification({
+      to: body.email,
+      subject: "We received your Roa concierge plan",
+      replyTo:
+        process.env.ADMIN_NOTIFICATION_EMAIL ||
+        process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",")[0]?.trim(),
+      html: `
+        <p>Hi ${escapeHtml(body.name)},</p>
+        <p>We received your Roa concierge plan. The RoatanIsland.life team will review your dates, guest count, pickup details, and suggested local options.</p>
+        <p><strong>What happens next:</strong></p>
+        <ol>
+          <li>We check the plan details and timing.</li>
+          <li>We follow up with any missing questions.</li>
+          <li>We help shape the best next step or booking request.</li>
+        </ol>
+        <p>You can return to your account anytime to review saved trips and booking messages.</p>
+      `,
+      text: [
+        `Hi ${body.name},`,
+        "",
+        "We received your Roa concierge plan. The RoatanIsland.life team will review your dates, guest count, pickup details, and suggested local options.",
+        "",
+        "What happens next:",
+        "1. We check the plan details and timing.",
+        "2. We follow up with any missing questions.",
+        "3. We help shape the best next step or booking request.",
+        "",
+        "You can return to your account anytime to review saved trips and booking messages.",
+      ].join("\n"),
+    });
+  }
 
   const { error: analyticsError } = await supabaseServer.from("analytics_events").insert([
     {
