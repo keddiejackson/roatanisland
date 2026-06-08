@@ -1,3 +1,12 @@
+import {
+  logoFits,
+  logoPositions,
+  logoShadows,
+  type LogoFit,
+  type LogoPosition,
+  type LogoShadow,
+} from "./site-branding";
+
 export const mobileNavItemKeys = [
   "listings",
   "map",
@@ -14,8 +23,15 @@ export type MobileSiteControls = {
   mobileHeroSubhead: string;
   mobilePrimaryCtaLabel: string;
   mobileSecondaryCtaLabel: string;
+  mobileHeroCountLabel: string;
+  mobileHeroMapLabel: string;
+  mobileHeroSupportLabel: string;
   mobileListingsTitle: string;
   mobileListingsIntro: string;
+  mobileListingsSearchPlaceholder: string;
+  mobileListingsMapButtonLabel: string;
+  mobileListingsFilterButtonLabel: string;
+  mobileListingsResultLabel: string;
   mobileFinalCtaTitle: string;
   mobileFinalCtaBody: string;
   mobileFinalCtaPrimaryLabel: string;
@@ -34,6 +50,10 @@ export type MobileSiteControls = {
   mobileSuccessTitle: string;
   mobileSuccessBody: string;
   mobileSuccessPrimaryLabel: string;
+  mobileBookingSuccessEyebrow: string;
+  mobileBookingSuccessTitle: string;
+  mobileBookingSuccessBody: string;
+  mobileBookingSuccessPrimaryLabel: string;
   mobileAccountEyebrow: string;
   mobileAccountHeadline: string;
   mobileAccountSignedOutHeadline: string;
@@ -56,8 +76,24 @@ export type MobileSiteControls = {
   showMobileNavConcierge: boolean;
   showMobileNavSignIn: boolean;
   showMobileNavBusiness: boolean;
+  compactMobileAdminNav: boolean;
+  compactMobileVendorDashboard: boolean;
   compactAdminMobileNav: boolean;
   compactVendorMobileNav: boolean;
+  useMobileLogoOverrides: boolean;
+  mobileLogoWidthPx: number;
+  mobileLogoHeightPx: number;
+  mobileLogoPaddingPx: number;
+  mobileLogoRadiusPx: number;
+  mobileLogoBorderWidthPx: number;
+  mobileLogoOpacity: number;
+  mobileLogoRotateDeg: number;
+  mobileLogoScale: number;
+  mobileLogoFit: LogoFit;
+  mobileLogoPosition: LogoPosition;
+  mobileLogoShadow: LogoShadow;
+  mobileLogoBackgroundColor: string;
+  mobileLogoBorderColor: string;
 };
 
 export const defaultMobileSiteControls: MobileSiteControls = {
@@ -66,9 +102,17 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   mobileHeroSubhead: "Have the Roatan Island Life, all for yourself.",
   mobilePrimaryCtaLabel: "Plan your Roatan day",
   mobileSecondaryCtaLabel: "Explore",
+  mobileHeroCountLabel: "curated option",
+  mobileHeroMapLabel: "Map-first planning",
+  mobileHeroSupportLabel: "Concierge support",
   mobileListingsTitle: "Featured Roatan picks.",
   mobileListingsIntro:
     "Search, choose a trip style, add your date and guests, then open the best matches.",
+  mobileListingsSearchPlaceholder:
+    "Search by tour, stay, transport, or location",
+  mobileListingsMapButtonLabel: "Open matched map",
+  mobileListingsFilterButtonLabel: "More filters",
+  mobileListingsResultLabel: "curated matches ready.",
   mobileFinalCtaTitle: "Ready for your Roatan day?",
   mobileFinalCtaBody:
     "Start with the map, request help, or open your trips when you are ready.",
@@ -90,6 +134,11 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   mobileSuccessBody:
     "Check your trip dashboard for messages, payment notes, and pickup details.",
   mobileSuccessPrimaryLabel: "View booking",
+  mobileBookingSuccessEyebrow: "Request sent",
+  mobileBookingSuccessTitle: "Your Roatan request is moving.",
+  mobileBookingSuccessBody:
+    "Check your trip dashboard for messages, payment notes, and pickup details.",
+  mobileBookingSuccessPrimaryLabel: "View booking",
   mobileAccountEyebrow: "Private guest lounge",
   mobileAccountHeadline: "Your Roatan trip.",
   mobileAccountSignedOutHeadline: "Your Roatan trip, beautifully handled.",
@@ -114,8 +163,24 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   showMobileNavConcierge: true,
   showMobileNavSignIn: true,
   showMobileNavBusiness: true,
+  compactMobileAdminNav: true,
+  compactMobileVendorDashboard: true,
   compactAdminMobileNav: true,
   compactVendorMobileNav: true,
+  useMobileLogoOverrides: true,
+  mobileLogoWidthPx: 176,
+  mobileLogoHeightPx: 86,
+  mobileLogoPaddingPx: 0,
+  mobileLogoRadiusPx: 22,
+  mobileLogoBorderWidthPx: 0,
+  mobileLogoOpacity: 1,
+  mobileLogoRotateDeg: 0,
+  mobileLogoScale: 1,
+  mobileLogoFit: "contain",
+  mobileLogoPosition: "center",
+  mobileLogoShadow: "none",
+  mobileLogoBackgroundColor: "transparent",
+  mobileLogoBorderColor: "transparent",
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -134,8 +199,99 @@ function cleanBoolean(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
 }
 
+function cleanNumber(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+) {
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number.parseFloat(value)
+        : Number.NaN;
+
+  if (!Number.isFinite(numericValue)) return fallback;
+
+  return Math.min(max, Math.max(min, numericValue));
+}
+
+function cleanWholeNumber(
+  value: unknown,
+  fallback: number,
+  min: number,
+  max: number,
+) {
+  return Math.round(cleanNumber(value, fallback, min, max));
+}
+
+function cleanLogoFit(value: unknown, fallback: LogoFit): LogoFit {
+  return typeof value === "string" && logoFits.includes(value as LogoFit)
+    ? (value as LogoFit)
+    : fallback;
+}
+
+function cleanLogoPosition(
+  value: unknown,
+  fallback: LogoPosition,
+): LogoPosition {
+  return typeof value === "string" &&
+    logoPositions.includes(value as LogoPosition)
+    ? (value as LogoPosition)
+    : fallback;
+}
+
+function cleanLogoShadow(value: unknown, fallback: LogoShadow): LogoShadow {
+  return typeof value === "string" && logoShadows.includes(value as LogoShadow)
+    ? (value as LogoShadow)
+    : fallback;
+}
+
 export function normalizeMobileSiteControls(value: unknown): MobileSiteControls {
   const settings = asRecord(value);
+  const compactMobileAdminNav = cleanBoolean(
+    settings.compactMobileAdminNav,
+    cleanBoolean(
+      settings.compactAdminMobileNav,
+      defaultMobileSiteControls.compactMobileAdminNav,
+    ),
+  );
+  const compactMobileVendorDashboard = cleanBoolean(
+    settings.compactMobileVendorDashboard,
+    cleanBoolean(
+      settings.compactVendorMobileNav,
+      defaultMobileSiteControls.compactMobileVendorDashboard,
+    ),
+  );
+  const mobileBookingSuccessEyebrow = cleanText(
+    settings.mobileBookingSuccessEyebrow,
+    cleanText(
+      settings.mobileSuccessEyebrow,
+      defaultMobileSiteControls.mobileBookingSuccessEyebrow,
+    ),
+  );
+  const mobileBookingSuccessTitle = cleanText(
+    settings.mobileBookingSuccessTitle,
+    cleanText(
+      settings.mobileSuccessTitle,
+      defaultMobileSiteControls.mobileBookingSuccessTitle,
+    ),
+  );
+  const mobileBookingSuccessBody = cleanText(
+    settings.mobileBookingSuccessBody,
+    cleanText(
+      settings.mobileSuccessBody,
+      defaultMobileSiteControls.mobileBookingSuccessBody,
+    ),
+  );
+  const mobileBookingSuccessPrimaryLabel = cleanText(
+    settings.mobileBookingSuccessPrimaryLabel,
+    cleanText(
+      settings.mobileSuccessPrimaryLabel,
+      defaultMobileSiteControls.mobileBookingSuccessPrimaryLabel,
+    ),
+  );
 
   return {
     mobileHeroEyebrow: cleanText(
@@ -158,6 +314,18 @@ export function normalizeMobileSiteControls(value: unknown): MobileSiteControls 
       settings.mobileSecondaryCtaLabel,
       defaultMobileSiteControls.mobileSecondaryCtaLabel,
     ),
+    mobileHeroCountLabel: cleanText(
+      settings.mobileHeroCountLabel,
+      defaultMobileSiteControls.mobileHeroCountLabel,
+    ),
+    mobileHeroMapLabel: cleanText(
+      settings.mobileHeroMapLabel,
+      defaultMobileSiteControls.mobileHeroMapLabel,
+    ),
+    mobileHeroSupportLabel: cleanText(
+      settings.mobileHeroSupportLabel,
+      defaultMobileSiteControls.mobileHeroSupportLabel,
+    ),
     mobileListingsTitle: cleanText(
       settings.mobileListingsTitle,
       defaultMobileSiteControls.mobileListingsTitle,
@@ -165,6 +333,22 @@ export function normalizeMobileSiteControls(value: unknown): MobileSiteControls 
     mobileListingsIntro: cleanText(
       settings.mobileListingsIntro,
       defaultMobileSiteControls.mobileListingsIntro,
+    ),
+    mobileListingsSearchPlaceholder: cleanText(
+      settings.mobileListingsSearchPlaceholder,
+      defaultMobileSiteControls.mobileListingsSearchPlaceholder,
+    ),
+    mobileListingsMapButtonLabel: cleanText(
+      settings.mobileListingsMapButtonLabel,
+      defaultMobileSiteControls.mobileListingsMapButtonLabel,
+    ),
+    mobileListingsFilterButtonLabel: cleanText(
+      settings.mobileListingsFilterButtonLabel,
+      defaultMobileSiteControls.mobileListingsFilterButtonLabel,
+    ),
+    mobileListingsResultLabel: cleanText(
+      settings.mobileListingsResultLabel,
+      defaultMobileSiteControls.mobileListingsResultLabel,
     ),
     mobileFinalCtaTitle: cleanText(
       settings.mobileFinalCtaTitle,
@@ -224,20 +408,24 @@ export function normalizeMobileSiteControls(value: unknown): MobileSiteControls 
     ),
     mobileSuccessEyebrow: cleanText(
       settings.mobileSuccessEyebrow,
-      defaultMobileSiteControls.mobileSuccessEyebrow,
+      mobileBookingSuccessEyebrow,
     ),
     mobileSuccessTitle: cleanText(
       settings.mobileSuccessTitle,
-      defaultMobileSiteControls.mobileSuccessTitle,
+      mobileBookingSuccessTitle,
     ),
     mobileSuccessBody: cleanText(
       settings.mobileSuccessBody,
-      defaultMobileSiteControls.mobileSuccessBody,
+      mobileBookingSuccessBody,
     ),
     mobileSuccessPrimaryLabel: cleanText(
       settings.mobileSuccessPrimaryLabel,
-      defaultMobileSiteControls.mobileSuccessPrimaryLabel,
+      mobileBookingSuccessPrimaryLabel,
     ),
+    mobileBookingSuccessEyebrow,
+    mobileBookingSuccessTitle,
+    mobileBookingSuccessBody,
+    mobileBookingSuccessPrimaryLabel,
     mobileAccountEyebrow: cleanText(
       settings.mobileAccountEyebrow,
       defaultMobileSiteControls.mobileAccountEyebrow,
@@ -326,13 +514,81 @@ export function normalizeMobileSiteControls(value: unknown): MobileSiteControls 
       settings.showMobileNavBusiness,
       defaultMobileSiteControls.showMobileNavBusiness,
     ),
-    compactAdminMobileNav: cleanBoolean(
-      settings.compactAdminMobileNav,
-      defaultMobileSiteControls.compactAdminMobileNav,
+    compactMobileAdminNav,
+    compactMobileVendorDashboard,
+    compactAdminMobileNav: compactMobileAdminNav,
+    compactVendorMobileNav: compactMobileVendorDashboard,
+    useMobileLogoOverrides: cleanBoolean(
+      settings.useMobileLogoOverrides,
+      defaultMobileSiteControls.useMobileLogoOverrides,
     ),
-    compactVendorMobileNav: cleanBoolean(
-      settings.compactVendorMobileNav,
-      defaultMobileSiteControls.compactVendorMobileNav,
+    mobileLogoWidthPx: cleanWholeNumber(
+      settings.mobileLogoWidthPx,
+      defaultMobileSiteControls.mobileLogoWidthPx,
+      24,
+      2400,
+    ),
+    mobileLogoHeightPx: cleanWholeNumber(
+      settings.mobileLogoHeightPx,
+      defaultMobileSiteControls.mobileLogoHeightPx,
+      24,
+      1200,
+    ),
+    mobileLogoPaddingPx: cleanWholeNumber(
+      settings.mobileLogoPaddingPx,
+      defaultMobileSiteControls.mobileLogoPaddingPx,
+      0,
+      240,
+    ),
+    mobileLogoRadiusPx: cleanWholeNumber(
+      settings.mobileLogoRadiusPx,
+      defaultMobileSiteControls.mobileLogoRadiusPx,
+      0,
+      2000,
+    ),
+    mobileLogoBorderWidthPx: cleanWholeNumber(
+      settings.mobileLogoBorderWidthPx,
+      defaultMobileSiteControls.mobileLogoBorderWidthPx,
+      0,
+      80,
+    ),
+    mobileLogoOpacity: cleanNumber(
+      settings.mobileLogoOpacity,
+      defaultMobileSiteControls.mobileLogoOpacity,
+      0.25,
+      1,
+    ),
+    mobileLogoRotateDeg: cleanNumber(
+      settings.mobileLogoRotateDeg,
+      defaultMobileSiteControls.mobileLogoRotateDeg,
+      -180,
+      180,
+    ),
+    mobileLogoScale: cleanNumber(
+      settings.mobileLogoScale,
+      defaultMobileSiteControls.mobileLogoScale,
+      0.1,
+      4,
+    ),
+    mobileLogoFit: cleanLogoFit(
+      settings.mobileLogoFit,
+      defaultMobileSiteControls.mobileLogoFit,
+    ),
+    mobileLogoPosition: cleanLogoPosition(
+      settings.mobileLogoPosition,
+      defaultMobileSiteControls.mobileLogoPosition,
+    ),
+    mobileLogoShadow: cleanLogoShadow(
+      settings.mobileLogoShadow,
+      defaultMobileSiteControls.mobileLogoShadow,
+    ),
+    mobileLogoBackgroundColor: cleanText(
+      settings.mobileLogoBackgroundColor,
+      defaultMobileSiteControls.mobileLogoBackgroundColor,
+    ),
+    mobileLogoBorderColor: cleanText(
+      settings.mobileLogoBorderColor,
+      defaultMobileSiteControls.mobileLogoBorderColor,
     ),
   };
 }
