@@ -32,6 +32,12 @@ type OpenAIResponseTool = {
   };
 };
 
+function getGeminiModelName() {
+  return (process.env.GEMINI_MODEL || "gemini-2.5-flash")
+    .trim()
+    .replace(/^models\//, "");
+}
+
 export async function POST(request: Request) {
   const body = (await request.json()) as RoaRequestBody;
   const messages = normalizeRoaMessages(body.messages || []);
@@ -87,7 +93,7 @@ export async function POST(request: Request) {
     process.env.ROA_ENABLE_WEB_SEARCH === "1";
 
   if (geminiApiKey && preferredProvider !== "openai") {
-    const geminiModel = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const geminiModel = getGeminiModelName();
     const geminiResponse = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
       {
@@ -127,6 +133,21 @@ export async function POST(request: Request) {
       "Roa Gemini fallback:",
       geminiPayload?.error?.message || "Gemini unavailable",
     );
+
+    if (preferredProvider === "gemini") {
+      return NextResponse.json({
+        ok: true,
+        mode: "brain",
+        reply: buildRoaFallbackReply({
+          latestMessage,
+          suggestedListings,
+          brainPlan,
+        }),
+        suggestedListings,
+        sources: [],
+        brainPlan,
+      });
+    }
   }
 
   if (!apiKey) {
