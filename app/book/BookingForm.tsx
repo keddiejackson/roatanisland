@@ -584,9 +584,7 @@ export default function BookingForm({
     <div className="mobile-no-overflow mx-auto grid w-full max-w-7xl gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_390px] lg:pb-0">
       <section className="mobile-no-overflow rounded-[2rem] bg-white p-5 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
         <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
-          <span className="sm:hidden">
-            {mobileControls.mobileBookingHeroEyebrow}
-          </span>
+          <span className="sm:hidden">{mobileControls.mobileBookingHeroEyebrow}</span>
           <span className="hidden sm:inline">Private booking request desk</span>
         </p>
         <h1 className="mt-2 text-3xl font-black leading-tight text-[#0B3C5D] sm:text-5xl">
@@ -603,9 +601,7 @@ export default function BookingForm({
         </h1>
 
         <p className="mt-3 max-w-3xl leading-7 text-gray-600">
-          <span className="sm:hidden">
-            {mobileControls.mobileBookingHeroBody}
-          </span>
+          <span className="sm:hidden">{mobileControls.mobileBookingHeroBody}</span>
           <span className="hidden sm:inline">
             A guided booking flow with availability, pickup notes, payment
             expectations, and guest messaging all connected before the operator
@@ -667,25 +663,7 @@ export default function BookingForm({
           </div>
         </section>
 
-        <details className="mt-5 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4 sm:hidden">
-          <summary className="cursor-pointer list-none text-sm font-black text-[#0B3C5D]">
-            How the request works
-          </summary>
-          <div className="mt-3 grid gap-2">
-            {luxurySteps.slice(0, 3).map((step) => (
-              <div key={step.label} className="rounded-xl bg-white px-3 py-2">
-                <p className="text-[11px] font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
-                  Step {step.number}
-                </p>
-                <p className="mt-1 text-sm font-black text-[#0B3C5D]">
-                  {step.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </details>
-
-        <div className="mt-6 hidden gap-3 sm:grid sm:grid-cols-2 xl:grid-cols-5">
+        <div className="mobile-scroll-row mt-6 flex gap-3 overflow-x-auto pb-1 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 xl:grid-cols-5">
           {luxurySteps.map((step) => (
           <div
             key={step.label}
@@ -746,40 +724,7 @@ export default function BookingForm({
         )}
       </section>
 
-      <details className="mt-5 rounded-2xl border border-[#D6B56D]/25 bg-[#FFFDF7] p-4 sm:hidden">
-        <summary className="cursor-pointer list-none text-sm font-black text-[#0B3C5D]">
-          Confidence and payment checks
-        </summary>
-        <div className="mt-3 grid gap-3">
-          <div className="rounded-xl bg-[#071F2F] px-4 py-3 text-white">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-white/55">
-              Confidence
-            </p>
-            <p className="mt-1 text-2xl font-black">
-              {bookingConfidence.score}%
-            </p>
-            <p className="mt-1 text-xs font-bold text-[#9EE8E3]">
-              {bookingConfidence.label}
-            </p>
-          </div>
-          {bookingConfidence.signals.slice(0, 2).map((signal) => (
-            <div
-              key={signal.label}
-              className="rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3 text-[#0B3C5D]"
-            >
-              <p className="text-xs font-black uppercase tracking-[0.14em]">
-                Check
-              </p>
-              <p className="mt-1 text-sm font-black">{signal.label}</p>
-              <p className="mt-1 text-xs leading-5 text-gray-600">
-                {signal.text}
-              </p>
-            </div>
-          ))}
-        </div>
-      </details>
-
-      <section className="mt-6 hidden rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FFFDF7] p-5 sm:block">
+      <section className="mt-6 rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FFFDF7] p-5">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
@@ -839,7 +784,7 @@ export default function BookingForm({
         </div>
       ) : null}
 
-      <section className="mt-6 hidden gap-3 sm:grid md:grid-cols-4">
+      <section className="mt-6 grid gap-3 md:grid-cols-4">
         {trustSteps.map((step, index) => (
           <div
             key={step.label}
@@ -1003,14 +948,14 @@ export default function BookingForm({
               href="/"
               className="rounded-xl border border-[#00A8A8] px-5 py-3 font-semibold text-[#007B7B]"
             >
-              Browse more listings
+              Browse more experiences
             </Link>
             {listingId ? (
               <Link
                 href={`/listings/${listingId}`}
                 className="rounded-xl bg-white px-5 py-3 font-semibold text-green-800"
               >
-                Back to listing
+                Back to experience
               </Link>
             ) : null}
           </div>
@@ -1096,7 +1041,7 @@ export default function BookingForm({
               Date and availability
             </p>
             <p className="mt-1 text-sm leading-6 text-gray-600">
-              Pick the day, time, and group size you want. We check listing
+              Pick the day, time, and group size you want. We check experience
               limits before the request can be sent.
             </p>
           </div>
@@ -1382,7 +1327,7 @@ export default function BookingForm({
       )}
       </section>
 
-      <aside className="hidden h-fit rounded-[2rem] border border-white/70 bg-white p-5 shadow-2xl shadow-[#071F2F]/10 lg:sticky lg:top-6 lg:block">
+      <aside className="h-fit rounded-[2rem] border border-white/70 bg-white p-5 shadow-2xl shadow-[#071F2F]/10 lg:sticky lg:top-6">
         <div className="rounded-[1.5rem] bg-[#071F2F] p-5 text-white">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#9EE8E3]">
             Trip summary

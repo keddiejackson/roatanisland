@@ -451,20 +451,14 @@ export default function Home() {
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="text-sm font-black uppercase tracking-[0.26em] text-[#D6B56D]"
               >
-                <span className="sm:hidden">
-                  {mobileControls.mobileHeroEyebrow}
-                </span>
-                <span className="hidden sm:inline">
-                  {homepageControls.heroEyebrow}
-                </span>
+                <span className="sm:hidden">{mobileControls.mobileHeroEyebrow}</span>
+                <span className="hidden sm:inline">{homepageControls.heroEyebrow}</span>
               </motion.p>
               <motion.h1
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-5 max-w-5xl text-[clamp(3.25rem,17vw,6rem)] font-black leading-[0.9] tracking-normal sm:text-8xl lg:text-[7.8rem]"
               >
-                <span className="sm:hidden">
-                  {mobileControls.mobileHeroHeadline}
-                </span>
+                <span className="sm:hidden">{mobileControls.mobileHeroHeadline}</span>
                 <span className="hidden sm:inline">
                   {homepageControls.homepageHeadline}
                 </span>
@@ -473,9 +467,7 @@ export default function Home() {
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
                 className="mt-6 max-w-3xl text-base leading-7 text-white/84 sm:mt-7 sm:text-2xl sm:leading-10"
               >
-                <span className="sm:hidden">
-                  {mobileControls.mobileHeroSubhead}
-                </span>
+                <span className="sm:hidden">{mobileControls.mobileHeroSubhead}</span>
                 <span className="hidden sm:inline">
                   {homepageControls.homepageSubhead}
                 </span>
@@ -508,31 +500,15 @@ export default function Home() {
                   mobileControls.showMobileHeroPills ? "" : "hidden sm:flex"
                 }`}
               >
-                  <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                    {navListingCount}{" "}
-                    <span className="sm:hidden">
-                      {mobileControls.mobileHeroCountLabel}
-                    </span>
-                    <span className="hidden sm:inline">
-                      {homepageControls.heroCountLabel}
-                    </span>
-                  </span>
-                  <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                    <span className="sm:hidden">
-                      {mobileControls.mobileHeroMapLabel}
-                    </span>
-                    <span className="hidden sm:inline">
-                      {homepageControls.heroMapLabel}
-                    </span>
-                  </span>
-                  <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
-                    <span className="sm:hidden">
-                      {mobileControls.mobileHeroSupportLabel}
-                    </span>
-                    <span className="hidden sm:inline">
-                      {homepageControls.heroSupportLabel}
-                    </span>
-                  </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                  {navListingCount} {homepageControls.heroCountLabel}
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                  {homepageControls.heroMapLabel}
+                </span>
+                <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2">
+                  {homepageControls.heroSupportLabel}
+                </span>
               </motion.div>
             </div>
           </motion.div>
@@ -607,10 +583,7 @@ export default function Home() {
                 href={mapUrl}
                 className="brand-button-secondary"
               >
-                <span className="sm:hidden">
-                  {mobileControls.mobileListingsMapButtonLabel}
-                </span>
-                <span className="hidden sm:inline">Open matched map</span>
+                Open matched map
               </Link>
             </div>
           </motion.div>
@@ -630,7 +603,7 @@ export default function Home() {
             <div className="grid gap-3 lg:grid-cols-[1.5fr_0.85fr_0.95fr_0.8fr_0.65fr]">
               <input
                 type="text"
-                placeholder={mobileControls.mobileListingsSearchPlaceholder}
+                placeholder="Search by experience, stay, transport, or location"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="brand-input min-h-12"
@@ -679,6 +652,45 @@ export default function Home() {
               />
             </div>
 
+            <div className="mt-4 rounded-[1rem] border border-[#D6B56D]/25 bg-[#FFFDF7] p-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+                    Private trip quiz
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
+                    Choose the kind of Roatan day you want and we will narrow
+                    the marketplace to the best fit.
+                  </p>
+                </div>
+                <Link
+                  href="/guides"
+                  className="brand-button-secondary shrink-0 justify-center px-4 py-2 text-sm"
+                >
+                  Read Roatan guides
+                </Link>
+              </div>
+              <div className="mobile-scroll-row mt-3 flex gap-2 overflow-x-auto pb-1">
+                {travelerPersonaPresets.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyTravelerPersona(preset.id)}
+                    className={`min-w-44 rounded-2xl border px-4 py-3 text-left text-sm transition ${
+                      selectedPersonaId === preset.id
+                        ? "border-[#00A8A8] bg-[#071F2F] text-white"
+                        : "border-[#D6B56D]/25 bg-white text-[#0B3C5D] hover:border-[#00A8A8]"
+                    }`}
+                  >
+                    <span className="block font-black">{preset.label}</span>
+                    <span className="mt-1 block text-xs leading-5 opacity-75">
+                      {preset.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="mt-3 flex flex-col justify-between gap-3 border-t border-[#D6B56D]/20 pt-3 sm:flex-row sm:items-center">
               <p className="text-sm leading-6 text-gray-700">
                 <span className="font-black text-[#0B3C5D]">
@@ -691,9 +703,7 @@ export default function Home() {
                 onClick={() => setShowAdvancedFilters((current) => !current)}
                 className="brand-button-secondary min-h-12 px-4 py-2 text-sm"
               >
-                {showAdvancedFilters
-                  ? "Hide filters"
-                  : mobileControls.mobileListingsFilterButtonLabel}
+                {showAdvancedFilters ? "Hide filters" : "More filters"}
               </button>
             </div>
 
@@ -758,13 +768,7 @@ export default function Home() {
 
             <div className="mt-4 flex flex-col justify-between gap-3 rounded-[1rem] bg-[#EEF7F6] p-4 sm:flex-row sm:items-center">
               <p className="text-sm font-bold text-[#0B3C5D]">
-                {featuredHomeListings.length}{" "}
-                <span className="sm:hidden">
-                  {mobileControls.mobileListingsResultLabel}
-                </span>
-                <span className="hidden sm:inline">
-                  curated matches ready.
-                </span>
+                {featuredHomeListings.length} curated matches ready.
               </p>
               <div className="flex flex-wrap gap-2">
                 {hasActiveFilters ? (
@@ -777,24 +781,20 @@ export default function Home() {
                   </button>
                 ) : null}
                 <Link href={mapUrl} className="brand-button-primary px-4 py-2 text-sm">
-                  <span className="sm:hidden">
-                    {mobileControls.mobileListingsMapButtonLabel}
-                  </span>
-                  <span className="hidden sm:inline">Compare on map</span>
+                  Compare on map
                 </Link>
               </div>
             </div>
           </motion.form>
 
           {!mobileControls.showMobileHomepageSearch ? (
-            <div className="brand-card grid gap-3 p-4 sm:hidden">
-              <p className="text-sm font-bold leading-6 text-[#0B3C5D]">
-                Search is simplified on mobile. Open the island map or ask the
-                concierge for a matched plan.
+            <div className="brand-card p-4 sm:hidden">
+              <p className="text-sm font-black text-[#0B3C5D]">
+                {featuredHomeListings.length} curated matches ready.
               </p>
-              <div className="grid gap-2">
+              <div className="mt-3 grid gap-2">
                 <Link href={mapUrl} className="brand-button-primary justify-center">
-                  {mobileControls.mobileListingsMapButtonLabel}
+                  Open matched map
                 </Link>
                 <Link
                   href="/concierge"
@@ -811,7 +811,7 @@ export default function Home() {
               <div className="rounded-[1.35rem] border border-[#D6B56D]/20 bg-[#F7F3EA] p-5 shadow-inner shadow-white">
                 <EmptyState
                   title="No curated matches yet."
-                  text="The homepage only shows polished, guest-ready listings. Open the map for every active option or ask the concierge to point you to the closest fit."
+                  text="The homepage only shows polished, guest-ready experiences. Open the map for every active option or ask the concierge to point you to the closest fit."
                   primaryHref="/map"
                   primaryLabel="Explore the map"
                   secondaryHref="/concierge"

@@ -11,6 +11,7 @@ import {
   type ListingQualityListing,
 } from "@/lib/listing-quality";
 import { getPremiumListingCardPolish } from "@/lib/marketplace-upgrade";
+import { getRoaVerifiedStatus } from "@/lib/roa-verified";
 import { supabase } from "@/lib/supabase";
 
 type QualityListing = ListingQualityListing & {
@@ -241,6 +242,7 @@ function SummaryCard({ label, value }: { label: string; value: number }) {
 function QualityRow({ listing }: { listing: QualityListing }) {
   const quality = getListingQualitySummary(listing);
   const polish = getPremiumListingCardPolish(listing);
+  const verified = getRoaVerifiedStatus(listing);
   const tone =
     quality.label === "Showcase ready"
       ? "bg-emerald-50 text-emerald-700"
@@ -261,6 +263,9 @@ function QualityRow({ listing }: { listing: QualityListing }) {
             </span>
             <span className="rounded-full bg-[#FFF3D2] px-3 py-1 text-xs font-black text-[#0B3C5D]">
               {polish.primaryBadge}
+            </span>
+            <span className="rounded-full bg-[#EEF7F6] px-3 py-1 text-xs font-black text-[#007B7B]">
+              {verified.label} - {verified.score}%
             </span>
           </div>
           <h2 className="mt-3 text-xl font-black">{listing.title || "Untitled listing"}</h2>
@@ -295,6 +300,24 @@ function QualityRow({ listing }: { listing: QualityListing }) {
           <p className="mt-1 text-sm font-semibold text-[#0B3C5D]">
             Fix {polish.adminFlags.join(", ")} before this feels premium.
           </p>
+        </div>
+      ) : null}
+
+      {verified.missingSignals.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+            Roa verification checklist
+          </p>
+          <div className="mt-2 grid gap-2 md:grid-cols-2">
+            {verified.missingSignals.slice(0, 4).map((signal) => (
+              <p
+                key={signal.key}
+                className="rounded-lg bg-white px-3 py-2 text-xs font-bold leading-5 text-[#0B3C5D]"
+              >
+                {signal.action}
+              </p>
+            ))}
+          </div>
         </div>
       ) : null}
 

@@ -23,17 +23,18 @@ import {
   getTourTimeLabels,
 } from "@/lib/listing-detail";
 import { getAvailabilityPreviewDays } from "@/lib/booking-availability";
-import { publishedSiteSettingsKey } from "@/lib/homepage-settings";
-import {
-  defaultMobileSiteControls,
-  normalizeMobileSiteControls,
-} from "@/lib/mobile-site-controls";
 import {
   buildListingComparisonFacts,
   getListingConversionScore,
   getListingTrustBadges,
 } from "@/lib/booking-conversion-pro";
+import { publishedSiteSettingsKey } from "@/lib/homepage-settings";
 import { getLuxuryListingDetailProfile } from "@/lib/marketplace-upgrade";
+import {
+  defaultMobileSiteControls,
+  normalizeMobileSiteControls,
+} from "@/lib/mobile-site-controls";
+import { getRoaVerifiedStatus } from "@/lib/roa-verified";
 import { supabaseServer } from "@/lib/supabase-server";
 import { getListingReadinessSummary } from "@/lib/vendor-dashboard";
 
@@ -278,6 +279,16 @@ export default async function ListingPage({
   const trustBadges = getListingTrustBadges({ listing, vendor });
   const comparisonFacts = buildListingComparisonFacts(listing);
   const luxuryProfile = getLuxuryListingDetailProfile(listing);
+  const roaVerified = getRoaVerifiedStatus(listing, vendor);
+  const { data: siteSettingsData } = await supabaseServer
+    .from("site_settings")
+    .select("value")
+    .eq("key", publishedSiteSettingsKey)
+    .maybeSingle();
+  const mobileControls =
+    siteSettingsData?.value && typeof siteSettingsData.value === "object"
+      ? normalizeMobileSiteControls(siteSettingsData.value)
+      : defaultMobileSiteControls;
   const availabilityPreviewDays = getAvailabilityPreviewDays({
     listing,
     listingId: listing.id,
@@ -299,15 +310,6 @@ export default async function ListingPage({
     category: nearby.category || "Experience",
     imageUrl: nearby.image_url,
   }));
-  const { data: siteSettingsData } = await supabaseServer
-    .from("site_settings")
-    .select("value")
-    .eq("key", publishedSiteSettingsKey)
-    .maybeSingle();
-  const mobileControls =
-    siteSettingsData?.value && typeof siteSettingsData.value === "object"
-      ? normalizeMobileSiteControls(siteSettingsData.value)
-      : defaultMobileSiteControls;
 
   return (
     <main className="min-h-screen bg-[#F8F3EA] pb-28 text-[#17324D] lg:pb-0">
@@ -337,7 +339,7 @@ export default async function ListingPage({
                 href="/"
                 className="rounded-full px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/15"
               >
-                All listings
+                Experiences
               </Link>
               <Link
                 href={`/map?selected=${listing.id}`}
@@ -362,7 +364,7 @@ export default async function ListingPage({
               <span className="hidden sm:inline">Luxury booking page</span>
             </p>
             <p className="mt-5 text-sm font-semibold uppercase tracking-[0.2em] text-[#9EE8E3]">
-              {listing.category || "Roatan experience"}
+                {listing.category || "Roatan experience"}
             </p>
             <h1 className="mt-4 max-w-5xl text-5xl font-black leading-[0.94] sm:text-7xl lg:text-8xl">
               {listing.title}
@@ -399,6 +401,11 @@ export default async function ListingPage({
                   Guest-ready listing
                 </span>
               ) : null}
+              {roaVerified.label === "Roa Verified" ? (
+                <span className="rounded-full bg-[#9EE8E3] px-4 py-2 text-[#071F2F]">
+                  Roa Verified
+                </span>
+              ) : null}
             </div>
           </div>
         </div>
@@ -428,7 +435,7 @@ export default async function ListingPage({
                 <span className="sm:hidden">
                   {mobileControls.mobileListingStickyCtaLabel}
                 </span>
-                <span className="hidden sm:inline">Request this listing</span>
+                <span className="hidden sm:inline">Request this experience</span>
               </Link>
             </div>
             <p className="mt-5 text-lg leading-8 text-gray-700">
@@ -451,6 +458,58 @@ export default async function ListingPage({
                     {note}
                   </div>
                 ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[1.75rem] border border-[#00A8A8]/15 bg-white p-6 shadow-xl shadow-[#071F2F]/8 sm:p-8">
+            <div className="grid gap-6 lg:grid-cols-[0.75fr_1fr] lg:items-start">
+              <div className="rounded-[1.5rem] bg-[#071F2F] p-5 text-white">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#9EE8E3]">
+                  Roa Verified
+                </p>
+                <h2 className="mt-3 text-3xl font-black">
+                  {roaVerified.label}
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-white/72">
+                  {roaVerified.summary}
+                </p>
+                <div className="mt-5 h-2 overflow-hidden rounded-full bg-white/15">
+                  <span
+                    className="block h-full rounded-full bg-[#00A8A8]"
+                    style={{ width: `${roaVerified.score}%` }}
+                  />
+                </div>
+                <p className="mt-3 text-sm font-black text-[#9EE8E3]">
+                  {roaVerified.score}% trust readiness
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#00A8A8]">
+                  Guest protection signals
+                </p>
+                <p className="mt-3 text-base leading-7 text-gray-600">
+                  {roaVerified.guestPromise}
+                </p>
+                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                  {roaVerified.signals.slice(0, 6).map((signal) => (
+                    <div
+                      key={signal.key}
+                      className={`rounded-2xl border p-4 ${
+                        signal.complete
+                          ? "border-[#00A8A8]/20 bg-[#EEF7F6]"
+                          : "border-[#D6B56D]/30 bg-[#FFF8E8]"
+                      }`}
+                    >
+                      <p className="font-black text-[#0B3C5D]">
+                        {signal.label}
+                      </p>
+                      <p className="mt-1 text-sm leading-6 text-gray-600">
+                        {signal.complete ? signal.guestText : signal.action}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
@@ -534,7 +593,7 @@ export default async function ListingPage({
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
-                  Trust this listing
+                  Trust this experience
                 </p>
                 <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
                   Clear details before you request.
@@ -583,6 +642,26 @@ export default async function ListingPage({
                   </p>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-6 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-5">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+                What happens after you request
+              </p>
+              <div className="mt-4 grid gap-3 md:grid-cols-3">
+                {[
+                  "Your date, time, guests, and pickup notes are sent together.",
+                  "The operator or concierge reviews availability before final confirmation.",
+                  "Messages, payment notes, and changes stay connected to your trip dashboard.",
+                ].map((item) => (
+                  <p
+                    key={item}
+                    className="rounded-2xl bg-white px-4 py-3 text-sm font-bold leading-6 text-[#0B3C5D]"
+                  >
+                    {item}
+                  </p>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -744,7 +823,7 @@ export default async function ListingPage({
                     </div>
                     <div className="p-4">
                       <p className="text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
-                        {nearby.category || "Listing"}
+                        {nearby.category || "Experience"}
                       </p>
                       <h3 className="mt-1 font-bold text-[#0B3C5D]">
                         {nearby.title}
@@ -1064,25 +1143,28 @@ export default async function ListingPage({
           <ReportListingForm listingId={listing.id} />
         </aside>
       </section>
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/95 px-3 py-3 shadow-2xl shadow-[#071F2F]/20 backdrop-blur lg:hidden">
+      <div className="mobile-safe-bottom fixed inset-x-0 bottom-0 z-40 border-t border-white/70 bg-white/95 px-3 pt-3 shadow-2xl shadow-[#071F2F]/15 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-7xl items-center gap-3">
           <div className="min-w-0 flex-1">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+              {priceLabel}
+            </p>
             <p className="truncate text-sm font-black text-[#0B3C5D]">
               {listing.title}
             </p>
-            <p className="mt-0.5 text-xs font-bold text-[#007B7B]">
-              {priceLabel} · {mobileControls.mobileListingTrustLine}
+            <p className="truncate text-xs font-semibold text-gray-500">
+              {mobileControls.mobileListingTrustLine}
             </p>
           </div>
           <Link
             href={`/map?selected=${listing.id}`}
-            className="rounded-2xl border border-[#00A8A8]/25 bg-[#EEF7F6] px-4 py-3 text-sm font-black text-[#0B3C5D]"
+            className="shrink-0 rounded-2xl border border-[#00A8A8]/25 bg-[#EEF7F6] px-3 py-3 text-xs font-black text-[#0B3C5D]"
           >
             {mobileControls.mobileListingMapLabel}
           </Link>
           <Link
             href={`/book?listing=${listing.id}`}
-            className="rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
+            className="shrink-0 rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
           >
             {mobileControls.mobileListingStickyCtaLabel}
           </Link>

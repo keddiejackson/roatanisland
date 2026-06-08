@@ -2,7 +2,9 @@ import Link from "next/link";
 import SiteLogo from "@/app/SiteLogo";
 
 const footerLinks = [
+  { href: "/#marketplace", label: "Experiences" },
   { href: "/map", label: "Map" },
+  { href: "/guides", label: "Guides" },
   { href: "/tours", label: "Tours" },
   { href: "/hotels", label: "Hotels" },
   { href: "/transport", label: "Transport" },
@@ -20,7 +22,7 @@ export default function SiteFooter() {
           <SiteLogo variant="light" />
           <p className="mt-4 max-w-xl text-sm leading-6 text-white/70">
             RoatanIsland.life helps travelers discover local operators, plan by
-            island area, and request bookings with clearer expectations.
+            island area, and request trusted experiences with clearer expectations.
           </p>
         </div>
         <div className="mobile-scroll-row lg:flex lg:flex-wrap lg:justify-end">

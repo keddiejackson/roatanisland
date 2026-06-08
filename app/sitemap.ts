@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { roatanGuides } from "@/lib/roatan-guides";
 import { supabaseServer } from "@/lib/supabase-server";
 
 const siteUrl =
@@ -35,6 +36,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: now,
       changeFrequency: "monthly",
       priority: 0.7,
+    },
+    {
+      url: `${siteUrl}/guides`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.75,
     },
     {
       url: `${siteUrl}/vendor/signup`,
@@ -76,6 +83,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
+  const guideRoutes = roatanGuides.map((guide) => ({
+    url: `${siteUrl}/guides/${guide.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.72,
+  }));
+
   const vendorRoutes = ((vendorsData as VendorSitemapRow[]) || []).map(
     (vendor) => ({
       url: `${siteUrl}/vendors/${vendor.id}`,
@@ -85,5 +99,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
-  return [...staticRoutes, ...listingRoutes, ...vendorRoutes];
+  return [...staticRoutes, ...guideRoutes, ...listingRoutes, ...vendorRoutes];
 }

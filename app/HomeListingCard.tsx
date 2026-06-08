@@ -6,10 +6,15 @@ import Link from "next/link";
 import type { HomeListing } from "@/lib/home-listings";
 import type { HomepageControls } from "@/lib/homepage-settings";
 import { getPremiumListingCardPolish } from "@/lib/marketplace-upgrade";
+import { getRoaVerifiedStatus } from "@/lib/roa-verified";
 
 export type HomePageListing = HomeListing & {
   image_url: string | null;
   reviews_count: number | null;
+  vendor_id?: string | null;
+  gallery_image_urls?: string[] | null;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
 const smoothEase = [0.22, 1, 0.36, 1] as const;
@@ -34,7 +39,7 @@ function listingBadge(
 ) {
   if (listing.is_featured) return homepageControls.featuredBadgeLabel;
   if ((listing.rating || 0) >= 4.8) return homepageControls.topRatedBadgeLabel;
-  return listing.category || "Listing";
+  return listing.category || "Experience";
 }
 
 type HomeListingCardProps = {
@@ -50,9 +55,10 @@ export default function HomeListingCard({
 }: HomeListingCardProps) {
   const reduceMotion = useReducedMotion();
   const cardPolish = getPremiumListingCardPolish(listing);
+  const verifiedStatus = getRoaVerifiedStatus(listing);
 
   return (
-    <motion.article
+    <motion.div
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: reduceMotion ? 0.05 : 0.22 }}
@@ -61,17 +67,15 @@ export default function HomeListingCard({
       transition={{ duration: 0.28, ease: smoothEase }}
       className="h-full"
     >
-      <div className="brand-card-lift group flex h-full flex-col overflow-hidden">
-        <Link
-          href={`/listings/${listing.id}`}
-          className="block focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
-          aria-label={`View ${listing.title}`}
-        >
+      <Link
+        href={`/listings/${listing.id}`}
+        className="brand-card-lift group block h-full overflow-hidden focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
+      >
         <div
           className={
             featured
-              ? "relative h-60 bg-[#D8EFEC] sm:h-60"
-              : "relative h-56 bg-[#D8EFEC] sm:h-52"
+              ? "relative h-52 bg-[#D8EFEC] sm:h-60"
+              : "relative h-48 bg-[#D8EFEC] sm:h-52"
           }
         >
           {listing.image_url ? (
@@ -106,66 +110,45 @@ export default function HomeListingCard({
             {cardPolish.priceLabel}
           </span>
         </div>
-        </Link>
 
-        <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <div className="p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="brand-eyebrow">{listing.location || "Roatan"}</p>
-              <Link
-                href={`/listings/${listing.id}`}
-                className="mt-2 block focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
-              >
-                <h3 className="text-xl font-black leading-snug text-[#0B3C5D] sm:text-lg">
-                  {listing.title}
-                </h3>
-              </Link>
+              <h3 className="mt-2 text-lg font-black leading-snug text-[#0B3C5D]">
+                {listing.title}
+              </h3>
             </div>
             <span className="brand-badge brand-badge-teal shrink-0 text-center">
-              {cardPolish.primaryBadge}
+              {verifiedStatus.label === "Roa Verified"
+                ? "Roa Verified"
+                : cardPolish.primaryBadge}
             </span>
           </div>
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
             {cardPolish.benefitLine}
           </p>
-          <div className="mt-auto pt-4">
-          <div className="hidden items-center justify-between border-t border-gray-100 pt-4 text-sm sm:flex">
+          <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
             <span className="font-bold text-gray-500">
-              {listing.category || "Listing"}
+              {listing.category || "Experience"}
             </span>
-            <Link
-              href={`/listings/${listing.id}`}
-              className="font-black text-[#007B7B]"
-            >
-              View details
-            </Link>
+            <span className="font-black text-[#007B7B]">View details</span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:hidden">
-            <Link
-              href={`/listings/${listing.id}`}
-              className="rounded-xl border border-[#00A8A8]/25 bg-white px-4 py-3 text-center text-sm font-black text-[#0B3C5D]"
-            >
-              Details
-            </Link>
-            <Link
-              href={`/book?listing=${listing.id}`}
-              className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
-            >
-              Request
-            </Link>
-          </div>
-          </div>
-          {cardPolish.trustBadges.length > 0 ? (
+          {verifiedStatus.badges.length > 0 ||
+          cardPolish.trustBadges.length > 0 ? (
             <div className="mt-3 flex flex-wrap gap-2">
-              {cardPolish.trustBadges.slice(0, 3).map((badge) => (
-                <span key={badge} className="brand-badge brand-badge-teal">
-                  {badge}
-                </span>
-              ))}
+              {[...verifiedStatus.badges, ...cardPolish.trustBadges]
+                .filter((badge, index, all) => all.indexOf(badge) === index)
+                .slice(0, 3)
+                .map((badge) => (
+                  <span key={badge} className="brand-badge brand-badge-teal">
+                    {badge}
+                  </span>
+                ))}
             </div>
           ) : null}
         </div>
-      </div>
-    </motion.article>
+      </Link>
+    </motion.div>
   );
 }

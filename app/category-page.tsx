@@ -93,7 +93,7 @@ export default async function CategoryPage({
               Browse
             </p>
             <h2 className="brand-display mt-2 text-3xl">
-              {category} listings
+              {category} experiences
             </h2>
           </div>
           <p className="brand-badge">
@@ -103,7 +103,7 @@ export default async function CategoryPage({
 
         {listings.length === 0 ? (
           <EmptyState
-            title={`No active ${category.toLowerCase()} listings yet.`}
+            title={`No active ${category.toLowerCase()} experiences yet.`}
             text="This section is ready for local operators. Explore the map for nearby options or add your business to help grow the marketplace."
           />
         ) : (
