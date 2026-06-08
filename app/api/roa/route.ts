@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import {
+  buildGeminiRoaRequestBody,
+  buildRoaBrainPlan,
   buildRoaFallbackReply,
   buildRoaInstructions,
   buildRoaPromptInput,
+  extractGeminiOutputText,
   extractRoaOutputText,
   extractRoaSources,
   getRoaReadyListings,
@@ -59,18 +62,85 @@ export async function POST(request: Request) {
     latestMessage,
     traveler: body.traveler,
   });
+  const brainPlan = buildRoaBrainPlan({
+    latestMessage,
+    traveler: body.traveler,
+    suggestedListings,
+  });
+  const promptInput = buildRoaPromptInput({
+    messages,
+    listings,
+    traveler: body.traveler,
+    brainPlan,
+  });
+  const instructions = buildRoaInstructions({
+    listingCount: listings.length,
+    webSearchEnabled:
+      process.env.ROA_ENABLE_WEB_SEARCH === "true" ||
+      process.env.ROA_ENABLE_WEB_SEARCH === "1",
+  });
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  const preferredProvider = (process.env.ROA_AI_PROVIDER || "").toLowerCase();
   const apiKey = process.env.OPENAI_API_KEY;
   const webSearchEnabled =
     process.env.ROA_ENABLE_WEB_SEARCH === "true" ||
     process.env.ROA_ENABLE_WEB_SEARCH === "1";
 
+  if (geminiApiKey && preferredProvider !== "openai") {
+    const geminiModel = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": geminiApiKey,
+        },
+        body: JSON.stringify(
+          buildGeminiRoaRequestBody({
+            instructions,
+            prompt: promptInput,
+          }),
+        ),
+      },
+    );
+    const geminiPayload = await geminiResponse.json();
+
+    if (geminiResponse.ok) {
+      return NextResponse.json({
+        ok: true,
+        mode: "gemini",
+        reply:
+          extractGeminiOutputText(geminiPayload) ||
+          buildRoaFallbackReply({
+            latestMessage,
+            suggestedListings,
+            brainPlan,
+          }),
+        suggestedListings,
+        sources: [],
+        brainPlan,
+      });
+    }
+
+    console.warn(
+      "Roa Gemini fallback:",
+      geminiPayload?.error?.message || "Gemini unavailable",
+    );
+  }
+
   if (!apiKey) {
     return NextResponse.json({
       ok: true,
-      mode: "fallback",
-      reply: buildRoaFallbackReply({ latestMessage, suggestedListings }),
+      mode: "brain",
+      reply: buildRoaFallbackReply({
+        latestMessage,
+        suggestedListings,
+        brainPlan,
+      }),
       suggestedListings,
       sources: [],
+      brainPlan,
     });
   }
 
@@ -101,11 +171,7 @@ export async function POST(request: Request) {
         listingCount: listings.length,
         webSearchEnabled,
       }),
-      input: buildRoaPromptInput({
-        messages,
-        listings,
-        traveler: body.traveler,
-      }),
+      input: promptInput,
       max_output_tokens: 900,
       metadata: {
         feature: "roa_concierge",
@@ -136,9 +202,11 @@ export async function POST(request: Request) {
         reply: buildRoaFallbackReply({
           latestMessage,
           suggestedListings,
+          brainPlan,
         }),
         suggestedListings,
         sources: [],
+        brainPlan,
       },
       { status: 200 },
     );
@@ -149,8 +217,9 @@ export async function POST(request: Request) {
     mode: "ai",
     reply:
       extractRoaOutputText(payload) ||
-      buildRoaFallbackReply({ latestMessage, suggestedListings }),
+      buildRoaFallbackReply({ latestMessage, suggestedListings, brainPlan }),
     suggestedListings,
     sources: extractRoaSources(payload),
+    brainPlan,
   });
 }

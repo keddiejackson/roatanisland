@@ -38,11 +38,43 @@ export type RoaSource = {
   url: string;
 };
 
+export type RoaBrainIntent =
+  | "cruise_day"
+  | "airport_arrival"
+  | "private_charter"
+  | "family_beach"
+  | "adventure_day"
+  | "weather_backup"
+  | "booking_help"
+  | "general_plan";
+
+export type RoaBrainStop = {
+  listingId?: string;
+  title: string;
+  timeBlock: string;
+  note: string;
+};
+
+export type RoaBrainPlan = {
+  title: string;
+  intent: RoaBrainIntent;
+  intentLabel: string;
+  confidenceScore: number;
+  confidenceLabel: "Ready to request" | "Strong start" | "Needs concierge review";
+  summary: string;
+  timingNotes: string[];
+  pickupNotes: string[];
+  missingDetails: string[];
+  nextAction: string;
+  suggestedStops: RoaBrainStop[];
+};
+
 export type RoaReply = {
   reply: string;
   suggestedListings: RoaSuggestedListing[];
   sources: RoaSource[];
-  mode: "ai" | "fallback";
+  mode: "ai" | "gemini" | "brain" | "fallback";
+  brainPlan?: RoaBrainPlan;
 };
 
 const roatanAreas = [
@@ -70,6 +102,28 @@ const interestKeywords = [
   "hotel",
   "charter",
 ];
+
+const intentLabels: Record<RoaBrainIntent, string> = {
+  cruise_day: "Cruise day",
+  airport_arrival: "Airport arrival",
+  private_charter: "Private charter",
+  family_beach: "Family beach day",
+  adventure_day: "Adventure day",
+  weather_backup: "Flexible weather plan",
+  booking_help: "Booking help",
+  general_plan: "Roatan day plan",
+};
+
+const intentTitles: Record<RoaBrainIntent, string> = {
+  cruise_day: "Cruise day with a safe return buffer",
+  airport_arrival: "Airport pickup and soft first-day plan",
+  private_charter: "Private Roatan day, handled cleanly",
+  family_beach: "Easy family beach day",
+  adventure_day: "Active Roatan adventure day",
+  weather_backup: "Flexible Roatan plan with backup options",
+  booking_help: "Booking next steps",
+  general_plan: "Your Roatan day, organized",
+};
 
 type RoaListingMatch = {
   listing: ConciergeListing;
@@ -282,6 +336,244 @@ export function deriveRoaPreferencesFromMessage(
   };
 }
 
+export function detectRoaIntent(
+  message: string,
+  traveler: RoaTravelerContext = {},
+): RoaBrainIntent {
+  const text = lower(
+    [
+      message,
+      traveler.notes,
+      traveler.arrivalType,
+      traveler.tripStyle,
+      traveler.pickupArea,
+    ]
+      .filter(Boolean)
+      .join(" "),
+  );
+
+  if (/\b(weather|rain|raining|storm|backup|flexible)\b/.test(text)) {
+    return "weather_backup";
+  }
+
+  if (/\b(book|booking|request|payment|deposit|message|confirm)\b/.test(text)) {
+    return "booking_help";
+  }
+
+  if (/\b(cruise|ship|port|all aboard|coxen)\b/.test(text)) {
+    return "cruise_day";
+  }
+
+  if (/\b(airport|flight|land|landing|luggage|baggage)\b/.test(text)) {
+    return "airport_arrival";
+  }
+
+  if (/\b(private|vip|charter|boat|yacht|luxury)\b/.test(text)) {
+    return "private_charter";
+  }
+
+  if (/\b(family|kids|child|children|easy|shade)\b/.test(text)) {
+    return "family_beach";
+  }
+
+  if (/\b(adventure|snorkel|wildlife|zip|active|reef)\b/.test(text)) {
+    return "adventure_day";
+  }
+
+  return "general_plan";
+}
+
+function missingRoaDetails(traveler: RoaTravelerContext) {
+  return [
+    cleanText(traveler.tripDate, 40) ? "" : "Trip date",
+    cleanText(traveler.guests, 20) ? "" : "Guest count",
+    cleanText(traveler.pickupArea, 120) ? "" : "Pickup area",
+    cleanText(traveler.arrivalType, 80) ? "" : "Arrival type",
+  ].filter(Boolean);
+}
+
+function timingNotesForIntent(intent: RoaBrainIntent) {
+  if (intent === "cruise_day") {
+    return [
+      "Use the ship all-aboard time as the hard deadline.",
+      "Keep the final stop close enough for a calm port return.",
+      "Ask the operator to confirm the return buffer before accepting payment.",
+    ];
+  }
+
+  if (intent === "airport_arrival") {
+    return [
+      "Share airline, landing time, and luggage needs before pickup.",
+      "Keep the first plan light until the guest is settled.",
+      "Use flexible timing in case immigration or baggage takes longer.",
+    ];
+  }
+
+  if (intent === "private_charter") {
+    return [
+      "Confirm weather window, water conditions, pickup dock, and boat capacity.",
+      "Keep sunset and private-water plans flexible until the operator confirms.",
+    ];
+  }
+
+  if (intent === "weather_backup") {
+    return [
+      "Roatan weather can shift quickly, so confirm conditions the morning of travel.",
+      "Keep one indoor, food, or shorter-transfer option as a backup.",
+    ];
+  }
+
+  return [
+    "Confirm final timing with the operator before plans are locked.",
+    "Keep pickup details and guest count visible in the request.",
+  ];
+}
+
+function pickupNotesForIntent(intent: RoaBrainIntent, traveler: RoaTravelerContext) {
+  const pickupArea = cleanText(traveler.pickupArea, 120);
+
+  if (intent === "cruise_day") {
+    return [
+      pickupArea
+        ? `Start from ${pickupArea} and confirm the exact port meeting point.`
+        : "Ask which cruise port or meeting gate the guest will use.",
+      "Return timing matters more than adding one more stop.",
+    ];
+  }
+
+  if (intent === "airport_arrival") {
+    return [
+      pickupArea
+        ? `Use ${pickupArea} as the pickup anchor.`
+        : "Collect airline, arrival time, and where the driver should meet the guest.",
+      "Ask whether luggage can stay with the driver or must go to lodging first.",
+    ];
+  }
+
+  if (pickupArea) {
+    return [`Use ${pickupArea} as the pickup anchor and confirm exact address.`];
+  }
+
+  return ["Ask for hotel, villa, port, beach, or airport pickup before handoff."];
+}
+
+function stopTimeBlock(index: number, intent: RoaBrainIntent) {
+  if (intent === "airport_arrival") {
+    return ["Arrival", "First stop", "Optional extra"][index] || "Flexible";
+  }
+
+  if (intent === "cruise_day") {
+    return ["Port pickup", "Midday", "Return buffer"][index] || "Flexible";
+  }
+
+  return ["Morning", "Midday", "Afternoon", "Sunset"][index] || "Flexible";
+}
+
+function brainStopsFromListings({
+  suggestedListings,
+  intent,
+}: {
+  suggestedListings: RoaSuggestedListing[];
+  intent: RoaBrainIntent;
+}): RoaBrainStop[] {
+  if (suggestedListings.length === 0) {
+    return [
+      {
+        title: "Concierge-reviewed local match",
+        timeBlock: "Flexible",
+        note: "Roa needs stronger listing data or guest details before recommending a specific operator.",
+      },
+    ];
+  }
+
+  return suggestedListings.slice(0, 3).map((listing, index) => ({
+    listingId: listing.id,
+    title: listing.title,
+    timeBlock: stopTimeBlock(index, intent),
+    note:
+      listing.reasons.slice(0, 2).join(", ") ||
+      listing.category ||
+      "Strong local fit",
+  }));
+}
+
+export function buildRoaBrainPlan({
+  latestMessage,
+  traveler = {},
+  suggestedListings,
+}: {
+  latestMessage: string;
+  traveler?: RoaTravelerContext;
+  suggestedListings: RoaSuggestedListing[];
+}): RoaBrainPlan {
+  const intent = detectRoaIntent(latestMessage, traveler);
+  const missingDetails = missingRoaDetails(traveler);
+  const confidenceScore = Math.max(
+    30,
+    Math.min(
+      96,
+      52 +
+        suggestedListings.length * 9 -
+        missingDetails.length * 8 +
+        (intent === "booking_help" ? 6 : 0),
+    ),
+  );
+  const confidenceLabel =
+    confidenceScore >= 82
+      ? "Ready to request"
+      : confidenceScore >= 62
+        ? "Strong start"
+        : "Needs concierge review";
+  const topListing = suggestedListings[0];
+  const summary =
+    topListing && intent !== "booking_help"
+      ? `Roa would anchor this around ${topListing.title}${
+          topListing.location ? ` in ${topListing.location}` : ""
+        }, then confirm timing, pickup, and operator availability before the guest pays.`
+      : intent === "booking_help"
+        ? "Roa will keep the guest focused on messages, payment status, pickup details, and operator confirmation."
+        : "Roa can shape this into a concierge request once the date, guest count, and pickup details are clearer.";
+
+  return {
+    title: intentTitles[intent],
+    intent,
+    intentLabel: intentLabels[intent],
+    confidenceScore,
+    confidenceLabel,
+    summary,
+    timingNotes: timingNotesForIntent(intent),
+    pickupNotes: pickupNotesForIntent(intent, traveler),
+    missingDetails,
+    nextAction:
+      missingDetails.length > 0
+        ? `Collect ${missingDetails.slice(0, 2).join(" and ")} before handoff.`
+        : "Send the plan to concierge or open the best listing to request.",
+    suggestedStops: brainStopsFromListings({ suggestedListings, intent }),
+  };
+}
+
+export function buildRoaBrainReply(plan: RoaBrainPlan) {
+  const details =
+    plan.missingDetails.length > 0
+      ? `I still need ${plan.missingDetails.slice(0, 2).join(" and ")}.`
+      : "This has enough basics to send for concierge review.";
+  const stopLine = plan.suggestedStops
+    .slice(0, 2)
+    .map((stop) => `${stop.timeBlock}: ${stop.title}`)
+    .join(" | ");
+
+  return [
+    `${plan.title}.`,
+    plan.summary,
+    stopLine ? `Suggested shape: ${stopLine}.` : "",
+    plan.timingNotes[0] ? `Timing note: ${plan.timingNotes[0]}` : "",
+    details,
+    `Next: ${plan.nextAction}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 export function summarizeListingsForRoa(listings: ConciergeListing[]) {
   return getRoaReadyListings(listings)
     .slice(0, 40)
@@ -330,10 +622,12 @@ export function buildRoaPromptInput({
   messages,
   listings,
   traveler,
+  brainPlan,
 }: {
   messages: RoaChatMessage[];
   listings: ConciergeListing[];
   traveler?: RoaTravelerContext;
+  brainPlan?: RoaBrainPlan;
 }) {
   const conversation = normalizeRoaMessages(messages)
     .map((message) =>
@@ -348,11 +642,38 @@ export function buildRoaPromptInput({
     "Active RoatanIsland.life listings:",
     summarizeListingsForRoa(listings) || "No active listings were found.",
     "",
+    "Roa Brain structured plan:",
+    brainPlan ? JSON.stringify(brainPlan, null, 2) : "No brain plan provided.",
+    "",
     "Conversation:",
     conversation,
     "",
-    "Reply as Roa. If useful, recommend specific matching listings by title.",
+    "Reply as Roa. Use the Roa Brain plan as the source of truth. If useful, recommend specific matching listings by title.",
   ].join("\n");
+}
+
+export function buildGeminiRoaRequestBody({
+  prompt,
+  instructions,
+}: {
+  prompt: string;
+  instructions: string;
+}) {
+  return {
+    contents: [
+      {
+        parts: [
+          {
+            text: [instructions, "", prompt].join("\n"),
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.35,
+      maxOutputTokens: 900,
+    },
+  };
 }
 
 export function suggestedListingsFromMatches(
@@ -464,17 +785,48 @@ export function extractRoaSources(response: unknown): RoaSource[] {
   return Array.from(sources.values()).slice(0, 5);
 }
 
+export function extractGeminiOutputText(response: unknown) {
+  if (!response || typeof response !== "object") return "";
+  const candidates = (response as { candidates?: unknown }).candidates;
+  if (!Array.isArray(candidates)) return "";
+
+  const parts: string[] = [];
+  candidates.forEach((candidate) => {
+    if (!candidate || typeof candidate !== "object") return;
+    const content = (candidate as { content?: unknown }).content;
+    if (!content || typeof content !== "object") return;
+    const candidateParts = (content as { parts?: unknown }).parts;
+    if (!Array.isArray(candidateParts)) return;
+
+    candidateParts.forEach((part) => {
+      if (!part || typeof part !== "object") return;
+      const text = (part as { text?: unknown }).text;
+      if (typeof text === "string" && text.trim()) {
+        parts.push(text.trim());
+      }
+    });
+  });
+
+  return parts.join("\n\n").trim();
+}
+
 export function buildRoaFallbackReply({
   latestMessage,
   suggestedListings,
+  brainPlan,
 }: {
   latestMessage: string;
   suggestedListings: RoaSuggestedListing[];
+  brainPlan?: RoaBrainPlan;
 }) {
   const wantsAISetup = /openai|api key|not working|error/i.test(latestMessage);
 
   if (wantsAISetup) {
-    return "Roa is ready for the full AI layer. Add OPENAI_API_KEY in Vercel and Roa will answer with live AI from the secure server route. Until then, I can still match guests to your active listings and send concierge requests to the admin dashboard.";
+    return "Roa is ready for the full AI layer. Add GEMINI_API_KEY for Gemini free-tier testing, or OPENAI_API_KEY later for OpenAI. Until then, Roa Brain still matches guests to active listings, builds a structured plan, and can send requests to the concierge dashboard.";
+  }
+
+  if (brainPlan) {
+    return buildRoaBrainReply(brainPlan);
   }
 
   if (suggestedListings.length > 0) {

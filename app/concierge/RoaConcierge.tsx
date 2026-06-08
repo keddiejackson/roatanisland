@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ConciergeListing } from "@/lib/guest-concierge";
 import type {
+  RoaBrainPlan,
   RoaChatMessage,
   RoaSuggestedListing,
   RoaTravelerContext,
@@ -83,7 +84,10 @@ export default function RoaConcierge({
   const [input, setInput] = useState("");
   const [suggestions, setSuggestions] = useState<RoaSuggestedListing[]>([]);
   const [sources, setSources] = useState<{ title: string; url: string }[]>([]);
-  const [mode, setMode] = useState<"ai" | "fallback" | "idle">("idle");
+  const [brainPlan, setBrainPlan] = useState<RoaBrainPlan | null>(null);
+  const [mode, setMode] = useState<
+    "ai" | "gemini" | "brain" | "fallback" | "idle"
+  >("idle");
   const [sending, setSending] = useState(false);
   const [handoffStatus, setHandoffStatus] = useState("");
   const messageEndRef = useRef<HTMLDivElement | null>(null);
@@ -154,6 +158,7 @@ export default function RoaConcierge({
       setMode(result.mode || "fallback");
       setSuggestions(result.suggestedListings || []);
       setSources(result.sources || []);
+      setBrainPlan(result.brainPlan || null);
       setMessages((current) => [
         ...current,
         {
@@ -165,6 +170,7 @@ export default function RoaConcierge({
       ]);
     } catch {
       setMode("fallback");
+      setBrainPlan(null);
       setMessages((current) => [
         ...current,
         {
@@ -244,11 +250,15 @@ export default function RoaConcierge({
               </p>
             </div>
             <div className="rounded-full bg-white/10 px-4 py-2 text-xs font-black ring-1 ring-white/15">
-              {mode === "ai"
-                ? "AI online"
-                : mode === "fallback"
-                  ? "Smart fallback"
-                  : `${listings.length} listings ready`}
+              {mode === "gemini"
+                ? "Gemini polish"
+                : mode === "ai"
+                  ? "AI polish"
+                  : mode === "brain"
+                    ? "Roa Brain"
+                    : mode === "fallback"
+                      ? "Smart fallback"
+                      : `${listings.length} listings ready`}
             </div>
           </div>
         </div>
@@ -407,6 +417,49 @@ export default function RoaConcierge({
             </p>
           ) : null}
         </div>
+
+        {brainPlan ? (
+          <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                  Roa Brain
+                </p>
+                <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                  {brainPlan.title}
+                </h3>
+              </div>
+              <span className="rounded-full bg-[#EEF7F6] px-3 py-2 text-xs font-black text-[#007B7B]">
+                {brainPlan.confidenceScore}% {brainPlan.confidenceLabel}
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              {brainPlan.summary}
+            </p>
+            <div className="mt-4 grid gap-2">
+              {brainPlan.suggestedStops.slice(0, 3).map((stop, index) => (
+                <div
+                  key={`${stop.title}-${index}`}
+                  className="rounded-2xl bg-[#FBF7EC] px-4 py-3"
+                >
+                  <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#D6B56D]">
+                    {stop.timeBlock}
+                  </p>
+                  <p className="mt-1 font-black text-[#0B3C5D]">{stop.title}</p>
+                  <p className="mt-1 text-sm text-gray-600">{stop.note}</p>
+                </div>
+              ))}
+            </div>
+            {brainPlan.missingDetails.length > 0 ? (
+              <div className="mt-4 rounded-2xl bg-[#FFF8E8] px-4 py-3 text-sm font-bold text-[#7A5A12]">
+                Needs: {brainPlan.missingDetails.join(", ")}
+              </div>
+            ) : null}
+            <div className="mt-4 rounded-2xl bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
+              {brainPlan.nextAction}
+            </div>
+          </div>
+        ) : null}
 
         <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8">
           <div className="flex items-center justify-between gap-3">
