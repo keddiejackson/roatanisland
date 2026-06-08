@@ -69,6 +69,13 @@ export type RoaBrainPlan = {
   suggestedStops: RoaBrainStop[];
 };
 
+export type RoaPlanAction = {
+  key: "save" | "concierge" | "map" | "booking" | "share";
+  label: string;
+  detail: string;
+  href?: string;
+};
+
 export type RoaReply = {
   reply: string;
   suggestedListings: RoaSuggestedListing[];
@@ -572,6 +579,127 @@ export function buildRoaBrainReply(plan: RoaBrainPlan) {
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+export function buildRoaPlanActions({
+  plan,
+  suggestedListings,
+  traveler = {},
+}: {
+  plan?: RoaBrainPlan;
+  suggestedListings: RoaSuggestedListing[];
+  traveler?: RoaTravelerContext;
+}): RoaPlanAction[] {
+  const topListing = suggestedListings[0];
+  const hasContact = Boolean(cleanText(traveler.name) && cleanText(traveler.email));
+  const hasMissingDetails = Boolean(plan?.missingDetails.length);
+
+  return [
+    {
+      key: "save",
+      label: "Save this plan",
+      detail: "Keep the Roa plan on this device for your next visit.",
+    },
+    {
+      key: "concierge",
+      label: hasContact ? "Send to concierge" : "Add contact details",
+      detail: hasMissingDetails
+        ? "The team can review the plan after the missing basics are added."
+        : "Send the full plan, guest notes, matches, and chat transcript to admin.",
+    },
+    {
+      key: "map",
+      label: "Open island map",
+      detail: "Compare the suggested stops by area before requesting.",
+      href: "/map",
+    },
+    {
+      key: "booking",
+      label: topListing ? "Request top match" : "Find local options",
+      detail: topListing
+        ? `Start a request for ${topListing.title}.`
+        : "Browse active listings that can fit this kind of day.",
+      href: topListing ? `/book?listing=${topListing.id}` : "/listings",
+    },
+    {
+      key: "share",
+      label: "Copy summary",
+      detail: "Copy the plan summary so it can be shared with your group.",
+    },
+  ];
+}
+
+export function buildRoaHandoffSummary({
+  messages,
+  traveler = {},
+  brainPlan,
+  suggestedListings,
+}: {
+  messages: RoaChatMessage[];
+  traveler?: RoaTravelerContext;
+  brainPlan?: RoaBrainPlan | null;
+  suggestedListings: RoaSuggestedListing[];
+}) {
+  const travelerLines = [
+    traveler.name ? `Name: ${traveler.name}` : "",
+    traveler.email ? `Email: ${traveler.email}` : "",
+    traveler.phone ? `Phone: ${traveler.phone}` : "",
+    traveler.tripDate ? `Trip date: ${traveler.tripDate}` : "",
+    traveler.guests ? `Guests: ${traveler.guests}` : "",
+    traveler.pickupArea ? `Pickup: ${traveler.pickupArea}` : "",
+    traveler.arrivalType ? `Arrival: ${traveler.arrivalType}` : "",
+    traveler.tripStyle ? `Style: ${traveler.tripStyle}` : "",
+    traveler.budget ? `Budget: ${traveler.budget}` : "",
+  ].filter(Boolean);
+  const stopLines =
+    brainPlan?.suggestedStops.map(
+      (stop) => `${stop.timeBlock}: ${stop.title} - ${stop.note}`,
+    ) || [];
+  const listingLines = suggestedListings.map((listing) =>
+    [
+      listing.title,
+      listing.location ? `Area: ${listing.location}` : "",
+      listing.price ? `Price: ${formatPrice(listing.price)}` : "",
+      listing.reasons.length ? `Fit: ${listing.reasons.join(", ")}` : "",
+    ]
+      .filter(Boolean)
+      .join(" | "),
+  );
+  const transcript = normalizeRoaMessages(messages)
+    .map(
+      (message) =>
+        `${message.role === "assistant" ? "Roa" : "Guest"}: ${message.content}`,
+    )
+    .join("\n\n");
+
+  return [
+    "Roa Concierge Pro handoff",
+    "",
+    travelerLines.length ? "Guest basics:" : "",
+    ...travelerLines,
+    "",
+    brainPlan ? `Plan: ${brainPlan.title}` : "Plan: Roa chat request",
+    brainPlan ? `Confidence: ${brainPlan.confidenceScore}% - ${brainPlan.confidenceLabel}` : "",
+    brainPlan ? `Summary: ${brainPlan.summary}` : "",
+    brainPlan?.missingDetails.length
+      ? `Missing details: ${brainPlan.missingDetails.join(", ")}`
+      : "",
+    brainPlan ? `Next action: ${brainPlan.nextAction}` : "",
+    "",
+    stopLines.length ? "Suggested flow:" : "",
+    ...stopLines,
+    "",
+    listingLines.length ? "Suggested listings:" : "",
+    ...listingLines,
+    "",
+    traveler.notes ? `Guest notes: ${traveler.notes}` : "",
+    "",
+    "Conversation:",
+    transcript,
+  ]
+    .filter((line, index, lines) => line || lines[index - 1])
+    .join("\n")
+    .trim();
 }
 
 export function summarizeListingsForRoa(listings: ConciergeListing[]) {

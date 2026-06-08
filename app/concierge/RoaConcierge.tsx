@@ -9,7 +9,11 @@ import type {
   RoaSuggestedListing,
   RoaTravelerContext,
 } from "@/lib/roa-concierge";
-import { getRoaReadyListings } from "@/lib/roa-concierge";
+import {
+  buildRoaHandoffSummary,
+  buildRoaPlanActions,
+  getRoaReadyListings,
+} from "@/lib/roa-concierge";
 import { supabase } from "@/lib/supabase";
 
 const quickPrompts = [
@@ -17,6 +21,53 @@ const quickPrompts = [
   "Build a luxury private Roatan day",
   "Help with airport pickup and a first-day plan",
   "What should I bring for a Roatan tour?",
+];
+
+const guidedStarts = [
+  {
+    label: "Cruise day",
+    detail: "Port timing, beach time, safe return buffer",
+    traveler: {
+      arrivalType: "Cruise",
+      pickupArea: "Coxen Hole",
+      tripStyle: "Family",
+    },
+    prompt:
+      "Plan a cruise day with a safe return buffer, beach time, and local options.",
+  },
+  {
+    label: "Airport arrival",
+    detail: "Pickup, luggage, soft first-day plan",
+    traveler: {
+      arrivalType: "Airport",
+      pickupArea: "Roatan Airport",
+      tripStyle: "Family",
+    },
+    prompt:
+      "Plan an airport arrival day with pickup, luggage-friendly timing, and an easy first stop.",
+  },
+  {
+    label: "Private luxury day",
+    detail: "VIP pacing, private charter, sunset option",
+    traveler: {
+      arrivalType: "Staying on island",
+      tripStyle: "Luxury",
+      budget: "Luxury",
+    },
+    prompt:
+      "Build a luxury private Roatan day with premium pacing, water time, and a sunset option.",
+  },
+  {
+    label: "Family beach day",
+    detail: "Easy pickup, calm stops, simple timing",
+    traveler: {
+      arrivalType: "Staying on island",
+      tripStyle: "Family",
+      budget: "Moderate",
+    },
+    prompt:
+      "Plan an easy family beach day with simple pickup, shade, food, and flexible timing.",
+  },
 ];
 
 function cleanLocalProfile() {
@@ -39,15 +90,6 @@ function moneyLabel(price: number | null) {
     currency: "USD",
     maximumFractionDigits: Number.isInteger(price) ? 0 : 2,
   }).format(price);
-}
-
-function transcript(messages: RoaChatMessage[]) {
-  return messages
-    .map(
-      (message) =>
-        `${message.role === "assistant" ? "Roa" : "Guest"}: ${message.content}`,
-    )
-    .join("\n\n");
 }
 
 export default function RoaConcierge({
@@ -108,6 +150,28 @@ export default function RoaConcierge({
   }, []);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    localStorage.setItem(
+      "roatan-guest-profile",
+      JSON.stringify({
+        displayName: traveler.name || "",
+        guestName: traveler.name || "",
+        email: traveler.email || "",
+        phone: traveler.phone || "",
+        pickupArea: traveler.pickupArea || "",
+        guests: traveler.guests || "",
+        guestCount: traveler.guests || "",
+        notes: traveler.notes || "",
+        tripDate: traveler.tripDate || "",
+        arrivalType: traveler.arrivalType || "",
+        tripStyle: traveler.tripStyle || "",
+        budget: traveler.budget || "",
+      }),
+    );
+  }, [traveler]);
+
+  useEffect(() => {
     messageEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, sending]);
 
@@ -126,14 +190,27 @@ export default function RoaConcierge({
   );
   const visibleSuggestions =
     suggestions.length > 0 ? suggestions : featuredListings;
+  const planActions = useMemo(
+    () =>
+      buildRoaPlanActions({
+        plan: brainPlan || undefined,
+        suggestedListings: visibleSuggestions,
+        traveler,
+      }),
+    [brainPlan, traveler, visibleSuggestions],
+  );
 
   function updateTraveler(field: keyof RoaTravelerContext, value: string) {
     setTraveler((current) => ({ ...current, [field]: value }));
   }
 
-  async function sendMessage(prompt?: string) {
+  async function sendMessage(
+    prompt?: string,
+    travelerOverride?: RoaTravelerContext,
+  ) {
     const content = (prompt || input).trim();
     if (!content || sending) return;
+    const activeTraveler = travelerOverride || traveler;
 
     const nextMessages: RoaChatMessage[] = [
       ...messages,
@@ -150,7 +227,7 @@ export default function RoaConcierge({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: nextMessages,
-          traveler,
+          traveler: activeTraveler,
         }),
       });
       const result = await response.json();
@@ -184,6 +261,47 @@ export default function RoaConcierge({
     }
   }
 
+  function startGuidedPlan(start: (typeof guidedStarts)[number]) {
+    const nextTraveler = {
+      ...traveler,
+      ...start.traveler,
+    };
+
+    setTraveler(nextTraveler);
+    sendMessage(start.prompt, nextTraveler);
+  }
+
+  function saveRoaPlan() {
+    if (typeof window === "undefined") return;
+
+    const savedPlan = {
+      savedAt: new Date().toISOString(),
+      traveler,
+      brainPlan,
+      suggestions: visibleSuggestions,
+      messages,
+    };
+
+    localStorage.setItem("roatan-roa-saved-plan", JSON.stringify(savedPlan));
+    setHandoffStatus("Saved. Your Roa plan is saved on this device.");
+  }
+
+  async function copyRoaSummary() {
+    const summary = buildRoaHandoffSummary({
+      messages,
+      traveler,
+      brainPlan,
+      suggestedListings: visibleSuggestions,
+    });
+
+    try {
+      await navigator.clipboard.writeText(summary);
+      setHandoffStatus("Copied. You can paste the Roa summary anywhere.");
+    } catch {
+      setHandoffStatus("Unable to copy right now, but the plan is still here.");
+    }
+  }
+
   async function sendToConciergeTeam() {
     if (!traveler.name || !traveler.email) {
       setHandoffStatus("Add your name and email first.");
@@ -200,15 +318,12 @@ export default function RoaConcierge({
         email: traveler.email,
         phone: traveler.phone,
         interest: "Roa AI concierge request",
-        message: [
-          "Roa AI concierge transcript",
-          "",
-          transcript(messages),
-          "",
-          traveler.notes ? `Guest notes: ${traveler.notes}` : "",
-        ]
-          .filter(Boolean)
-          .join("\n"),
+        message: buildRoaHandoffSummary({
+          messages,
+          traveler,
+          brainPlan,
+          suggestedListings: visibleSuggestions,
+        }),
         leadType: "concierge_plan",
         travelDate: traveler.tripDate,
         guests: traveler.guests,
@@ -219,7 +334,9 @@ export default function RoaConcierge({
         plan: {
           source: "roa_ai_concierge",
           messages,
-          suggestions,
+          suggestions: visibleSuggestions,
+          brainPlan,
+          actions: planActions,
           traveler,
         },
         sourcePath: "/concierge",
@@ -263,7 +380,7 @@ export default function RoaConcierge({
           </div>
         </div>
 
-        <div className="grid min-h-[560px] grid-rows-[auto_1fr_auto]">
+        <div className="grid min-h-[calc(100svh-220px)] grid-rows-[auto_auto_1fr_auto] sm:min-h-[560px]">
           <div className="flex gap-2 overflow-x-auto border-b border-[#E8DDC6] bg-[#FBF7EC] p-3">
             {quickPrompts.map((prompt) => (
               <button
@@ -277,7 +394,32 @@ export default function RoaConcierge({
             ))}
           </div>
 
-          <div className="max-h-[430px] space-y-4 overflow-y-auto bg-[#F7F3EA] p-4 sm:p-5">
+          {messages.length <= 1 && !brainPlan ? (
+            <div className="border-b border-[#E8DDC6] bg-white p-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                Start with your arrival
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {guidedStarts.map((start) => (
+                  <button
+                    key={start.label}
+                    type="button"
+                    onClick={() => startGuidedPlan(start)}
+                    className="rounded-2xl border border-[#E8DDC6] bg-[#FFFDF7] px-4 py-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-[#00A8A8]"
+                  >
+                    <span className="block font-black text-[#0B3C5D]">
+                      {start.label}
+                    </span>
+                    <span className="mt-1 block text-sm leading-5 text-gray-600">
+                      {start.detail}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="max-h-[52svh] space-y-4 overflow-y-auto bg-[#F7F3EA] p-4 sm:max-h-[430px] sm:p-5">
             {messages.map((message, index) => (
               <div
                 key={`${message.role}-${index}`}
@@ -457,6 +599,40 @@ export default function RoaConcierge({
             ) : null}
             <div className="mt-4 rounded-2xl bg-[#EEF7F6] px-4 py-3 text-sm font-bold text-[#0B3C5D]">
               {brainPlan.nextAction}
+            </div>
+            <div className="mt-4 grid gap-2">
+              {planActions.map((action) =>
+                action.href ? (
+                  <Link
+                    key={action.key}
+                    href={action.href}
+                    className="rounded-xl border border-[#E8DDC6] bg-white px-4 py-3 text-sm font-black text-[#0B3C5D] shadow-sm transition hover:-translate-y-0.5"
+                  >
+                    {action.label}
+                    <span className="mt-1 block text-xs font-bold text-gray-500">
+                      {action.detail}
+                    </span>
+                  </Link>
+                ) : (
+                  <button
+                    key={action.key}
+                    type="button"
+                    onClick={
+                      action.key === "save"
+                        ? saveRoaPlan
+                        : action.key === "share"
+                          ? copyRoaSummary
+                          : sendToConciergeTeam
+                    }
+                    className="rounded-xl border border-[#E8DDC6] bg-white px-4 py-3 text-left text-sm font-black text-[#0B3C5D] shadow-sm transition hover:-translate-y-0.5"
+                  >
+                    {action.label}
+                    <span className="mt-1 block text-xs font-bold text-gray-500">
+                      {action.detail}
+                    </span>
+                  </button>
+                ),
+              )}
             </div>
           </div>
         ) : null}
