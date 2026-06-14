@@ -25,6 +25,7 @@ import {
   getGuestTripPlanSummary,
   type GuestTripPlan,
 } from "@/lib/guest-trip-plans";
+import { getRoaTripDeskTimeline } from "@/lib/roa-concierge";
 import {
   buildGuestPasswordResetRedirect,
   getGuestAuthSubmitLabel,
@@ -958,6 +959,10 @@ export default function AccountPage() {
                   const conciergeRequested =
                     plan.status === "concierge_requested" ||
                     Boolean(plan.conciergeLeadId);
+                  const roaTimeline =
+                    plan.source === "roa"
+                      ? getRoaTripDeskTimeline(plan.status)
+                      : [];
 
                   return (
                   <article
@@ -988,6 +993,26 @@ export default function AccountPage() {
                         </span>
                       ) : null}
                     </div>
+                    {roaTimeline.length > 0 ? (
+                      <div className="mt-4 grid grid-cols-3 gap-1 sm:grid-cols-6">
+                        {roaTimeline.map((step) => (
+                          <div
+                            key={step.key}
+                            className={`rounded-xl px-2 py-2 text-center ${
+                              step.state === "active"
+                                ? "bg-[#071F2F] text-white"
+                                : step.state === "complete"
+                                  ? "bg-[#EEF7F6] text-[#007B7B]"
+                                  : "bg-white text-gray-400"
+                            }`}
+                          >
+                            <p className="truncate text-[0.65rem] font-black">
+                              {step.label}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
                     <div className="mt-4 grid gap-2">
                       {plan.stops.slice(0, 4).map((stop, index) => (
                         <div

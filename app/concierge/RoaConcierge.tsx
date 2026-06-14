@@ -12,7 +12,9 @@ import type {
 import {
   buildRoaHandoffSummary,
   buildRoaPlanActions,
+  getRoaMissingDetailFields,
   getRoaReadyListings,
+  getRoaTripDeskSnapshot,
 } from "@/lib/roa-concierge";
 import { supabase } from "@/lib/supabase";
 
@@ -199,6 +201,20 @@ export default function RoaConcierge({
         traveler,
       }),
     [brainPlan, traveler, visibleSuggestions],
+  );
+  const tripDeskSnapshot = useMemo(
+    () =>
+      getRoaTripDeskSnapshot({
+        plan: brainPlan,
+        suggestedListings: visibleSuggestions,
+        traveler,
+        status: savedTripPlanId ? "saved" : "draft",
+      }),
+    [brainPlan, savedTripPlanId, traveler, visibleSuggestions],
+  );
+  const missingDetailFields = useMemo(
+    () => getRoaMissingDetailFields({ plan: brainPlan, traveler }),
+    [brainPlan, traveler],
   );
 
   function updateTraveler(field: keyof RoaTravelerContext, value: string) {
@@ -466,7 +482,7 @@ export default function RoaConcierge({
   }
 
   return (
-    <section className="mb-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+    <section className="mb-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div className="overflow-hidden rounded-[2rem] bg-white shadow-2xl shadow-[#071F2F]/10">
         <div className="bg-[#071F2F] p-4 text-white sm:p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
@@ -493,7 +509,7 @@ export default function RoaConcierge({
           </div>
         </div>
 
-        <div className="grid min-h-[calc(100svh-220px)] grid-rows-[auto_auto_1fr_auto] sm:min-h-[560px]">
+        <div className="grid min-h-[calc(100svh-180px)] grid-rows-[auto_auto_minmax(0,1fr)_auto] sm:min-h-[560px]">
           <div className="flex gap-2 overflow-x-auto border-b border-[#E8DDC6] bg-[#FBF7EC] p-3">
             {quickPrompts.map((prompt) => (
               <button
@@ -607,7 +623,74 @@ export default function RoaConcierge({
         </div>
       </div>
 
-      <aside className="grid gap-4 lg:content-start">
+      <aside className="grid gap-4 lg:sticky lg:top-4 lg:content-start">
+        <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                Roa Trip Desk
+              </p>
+              <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+                {tripDeskSnapshot.statusLabel}
+              </h3>
+            </div>
+            <span className="rounded-full bg-[#EEF7F6] px-3 py-2 text-xs font-black text-[#007B7B]">
+              {tripDeskSnapshot.readinessScore}% ready
+            </span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-gray-600">
+            {tripDeskSnapshot.tripSummary}
+          </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-2xl bg-[#FBF7EC] px-4 py-3">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                Estimate
+              </p>
+              <p className="mt-1 font-black text-[#0B3C5D]">
+                {tripDeskSnapshot.estimatedValueLabel}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[#FBF7EC] px-4 py-3">
+              <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-[#9C7A2F]">
+                Pickup
+              </p>
+              <p className="mt-1 truncate font-black text-[#0B3C5D]">
+                {tripDeskSnapshot.pickupSummary}
+              </p>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-2">
+            {tripDeskSnapshot.timeline.map((step) => (
+              <div
+                key={step.key}
+                className={`flex items-center gap-3 rounded-2xl px-3 py-2 ${
+                  step.state === "active"
+                    ? "bg-[#071F2F] text-white"
+                    : step.state === "complete"
+                      ? "bg-[#EEF7F6] text-[#0B3C5D]"
+                      : "bg-[#F7F3EA] text-gray-500"
+                }`}
+              >
+                <span
+                  className={`grid size-6 shrink-0 place-items-center rounded-full text-[0.65rem] font-black ${
+                    step.state === "active"
+                      ? "bg-[#D6B56D] text-[#071F2F]"
+                      : step.state === "complete"
+                        ? "bg-[#00A8A8] text-white"
+                        : "bg-white text-gray-400"
+                  }`}
+                >
+                  {step.state === "complete" ? "OK" : ""}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-black">{step.label}</p>
+                  <p className="truncate text-xs opacity-75">{step.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="rounded-[1.75rem] bg-[#071F2F] p-5 text-white shadow-xl shadow-[#071F2F]/10">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#D6B56D]">
             Trip context
@@ -659,6 +742,50 @@ export default function RoaConcierge({
               className="rounded-xl border border-white/15 bg-white/10 px-4 py-3 text-white outline-none placeholder:text-white/45 focus:border-[#00A8A8]"
             />
           </div>
+          {missingDetailFields.length > 0 ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-white/10 p-3">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
+                Finish the handoff
+              </p>
+              <div className="mt-3 grid gap-2">
+                {missingDetailFields.slice(0, 4).map((field) => (
+                  <label
+                    key={field.detail}
+                    className="grid gap-1 text-xs font-black uppercase tracking-[0.12em] text-white/60"
+                  >
+                    {field.label}
+                    {field.inputType === "select" ? (
+                      <select
+                        value={traveler[field.field] || ""}
+                        onChange={(event) =>
+                          updateTraveler(field.field, event.target.value)
+                        }
+                        className="rounded-xl border border-white/15 bg-[#071F2F] px-3 py-3 text-base font-bold normal-case tracking-normal text-white outline-none focus:border-[#00A8A8]"
+                      >
+                        <option value="">{field.placeholder}</option>
+                        {field.options?.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type={field.inputType}
+                        min={field.inputType === "number" ? 1 : undefined}
+                        value={traveler[field.field] || ""}
+                        onChange={(event) =>
+                          updateTraveler(field.field, event.target.value)
+                        }
+                        placeholder={field.placeholder}
+                        className="rounded-xl border border-white/15 bg-[#071F2F] px-3 py-3 text-base font-bold normal-case tracking-normal text-white outline-none placeholder:text-white/45 focus:border-[#00A8A8]"
+                      />
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <button
             type="button"
             onClick={sendToConciergeTeam}
@@ -691,8 +818,27 @@ export default function RoaConcierge({
             <p className="mt-3 text-sm leading-6 text-gray-600">
               {brainPlan.summary}
             </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">
+              {[
+                ["Value", tripDeskSnapshot.estimatedValueLabel],
+                ["Pickup", tripDeskSnapshot.pickupSummary],
+                ["Action", tripDeskSnapshot.primaryAction],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-[#00A8A8]/10 bg-[#EEF7F6] px-3 py-3"
+                >
+                  <p className="text-[0.65rem] font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                    {label}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-[#0B3C5D]">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
             <div className="mt-4 grid gap-2">
-              {brainPlan.suggestedStops.slice(0, 3).map((stop, index) => (
+              {tripDeskSnapshot.itineraryBlocks.slice(0, 3).map((stop, index) => (
                 <div
                   key={`${stop.title}-${index}`}
                   className="rounded-2xl bg-[#FBF7EC] px-4 py-3"

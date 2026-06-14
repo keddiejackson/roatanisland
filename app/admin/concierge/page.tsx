@@ -17,6 +17,11 @@ import {
   type ConciergeLeadPriority,
   type ConciergeLeadStatus,
 } from "@/lib/concierge-leads";
+import {
+  getRoaTripDeskSnapshot,
+  type RoaBrainPlan,
+  type RoaSuggestedListing,
+} from "@/lib/roa-concierge";
 import { supabase } from "@/lib/supabase";
 
 type PlanStop = {
@@ -30,14 +35,8 @@ type PlanPayload = {
   name?: string;
   notes?: string;
   source?: string;
-  brainPlan?: {
-    title?: string;
-    confidenceScore?: number;
-    confidenceLabel?: string;
-    summary?: string;
-    nextAction?: string;
-    missingDetails?: string[];
-  };
+  brainPlan?: Partial<RoaBrainPlan>;
+  suggestions?: RoaSuggestedListing[];
   stops?: PlanStop[];
 };
 
@@ -673,6 +672,25 @@ export default function AdminConciergePage() {
               {filteredLeads.map((lead) => {
                 const stops = leadPlanStops(lead.plan);
                 const roaLead = isRoaLead(lead);
+                const roaSnapshot = roaLead
+                  ? getRoaTripDeskSnapshot({
+                      plan: lead.plan?.brainPlan as RoaBrainPlan | null,
+                      suggestedListings: lead.plan?.suggestions || [],
+                      traveler: {
+                        name: lead.guest_name,
+                        email: lead.guest_email,
+                        phone: lead.guest_phone || "",
+                        tripDate: lead.travel_date || "",
+                        guests: lead.guests ? String(lead.guests) : "",
+                        pickupArea: lead.pickup_area || "",
+                        arrivalType: lead.arrival_type || "",
+                        tripStyle: lead.trip_style || "",
+                        budget: lead.budget || "",
+                        notes: lead.message,
+                      },
+                      status: lead.status,
+                    })
+                  : null;
                 const draft = assignmentDrafts[lead.id] || emptyAssignmentDraft;
                 const leadFulfillment = conciergeFulfillmentSummary(
                   lead.assignments,
@@ -708,40 +726,88 @@ export default function AdminConciergePage() {
                           </span>
                         </div>
 
-                        {lead.plan?.brainPlan ? (
+                        {lead.plan?.brainPlan && roaSnapshot ? (
                           <div className="mt-5 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-4">
                             <div className="flex flex-wrap items-start justify-between gap-3">
                               <div>
                                 <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
-                                  Roa Brain summary
+                                  Roa command center
                                 </p>
                                 <h3 className="mt-1 text-lg font-black text-[#0B3C5D]">
                                   {lead.plan.brainPlan.title || "Roa concierge plan"}
                                 </h3>
                               </div>
-                              {lead.plan.brainPlan.confidenceScore ? (
-                                <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
-                                  {lead.plan.brainPlan.confidenceScore}%{" "}
-                                  {lead.plan.brainPlan.confidenceLabel || ""}
-                                </span>
-                              ) : null}
+                              <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0B3C5D]">
+                                {roaSnapshot.readinessScore}%{" "}
+                                {roaSnapshot.readinessLabel}
+                              </span>
                             </div>
                             {lead.plan.brainPlan.summary ? (
                               <p className="mt-3 text-sm leading-6 text-gray-700">
                                 {lead.plan.brainPlan.summary}
                               </p>
                             ) : null}
-                            {lead.plan.brainPlan.missingDetails?.length ? (
-                              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#7A5A12]">
-                                Missing:{" "}
-                                {lead.plan.brainPlan.missingDetails.join(", ")}
-                              </p>
-                            ) : null}
-                            {lead.plan.brainPlan.nextAction ? (
-                              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#0B3C5D]">
-                                {lead.plan.brainPlan.nextAction}
-                              </p>
-                            ) : null}
+                            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                              {[
+                                ["Status", roaSnapshot.statusLabel],
+                                ["Estimate", roaSnapshot.estimatedValueLabel],
+                                ["Pickup", roaSnapshot.pickupSummary],
+                              ].map(([label, value]) => (
+                                <div key={label} className="rounded-lg bg-white px-3 py-2">
+                                  <p className="text-[0.65rem] font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                                    {label}
+                                  </p>
+                                  <p className="mt-1 truncate text-sm font-black text-[#0B3C5D]">
+                                    {value}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-4 grid grid-cols-3 gap-1 sm:grid-cols-6">
+                              {roaSnapshot.timeline.map((step) => (
+                                <div
+                                  key={step.key}
+                                  className={`rounded-lg px-2 py-2 text-center ${
+                                    step.state === "active"
+                                      ? "bg-[#071F2F] text-white"
+                                      : step.state === "complete"
+                                        ? "bg-white text-[#007B7B]"
+                                        : "bg-white/50 text-gray-500"
+                                  }`}
+                                >
+                                  <p className="truncate text-[0.65rem] font-black">
+                                    {step.label}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                              <div className="rounded-lg bg-white px-3 py-2">
+                                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#7A5A12]">
+                                  Missing details
+                                </p>
+                                <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
+                                  {roaSnapshot.missingDetails.length > 0
+                                    ? roaSnapshot.missingDetails.join(", ")
+                                    : "None"}
+                                </p>
+                              </div>
+                              <div className="rounded-lg bg-white px-3 py-2">
+                                <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
+                                  Suggested vendors
+                                </p>
+                                <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
+                                  {roaSnapshot.bestMatches.length > 0
+                                    ? roaSnapshot.bestMatches.join(", ")
+                                    : "Assign from vendor list"}
+                                </p>
+                              </div>
+                            </div>
+                            <p className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-bold text-[#0B3C5D]">
+                              Next:{" "}
+                              {lead.plan.brainPlan.nextAction ||
+                                roaSnapshot.primaryAction}
+                            </p>
                           </div>
                         ) : null}
                         <h2 className="mt-3 text-2xl font-black text-[#0B3C5D]">

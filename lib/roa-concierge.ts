@@ -76,6 +76,53 @@ export type RoaPlanAction = {
   href?: string;
 };
 
+export type RoaTripDeskStepKey =
+  | "draft"
+  | "sent"
+  | "reviewing"
+  | "vendor_contacted"
+  | "quote_ready"
+  | "booked";
+
+export type RoaTripDeskStepState = "complete" | "active" | "upcoming";
+
+export type RoaTripDeskStep = {
+  key: RoaTripDeskStepKey;
+  label: string;
+  detail: string;
+  state: RoaTripDeskStepState;
+};
+
+export type RoaMissingDetailField = {
+  detail: string;
+  field: keyof RoaTravelerContext;
+  label: string;
+  placeholder: string;
+  inputType: "text" | "email" | "date" | "number" | "select";
+  options?: string[];
+};
+
+export type RoaTripDeskSnapshot = {
+  statusLabel: string;
+  readinessScore: number;
+  readinessLabel: string;
+  missingDetails: string[];
+  timeline: RoaTripDeskStep[];
+  estimatedValue: number;
+  estimatedValueLabel: string;
+  pickupSummary: string;
+  tripSummary: string;
+  primaryAction: string;
+  itineraryBlocks: Array<{
+    title: string;
+    timeBlock: string;
+    note: string;
+    location: string;
+    price: number | null;
+  }>;
+  bestMatches: string[];
+};
+
 export type RoaReply = {
   reply: string;
   suggestedListings: RoaSuggestedListing[];
@@ -105,6 +152,11 @@ const interestKeywords = [
   "food",
   "wildlife",
   "sunset",
+  "morning",
+  "midday",
+  "afternoon",
+  "evening",
+  "4:30",
   "transport",
   "hotel",
   "charter",
@@ -130,6 +182,80 @@ const intentTitles: Record<RoaBrainIntent, string> = {
   weather_backup: "Flexible Roatan plan with backup options",
   booking_help: "Booking next steps",
   general_plan: "Your Roatan day, organized",
+};
+
+const tripDeskSteps: Array<Omit<RoaTripDeskStep, "state">> = [
+  {
+    key: "draft",
+    label: "Draft",
+    detail: "Roa shaped the first plan.",
+  },
+  {
+    key: "sent",
+    label: "Sent",
+    detail: "The plan reached concierge.",
+  },
+  {
+    key: "reviewing",
+    label: "Reviewing",
+    detail: "Details and timing are being checked.",
+  },
+  {
+    key: "vendor_contacted",
+    label: "Vendor contacted",
+    detail: "Best-fit operators are being checked.",
+  },
+  {
+    key: "quote_ready",
+    label: "Quote ready",
+    detail: "Guest can review pricing and next steps.",
+  },
+  {
+    key: "booked",
+    label: "Booked",
+    detail: "The trip is confirmed.",
+  },
+];
+
+const tripDeskStatusLabels: Record<RoaTripDeskStepKey, string> = {
+  draft: "Draft",
+  sent: "Sent to concierge",
+  reviewing: "Being reviewed",
+  vendor_contacted: "Vendor contacted",
+  quote_ready: "Quote ready",
+  booked: "Booked",
+};
+
+const missingDetailFieldConfig: Record<string, RoaMissingDetailField> = {
+  "Trip date": {
+    detail: "Trip date",
+    field: "tripDate",
+    label: "Trip date",
+    placeholder: "Choose your date",
+    inputType: "date",
+  },
+  "Guest count": {
+    detail: "Guest count",
+    field: "guests",
+    label: "Guests",
+    placeholder: "How many guests?",
+    inputType: "number",
+  },
+  "Pickup area": {
+    detail: "Pickup area",
+    field: "pickupArea",
+    label: "Pickup area",
+    placeholder: "Hotel, port, airport, or beach",
+    inputType: "text",
+  },
+  "Arrival type": {
+    detail: "Arrival type",
+    field: "arrivalType",
+    label: "Arrival",
+    placeholder: "How are you arriving?",
+    inputType: "select",
+    options: ["Cruise", "Airport", "Staying on island", "Not sure yet"],
+  },
 };
 
 type RoaListingMatch = {
@@ -231,6 +357,12 @@ function scoreRoaListing(
     }
   });
 
+  const timeMatches = preferredTimeMatches(preferences.interests, text);
+  if (timeMatches.length > 0) {
+    score += timeMatches.length * 10;
+    reasons.push(...timeMatches.map((time) => `${time} time fit`));
+  }
+
   score += Math.min(10, Math.round((listing.rating || 0) * 2));
   score += Math.min(8, listing.reviews_count || 0);
 
@@ -263,6 +395,36 @@ function scoreRoaListing(
 function extractGuestCount(text: string) {
   const match = text.match(/\b(\d{1,2})\s*(guests?|people|adults?|kids?)\b/i);
   return match?.[1] || "";
+}
+
+function preferredTimeMatches(interests: string[], text: string) {
+  const matches: string[] = [];
+  const hasInterest = (value: string) =>
+    interests.some((interest) => interest.toLowerCase() === value);
+
+  if (hasInterest("morning") && /\b(morning|am|8:|9:|10:|11:)\b/.test(text)) {
+    matches.push("Morning");
+  }
+
+  if (hasInterest("midday") && /\b(midday|noon|12:|1:)\b/.test(text)) {
+    matches.push("Midday");
+  }
+
+  if (
+    hasInterest("afternoon") &&
+    /\b(afternoon|2:|3:|4:|pm)\b/.test(text)
+  ) {
+    matches.push("Afternoon");
+  }
+
+  if (
+    (hasInterest("sunset") || hasInterest("evening") || hasInterest("4:30")) &&
+    /\b(sunset|evening|4:30|5:|6:|pm)\b/.test(text)
+  ) {
+    matches.push("Sunset");
+  }
+
+  return [...new Set(matches)];
 }
 
 export function isRoaReadyListing(listing: ConciergeListing) {
@@ -579,6 +741,165 @@ export function buildRoaBrainReply(plan: RoaBrainPlan) {
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+function normalizeTripDeskKey(status?: string | null): RoaTripDeskStepKey {
+  const cleanStatus = lower(status);
+
+  if (cleanStatus === "concierge_requested" || cleanStatus === "new") {
+    return "sent";
+  }
+
+  if (cleanStatus === "contacted" || cleanStatus === "vendor_contacted") {
+    return "vendor_contacted";
+  }
+
+  if (cleanStatus === "quoted" || cleanStatus === "quote_ready") {
+    return "quote_ready";
+  }
+
+  if (cleanStatus === "reviewing" || cleanStatus === "booked") {
+    return cleanStatus as RoaTripDeskStepKey;
+  }
+
+  return "draft";
+}
+
+function uniqueStrings(values: string[]) {
+  return [...new Set(values.map((value) => cleanText(value, 80)).filter(Boolean))];
+}
+
+export function getRoaTripDeskTimeline(
+  status?: string | null,
+): RoaTripDeskStep[] {
+  const activeKey = normalizeTripDeskKey(status);
+  const activeIndex = tripDeskSteps.findIndex((step) => step.key === activeKey);
+
+  return tripDeskSteps.map((step, index) => ({
+    ...step,
+    state:
+      index < activeIndex
+        ? "complete"
+        : index === activeIndex
+          ? "active"
+          : "upcoming",
+  }));
+}
+
+export function getRoaMissingDetailFields({
+  plan,
+  traveler = {},
+}: {
+  plan?: RoaBrainPlan | null;
+  traveler?: RoaTravelerContext;
+}) {
+  const details = uniqueStrings([
+    ...(plan?.missingDetails || []),
+    ...missingRoaDetails(traveler),
+  ]);
+
+  return details
+    .map((detail) => missingDetailFieldConfig[detail])
+    .filter((field): field is RoaMissingDetailField => Boolean(field));
+}
+
+function estimateRoaPlanValue(suggestedListings: RoaSuggestedListing[]) {
+  return suggestedListings
+    .slice(0, 3)
+    .map((listing) => listing.price || 0)
+    .filter((price) => price > 0 && price <= 20000)
+    .reduce((total, price) => total + price, 0);
+}
+
+function itineraryBlocksForSnapshot({
+  plan,
+  suggestedListings,
+}: {
+  plan?: RoaBrainPlan | null;
+  suggestedListings: RoaSuggestedListing[];
+}) {
+  const stops = plan?.suggestedStops?.length
+    ? plan.suggestedStops.slice(0, 3)
+    : suggestedListings.slice(0, 3).map((listing, index) => ({
+        listingId: listing.id,
+        title: listing.title,
+        timeBlock: ["Morning", "Midday", "Afternoon"][index] || "Flexible",
+        note: listing.reasons.join(", ") || "Roa match",
+      }));
+
+  return stops.map((stop, index) => {
+    const listing =
+      suggestedListings.find((match) => match.id === stop.listingId) ||
+      suggestedListings[index];
+
+    return {
+      title: stop.title || listing?.title || "Roa concierge stop",
+      timeBlock: stop.timeBlock || "Flexible",
+      note: stop.note || listing?.reasons.join(", ") || "Local fit",
+      location: listing?.location || "",
+      price: listing?.price || null,
+    };
+  });
+}
+
+export function getRoaTripDeskSnapshot({
+  plan,
+  suggestedListings,
+  traveler = {},
+  status = "saved",
+}: {
+  plan?: RoaBrainPlan | null;
+  suggestedListings: RoaSuggestedListing[];
+  traveler?: RoaTravelerContext;
+  status?: string | null;
+}): RoaTripDeskSnapshot {
+  const statusKey = normalizeTripDeskKey(status);
+  const missingDetails = uniqueStrings([
+    ...(plan?.missingDetails || []),
+    ...missingRoaDetails(traveler),
+  ]);
+  const estimatedValue = estimateRoaPlanValue(suggestedListings);
+  const readinessScore = Math.max(
+    20,
+    Math.min(
+      100,
+      plan?.confidenceScore || 52 + suggestedListings.length * 9 - missingDetails.length * 10,
+    ),
+  );
+
+  return {
+    statusLabel: tripDeskStatusLabels[statusKey],
+    readinessScore,
+    readinessLabel:
+      readinessScore >= 82
+        ? "Ready for concierge"
+        : readinessScore >= 62
+          ? "Strong start"
+          : "Needs details",
+    missingDetails,
+    timeline: getRoaTripDeskTimeline(status),
+    estimatedValue,
+    estimatedValueLabel:
+      estimatedValue > 0 ? formatPrice(estimatedValue) : "Pricing pending",
+    pickupSummary: traveler.pickupArea
+      ? `${traveler.pickupArea}${traveler.arrivalType ? ` - ${traveler.arrivalType}` : ""}`
+      : "Pickup still needed",
+    tripSummary: [
+      traveler.tripDate || "Date not set",
+      traveler.guests ? `${traveler.guests} guests` : "Guest count needed",
+      plan?.intentLabel || "Roa plan",
+    ].join(" / "),
+    primaryAction:
+      missingDetails.length > 0
+        ? `Add ${missingDetails[0].toLowerCase()}`
+        : statusKey === "draft"
+          ? "Send to concierge"
+          : statusKey === "quote_ready"
+            ? "Review quote"
+            : "Open Trip Desk",
+    itineraryBlocks: itineraryBlocksForSnapshot({ plan, suggestedListings }),
+    bestMatches: suggestedListings.slice(0, 3).map((listing) => listing.title),
+  };
 }
 
 export function buildRoaPlanActions({
