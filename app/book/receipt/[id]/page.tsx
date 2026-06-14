@@ -70,10 +70,10 @@ export default async function BookingReceiptPage({
 
   if (!booking) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+      <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
         <div className="mx-auto max-w-3xl">
           <SiteLogo />
-          <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+          <section className="mt-8 brand-auth-card p-5 shadow sm:p-8">
             <h1 className="text-2xl font-black text-[#0B3C5D]">
               Receipt not found
             </h1>
@@ -90,7 +90,7 @@ export default async function BookingReceiptPage({
   const snapshot = getBookingMoneySnapshot(booking);
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+    <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
         <div className="mb-8 flex items-center justify-between gap-4 print:hidden">
           <SiteLogo />
@@ -102,7 +102,7 @@ export default async function BookingReceiptPage({
           </Link>
         </div>
 
-        <section className="rounded-2xl bg-white p-8 shadow print:shadow-none">
+        <section className="brand-auth-card p-5 shadow sm:p-8 print:shadow-none">
           <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
             Printable receipt
           </p>

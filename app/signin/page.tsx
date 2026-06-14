@@ -29,27 +29,27 @@ const destinationStyles = {
 
 export default function SignInPage() {
   return (
-    <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
-      <section className="px-5 py-6 sm:px-6">
-        <div className="mx-auto max-w-6xl">
-          <header className="flex flex-wrap items-center justify-between gap-3">
+    <main className="brand-page min-h-screen text-[#17324D]">
+      <section className="brand-shell">
+        <div>
+          <header className="brand-topbar">
             <SiteLogo />
-            <nav className="flex flex-wrap items-center justify-end gap-2 text-sm font-bold">
+            <nav className="brand-nav-pills text-sm font-bold">
               <Link
                 href="/"
-                className="rounded-lg bg-white px-4 py-2 text-[#0B3C5D] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="brand-button-secondary shrink-0"
               >
                 Home
               </Link>
               <Link
                 href="/vendor/signup"
-                className="rounded-lg bg-[#00A8A8] px-4 py-2 text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#078F8F]"
+                className="brand-button-primary shrink-0"
               >
                 List your business
               </Link>
               <Link
                 href="/concierge"
-                className="rounded-lg bg-white px-4 py-2 text-[#0B3C5D] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="brand-button-secondary shrink-0"
               >
                 Concierge
               </Link>
@@ -78,7 +78,7 @@ export default function SignInPage() {
                 return (
                   <section
                     key={destination.kind}
-                    className={`rounded-lg border bg-white p-5 shadow-sm ${styles.border}`}
+                    className={`brand-auth-card p-5 ${styles.border}`}
                   >
                     <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex gap-4">
@@ -101,14 +101,14 @@ export default function SignInPage() {
                       <div className="flex shrink-0 flex-col gap-2 sm:min-w-44">
                         <Link
                           href={destination.href}
-                          className="rounded-lg bg-[#071F2F] px-4 py-3 text-center text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#0B3C5D]"
+                          className="brand-button-primary"
                         >
                           {destination.cta}
                         </Link>
                         {destination.secondaryHref ? (
                           <Link
                             href={destination.secondaryHref}
-                            className={`rounded-lg px-4 py-3 text-center text-sm font-black text-[#0B3C5D] transition hover:-translate-y-0.5 ${styles.bg}`}
+                            className={`brand-button-secondary ${styles.bg}`}
                           >
                             {destination.secondaryLabel}
                           </Link>

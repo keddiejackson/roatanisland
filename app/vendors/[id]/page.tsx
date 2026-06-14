@@ -114,8 +114,8 @@ export default async function VendorProfilePage({
 
   if (!vendor || vendor.is_active === false) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] px-6 py-16 text-[#17324D]">
-        <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow">
+      <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-12">
+        <div className="mx-auto max-w-3xl brand-auth-card p-5 shadow sm:p-8">
           <h1 className="text-2xl font-bold text-[#0B3C5D]">
             Vendor profile not found
           </h1>
@@ -173,7 +173,7 @@ export default async function VendorProfilePage({
   ];
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] text-[#17324D]">
+    <main className="brand-page min-h-screen text-[#17324D]">
       <section className="bg-[#0B3C5D] px-6 py-10 text-white">
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-4">
@@ -181,13 +181,13 @@ export default async function VendorProfilePage({
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/"
-                className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D]"
+                className="brand-button-secondary"
               >
                 Home
               </Link>
               <Link
                 href="/vendors"
-                className="rounded-xl bg-white/15 px-4 py-2 text-sm font-semibold text-white ring-1 ring-white/20"
+                className="brand-button-ghost"
               >
                 Vendors
               </Link>
@@ -299,7 +299,7 @@ export default async function VendorProfilePage({
         </div>
 
         {vendor.show_contact_name !== false && vendor.contact_name ? (
-          <div className="mb-8 rounded-2xl bg-white p-6 shadow">
+          <div className="mb-8 brand-auth-card p-5 shadow sm:p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
               Contact
             </p>
@@ -324,7 +324,7 @@ export default async function VendorProfilePage({
             </div>
           </div>
         ) : vendor.show_phone !== false && vendor.phone ? (
-          <div className="mb-8 rounded-2xl bg-white p-6 shadow">
+          <div className="mb-8 brand-auth-card p-5 shadow sm:p-6">
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
               Contact
             </p>

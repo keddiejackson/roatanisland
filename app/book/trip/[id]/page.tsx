@@ -61,10 +61,10 @@ export default async function TripPacketPage({
 
   if (!booking) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+      <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
         <div className="mx-auto max-w-4xl">
           <SiteLogo />
-          <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+          <section className="mt-8 brand-auth-card p-5 shadow sm:p-8">
             <h1 className="text-3xl font-black text-[#0B3C5D]">
               Trip packet not found
             </h1>
@@ -89,7 +89,7 @@ export default async function TripPacketPage({
   });
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+    <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <SiteLogo />
@@ -154,7 +154,7 @@ export default async function TripPacketPage({
           ))}
         </section>
 
-        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+        <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
             Day-of command sheet
           </p>
@@ -183,7 +183,7 @@ export default async function TripPacketPage({
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+        <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
@@ -212,7 +212,7 @@ export default async function TripPacketPage({
         </section>
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-          <div className="rounded-2xl bg-white p-6 shadow">
+          <div className="brand-auth-card p-5 shadow sm:p-6">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
               Next steps
             </p>
@@ -227,7 +227,7 @@ export default async function TripPacketPage({
               ))}
             </div>
           </div>
-          <div className="rounded-2xl bg-white p-6 shadow">
+          <div className="brand-auth-card p-5 shadow sm:p-6">
             <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
               What to bring
             </p>
@@ -246,7 +246,7 @@ export default async function TripPacketPage({
 
         <section className="mt-6 grid gap-4 md:grid-cols-2">
           {packet.notes.map((note) => (
-            <div key={note.label} className="rounded-2xl bg-white p-6 shadow">
+            <div key={note.label} className="brand-auth-card p-5 shadow sm:p-6">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
                 {note.label}
               </p>

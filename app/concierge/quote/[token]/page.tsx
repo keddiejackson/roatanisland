@@ -78,10 +78,10 @@ export default async function ConciergeQuotePage({
 
   if (!quote || !lead) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+      <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
         <div className="mx-auto max-w-3xl">
           <SiteLogo />
-          <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+          <section className="mt-8 brand-auth-card p-5 shadow sm:p-8">
             <h1 className="text-2xl font-black text-[#0B3C5D]">
               Quote not found
             </h1>
@@ -107,7 +107,7 @@ export default async function ConciergeQuotePage({
     !["approved", "deposit_started", "paid"].includes(quote.status);
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+    <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <SiteLogo />

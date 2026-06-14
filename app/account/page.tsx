@@ -580,7 +580,7 @@ export default function AccountPage() {
   }
 
   if (loading) {
-    return <main className="min-h-screen bg-[#F7F3EA] p-8">Loading account...</main>;
+    return <main className="brand-page min-h-screen px-4 py-6 sm:px-6 sm:py-10">Loading account...</main>;
   }
 
   const hasSignedIn = Boolean(signedInEmail);
@@ -635,9 +635,9 @@ export default function AccountPage() {
     : undefined;
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
+    <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-5xl">
-        <header className="mb-6 flex flex-col gap-4 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+        <header className="brand-topbar mb-6 sm:mb-8">
           <SiteLogo />
           <div className="mobile-scroll-row sm:flex sm:flex-wrap sm:items-center sm:gap-2">
             <Link href="/" className="rounded-xl bg-white px-4 py-2 font-semibold shadow">
@@ -816,7 +816,7 @@ export default function AccountPage() {
         {hasSignedIn ? (
           <details
             id="guest-profile"
-            className="mt-6 rounded-2xl bg-white p-4 shadow sm:p-6"
+            className="mt-6 brand-auth-card p-4 shadow sm:p-6"
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>

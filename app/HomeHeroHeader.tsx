@@ -42,11 +42,11 @@ export default function HomeHeroHeader({
       </div>
 
       <nav aria-label="Mobile main navigation" className="w-full sm:hidden">
-        <div className="mobile-scroll-row rounded-[1.15rem] border border-white/12 bg-white/[0.09] p-1 text-center text-[13px] font-black text-white/90 shadow-xl shadow-black/10 backdrop-blur-xl">
+        <div className="mobile-scroll-row flex-wrap overflow-visible rounded-[1.15rem] border border-white/12 bg-white/[0.09] p-1 text-center text-[12px] font-black text-white/90 shadow-xl shadow-black/10 backdrop-blur-xl">
           {mobileControls.showMobileNavListings ? (
             <a
               href="#marketplace"
-              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
             >
               {mobileControls.mobileNavListingsLabel}
             </a>
@@ -54,7 +54,7 @@ export default function HomeHeroHeader({
           {mobileControls.showMobileNavMap ? (
             <Link
               href="/map"
-              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
             >
               {mobileControls.mobileNavMapLabel}
             </Link>
@@ -62,18 +62,18 @@ export default function HomeHeroHeader({
           {mobileControls.showMobileNavConcierge ? (
             <Link
               href="/concierge"
-              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
             >
               {mobileControls.mobileNavConciergeLabel}
             </Link>
           ) : null}
           {accountLoading ? (
-            <span className="shrink-0 rounded-xl px-3 py-3 text-white/50">
+            <span className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 text-white/50">
               ...
             </span>
           ) : account ? (
-            <details className="group relative shrink-0">
-              <summary className="grid cursor-pointer list-none place-items-center rounded-xl px-3 py-3 hover:bg-white/10">
+            <details className="group relative flex-1">
+              <summary className="grid cursor-pointer list-none place-items-center rounded-xl px-2 py-2.5 hover:bg-white/10">
                 Account
               </summary>
               <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-white/20 bg-white p-2 text-left text-[#071F2F] shadow-2xl shadow-black/20">
@@ -102,7 +102,7 @@ export default function HomeHeroHeader({
           ) : mobileControls.showMobileNavSignIn ? (
             <Link
               href="/signin"
-              className="shrink-0 rounded-xl px-3 py-3 hover:bg-white/10"
+              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
             >
               {mobileControls.mobileNavSignInLabel}
             </Link>
@@ -110,7 +110,7 @@ export default function HomeHeroHeader({
           {mobileControls.showMobileNavBusiness ? (
             <Link
               href="/vendor/signup"
-              className="shrink-0 rounded-xl bg-white px-3 py-3 text-[#071F2F] shadow-lg shadow-black/10"
+              className="basis-full rounded-xl bg-white px-3 py-3 text-[#071F2F] shadow-lg shadow-black/10"
             >
               {mobileControls.mobileNavBusinessLabel}
             </Link>

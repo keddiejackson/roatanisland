@@ -23,34 +23,34 @@ export default async function ConciergePage() {
     .limit(80);
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-5 py-8 text-[#17324D] sm:px-6">
-      <div className="mx-auto max-w-7xl">
-        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+    <main className="brand-page min-h-screen text-[#17324D]">
+      <div className="brand-shell">
+        <header className="brand-topbar mb-6 sm:mb-8">
           <SiteLogo />
-          <nav className="flex flex-wrap gap-2 text-sm font-bold">
+          <nav className="brand-nav-pills text-sm font-bold">
             <Link
               href="/"
-              className="rounded-xl bg-white px-4 py-2 text-[#0B3C5D] shadow"
+              className="brand-button-secondary shrink-0"
             >
               Home
             </Link>
             <Link
               href="/map"
-              className="rounded-xl bg-white px-4 py-2 text-[#0B3C5D] shadow"
+              className="brand-button-secondary shrink-0"
             >
               Map
             </Link>
             <Link
               href="/account"
-              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-white shadow"
+              className="brand-button-primary shrink-0"
             >
               My trips
             </Link>
           </nav>
         </header>
 
-        <section className="mb-6 overflow-hidden rounded-[2rem] bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#D6B56D]">
+        <section className="brand-hero-panel mb-6 overflow-hidden p-5 text-white sm:p-8">
+          <p className="brand-eyebrow-gold">
             Roa AI Concierge
           </p>
           <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_0.72fr] lg:items-end">

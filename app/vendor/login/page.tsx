@@ -82,21 +82,24 @@ export default function VendorLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
-      <div className="mx-auto max-w-md">
-        <header className="mb-8 flex items-center justify-between gap-4">
+    <main className="brand-page min-h-screen text-[#17324D]">
+      <div className="brand-shell max-w-lg">
+        <header className="brand-topbar mb-6 sm:mb-8">
           <SiteLogo />
           <Link
             href="/"
-            className="rounded-xl bg-white px-4 py-2 text-sm font-semibold text-[#0B3C5D] shadow"
+            className="brand-button-secondary w-fit"
           >
             Home
           </Link>
         </header>
 
-        <div className="rounded-2xl bg-white p-8 shadow">
-          <h1 className="text-3xl font-bold text-[#0B3C5D]">Vendor Login</h1>
-          <p className="mt-2 text-gray-600">
+        <div className="brand-auth-card p-5 sm:p-8">
+          <p className="brand-eyebrow">Operator access</p>
+          <h1 className="mt-2 text-3xl font-black text-[#0B3C5D]">
+            Vendor Login
+          </h1>
+          <p className="brand-subtitle mt-2 text-sm">
             Sign in to manage your submitted listings.
           </p>
 
@@ -107,7 +110,7 @@ export default function VendorLoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                className="brand-input"
                 required
               />
             </div>
@@ -118,7 +121,7 @@ export default function VendorLoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                className="brand-input"
                 required
               />
             </div>
@@ -128,7 +131,7 @@ export default function VendorLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
+              className="brand-button-primary w-full disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Login"}
             </button>

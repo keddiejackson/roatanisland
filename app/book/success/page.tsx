@@ -31,7 +31,7 @@ export default async function BookingPaymentSuccessPage({
       : defaultMobileSiteControls;
 
   return (
-    <main className="brand-page min-h-screen overflow-hidden px-6 py-10 text-[#17324D]">
+    <main className="brand-page min-h-screen overflow-hidden px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="pointer-events-none fixed inset-x-0 top-0 h-96 bg-[radial-gradient(circle_at_18%_20%,rgba(0,168,168,0.18),transparent_34%),radial-gradient(circle_at_84%_12%,rgba(214,181,109,0.22),transparent_30%)]" />
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">

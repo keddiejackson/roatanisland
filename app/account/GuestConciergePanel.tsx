@@ -93,7 +93,7 @@ export default function GuestConciergePanel({
 
   return (
     <section className="mt-6 grid gap-6 lg:grid-cols-[0.82fr_1.18fr]">
-      <div className="rounded-2xl bg-white p-6 shadow">
+      <div className="brand-auth-card p-5 shadow sm:p-6">
         <p className="text-sm font-black uppercase tracking-[0.16em] text-[#00A8A8]">
           Concierge profile
         </p>
@@ -163,7 +163,7 @@ export default function GuestConciergePanel({
         ) : null}
       </div>
 
-      <div className="rounded-2xl bg-white p-6 shadow">
+      <div className="brand-auth-card p-5 shadow sm:p-6">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.16em] text-[#D6B56D]">

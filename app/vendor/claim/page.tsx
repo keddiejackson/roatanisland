@@ -81,7 +81,7 @@ function VendorClaimContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
+    <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-2xl">
         <header className="mb-8 flex items-center justify-between gap-4">
           <SiteLogo />
@@ -93,7 +93,7 @@ function VendorClaimContent() {
           </Link>
         </header>
 
-        <section className="rounded-2xl bg-white p-8 shadow">
+        <section className="brand-auth-card p-5 shadow sm:p-8">
           <h1 className="text-3xl font-bold text-[#0B3C5D]">
             Claim vendor profile
           </h1>
@@ -152,7 +152,7 @@ export default function VendorClaimPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen bg-[#F7F3EA] px-6 py-12 text-[#17324D]">
+        <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
           <div className="mx-auto max-w-2xl">Loading invite...</div>
         </main>
       }

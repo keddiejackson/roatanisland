@@ -80,10 +80,10 @@ export default async function BookingStatusPage({
 
   if (!booking) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+      <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
         <div className="mx-auto max-w-3xl">
           <SiteLogo />
-          <div className="mt-8 rounded-2xl bg-white p-8 shadow">
+          <div className="mt-8 brand-auth-card p-5 shadow sm:p-8">
             <h1 className="text-2xl font-bold text-[#0B3C5D]">
               Booking not found
             </h1>
@@ -145,7 +145,7 @@ export default async function BookingStatusPage({
   });
 
   return (
-    <main className="brand-page min-h-screen overflow-hidden px-6 py-10 text-[#17324D]">
+    <main className="brand-page min-h-screen overflow-hidden px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="pointer-events-none fixed inset-x-0 top-0 h-96 bg-[radial-gradient(circle_at_18%_18%,rgba(0,168,168,0.16),transparent_34%),radial-gradient(circle_at_82%_10%,rgba(214,181,109,0.2),transparent_30%)]" />
       <div className="relative mx-auto max-w-6xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">

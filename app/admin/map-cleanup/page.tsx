@@ -256,7 +256,7 @@ export default function AdminMapCleanupPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
+    <main className="brand-workspace min-h-screen px-4 py-6 text-[#1F2937] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-7xl">
         <AdminNav />
 

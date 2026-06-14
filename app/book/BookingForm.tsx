@@ -724,7 +724,20 @@ export default function BookingForm({
         )}
       </section>
 
-      <section className="mt-6 rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FFFDF7] p-5">
+      <section className="mt-4 rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FFFDF7] p-4 sm:hidden">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
+          How the request works
+        </p>
+        <h2 className="mt-1 text-xl font-black text-[#0B3C5D]">
+          Confidence and payment checks
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-gray-600">
+          Add the basics, send the request, then we keep messages and payment
+          notes attached to your booking.
+        </p>
+      </section>
+
+      <section className="mt-6 hidden rounded-[1.5rem] border border-[#D6B56D]/25 bg-[#FFFDF7] p-5 sm:block">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[#9C7A2F]">
@@ -784,7 +797,7 @@ export default function BookingForm({
         </div>
       ) : null}
 
-      <section className="mt-6 grid gap-3 md:grid-cols-4">
+      <section className="mt-6 hidden gap-3 sm:grid md:grid-cols-4">
         {trustSteps.map((step, index) => (
           <div
             key={step.label}
@@ -1327,7 +1340,7 @@ export default function BookingForm({
       )}
       </section>
 
-      <aside className="h-fit rounded-[2rem] border border-white/70 bg-white p-5 shadow-2xl shadow-[#071F2F]/10 lg:sticky lg:top-6">
+      <aside className="hidden h-fit rounded-[2rem] border border-white/70 bg-white p-5 shadow-2xl shadow-[#071F2F]/10 lg:sticky lg:top-6 lg:block">
         <div className="rounded-[1.5rem] bg-[#071F2F] p-5 text-white">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-[#9EE8E3]">
             Trip summary

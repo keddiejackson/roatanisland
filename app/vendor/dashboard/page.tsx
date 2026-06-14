@@ -1314,7 +1314,7 @@ export default function VendorDashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+      <main className="brand-workspace min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
         <div className="mx-auto max-w-5xl">Loading vendor dashboard...</div>
       </main>
     );
@@ -1322,7 +1322,7 @@ export default function VendorDashboardPage() {
 
   return (
     <main
-      className={`min-h-screen bg-[#F7F3EA] text-[#17324D] ${
+      className={`brand-workspace min-h-screen text-[#17324D] ${
         mobileControls.compactMobileVendorDashboard
           ? "px-3 py-5 sm:px-6 sm:py-10"
           : "px-6 py-10"
@@ -1495,7 +1495,7 @@ export default function VendorDashboardPage() {
           </p>
         </section>
 
-        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+        <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -1699,7 +1699,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+        <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -1743,7 +1743,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+        <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -1797,7 +1797,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section className="mt-6 rounded-2xl bg-white p-6 shadow">
+        <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -1836,7 +1836,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section id="profile" className="mt-8 rounded-2xl bg-white p-8 shadow">
+        <section id="profile" className="mt-8 brand-auth-card p-5 shadow sm:p-8">
           <h2 className="text-2xl font-bold text-[#0B3C5D]">
             Public Vendor Profile
           </h2>
@@ -1962,7 +1962,7 @@ export default function VendorDashboardPage() {
           </form>
         </section>
 
-        <section id="bookings" className="mt-8 scroll-mt-24 rounded-2xl bg-white p-8 shadow">
+        <section id="bookings" className="mt-8 scroll-mt-24 brand-auth-card p-5 shadow sm:p-8">
           <h2 className="text-2xl font-bold text-[#0B3C5D]">
             Business Verification
           </h2>
@@ -2034,7 +2034,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section id="listings" className="mt-8 scroll-mt-24 rounded-2xl bg-white p-8 shadow">
+        <section id="listings" className="mt-8 scroll-mt-24 brand-auth-card p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -2637,7 +2637,7 @@ export default function VendorDashboardPage() {
           )}
         </section>
 
-        <section className="mt-8 rounded-2xl bg-white p-8 shadow">
+        <section className="mt-8 brand-auth-card p-5 shadow sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-[#0B3C5D]">

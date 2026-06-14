@@ -39,7 +39,7 @@ export default async function MapPage() {
       <div className="mx-auto max-w-7xl min-w-0">
         <header className="mb-6 grid gap-4 sm:mb-8 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <SiteLogo />
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-2">
+          <div className="mobile-scroll-row flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
             <Link
               href="/"
               className="brand-button-secondary shrink-0"
@@ -72,10 +72,14 @@ export default async function MapPage() {
           <p className="brand-subtitle mt-3 max-w-2xl">
             Choose a start point, pick a day style, then save the stops that fit.
           </p>
-          <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-[#D6B56D]/25 bg-white/80 p-2 text-center text-xs font-black text-[#0B3C5D] shadow-sm sm:hidden">
-            <span className="rounded-xl bg-[#EEF7F6] px-2 py-2">Airport</span>
-            <span className="rounded-xl bg-[#FFF8E8] px-2 py-2">Cruise</span>
-            <span className="rounded-xl bg-[#EEF7F6] px-2 py-2">Beach</span>
+          <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl border border-[#D6B56D]/25 bg-white/80 p-2 text-center shadow-sm sm:hidden">
+            <span className="brand-badge brand-badge-teal justify-center px-2 py-2">
+              Airport
+            </span>
+            <span className="brand-badge justify-center px-2 py-2">Cruise</span>
+            <span className="brand-badge brand-badge-teal justify-center px-2 py-2">
+              Beach
+            </span>
           </div>
         </section>
 

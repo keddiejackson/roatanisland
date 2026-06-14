@@ -96,11 +96,11 @@ export default function AdminActivityPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
+    <main className="brand-workspace min-h-screen px-4 py-6 text-[#1F2937] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-7xl">
         <AdminNav />
 
-        <section className="rounded-2xl bg-white p-8 shadow">
+        <section className="brand-auth-card p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <h1 className="text-3xl font-bold text-[#0B3C5D]">

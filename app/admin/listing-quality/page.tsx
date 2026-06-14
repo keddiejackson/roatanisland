@@ -140,7 +140,7 @@ export default function AdminListingQualityPage() {
 
   if (checkingAuth) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] p-6 text-[#0B3C5D]">
+      <main className="brand-workspace min-h-screen px-4 py-6 text-[#0B3C5D] sm:px-6 sm:py-10">
         Checking admin access...
       </main>
     );
@@ -149,11 +149,11 @@ export default function AdminListingQualityPage() {
   if (!authorized) return null;
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-5 py-10 text-[#0B3C5D]">
+    <main className="brand-workspace min-h-screen px-4 py-6 text-[#0B3C5D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-7xl">
         <AdminNav />
 
-        <section className="rounded-2xl bg-white p-6 shadow">
+        <section className="brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#00A8A8]">

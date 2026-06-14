@@ -41,7 +41,7 @@ export default function AdminNav() {
 
   return (
     <nav
-      className={`mb-8 grid gap-2 sm:flex sm:flex-wrap sm:gap-3 ${
+      className={`brand-workspace-nav mb-8 grid gap-2 sm:flex sm:flex-wrap sm:gap-3 ${
         mobileControls.compactMobileAdminNav
           ? "grid-cols-3"
           : "grid-cols-2"
@@ -57,7 +57,7 @@ export default function AdminNav() {
             className={`rounded-xl px-3 py-2 text-center text-xs font-semibold sm:px-4 sm:text-sm ${
               active
                 ? "bg-[#0B3C5D] text-white"
-                : "bg-white text-[#0B3C5D] shadow"
+                : "bg-white text-[#0B3C5D] shadow-sm"
             }`}
           >
             {item.label}

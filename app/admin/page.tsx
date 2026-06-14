@@ -294,11 +294,11 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F4EBD0] px-6 py-16 text-[#1F2937]">
+    <main className="brand-workspace min-h-screen px-4 py-6 text-[#1F2937] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-7xl">
         <AdminNav />
 
-        <section className="rounded-2xl bg-white p-8 shadow">
+        <section className="brand-auth-card p-5 sm:p-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
               <h1 className="text-3xl font-bold text-[#0B3C5D]">
@@ -408,7 +408,7 @@ export default function AdminDashboardPage() {
                     {summary.recentGuestTripPlans.map((plan) => (
                       <article
                         key={plan.id}
-                        className="rounded-2xl bg-white p-4 shadow-sm"
+                        className="brand-auth-card p-4 shadow-sm"
                       >
                         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
                           <div>
@@ -845,7 +845,7 @@ export default function AdminDashboardPage() {
                     <Link
                       key={card.label}
                       href={card.href}
-                      className="rounded-2xl bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
+                      className="brand-auth-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow"
                     >
                       <p className="text-sm text-gray-600">{card.label}</p>
                       <p className="mt-2 text-3xl font-black text-[#0B3C5D]">

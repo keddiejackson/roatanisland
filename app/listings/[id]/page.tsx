@@ -180,8 +180,8 @@ export default async function ListingPage({
 
   if (!listing) {
     return (
-      <main className="min-h-screen bg-[#F7F3EA] px-6 py-16 text-[#17324D]">
-        <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow">
+      <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-12">
+        <div className="mx-auto max-w-3xl brand-auth-card p-5 shadow sm:p-8">
           <h1 className="text-2xl font-bold text-[#0B3C5D]">
             Listing not found
           </h1>

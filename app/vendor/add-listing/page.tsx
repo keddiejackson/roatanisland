@@ -187,7 +187,7 @@ export default function AddListingPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#F7F3EA] px-6 py-10 text-[#17324D]">
+    <main className="brand-page min-h-screen px-4 py-6 text-[#17324D] sm:px-6 sm:py-10">
       <div className="mx-auto max-w-5xl">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <SiteLogo />
@@ -234,7 +234,7 @@ export default function AddListingPage() {
           </div>
         </section>
 
-        <div className="rounded-2xl bg-white p-8 shadow">
+        <div className="brand-auth-card p-5 shadow sm:p-8">
           <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
             Vendor onboarding
           </p>
