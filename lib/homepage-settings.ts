@@ -102,7 +102,7 @@ export const defaultHomepageControls: HomepageControls = {
   primaryCtaLabel: "Plan your Roatan day",
   secondaryCtaLabel: "Explore experiences",
   primaryCtaHref: "#marketplace",
-  secondaryCtaHref: "/map",
+  secondaryCtaHref: "/tours",
   heroCountLabel: "curated options",
   heroMapLabel: "Map-first planning",
   heroSupportLabel: "Concierge support",
@@ -152,7 +152,7 @@ export const defaultHomepageControls: HomepageControls = {
   finalCtaBody:
     "Start with the map, let the concierge help, or open your trip dashboard to keep every saved plan and booking in one place.",
   finalCtaPrimaryLabel: "Browse the map",
-  finalCtaSecondaryLabel: "Concierge",
+  finalCtaSecondaryLabel: "Ask Roa",
   finalCtaTertiaryLabel: "My trips",
   finalCtaPrimaryHref: "/map",
   finalCtaSecondaryHref: "/concierge",

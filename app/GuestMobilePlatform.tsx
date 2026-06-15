@@ -19,7 +19,8 @@ import {
 function isGuestSurface(pathname: string | null) {
   if (!pathname) return true;
   if (pathname.startsWith("/admin")) return false;
-  if (pathname.startsWith("/vendor") && pathname !== "/vendor/signup") {
+  if (pathname === "/vendor" || pathname.startsWith("/vendor/")) {
+    if (pathname === "/vendor/signup") return true;
     return false;
   }
   if (pathname.startsWith("/api")) return false;

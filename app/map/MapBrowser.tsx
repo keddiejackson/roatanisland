@@ -74,7 +74,8 @@ const luxuryLayers = [
   "Beaches",
   "Private Charters",
 ];
-const zoomLevels = [11, 12, 13, 14];
+const zoomLevels = [11, 12, 13, 14, 15, 16, 17, 18];
+const maxZoom = zoomLevels[zoomLevels.length - 1];
 const roatanCenter = { latitude: 16.34, longitude: -86.48 };
 
 const areaPositions: Record<string, { latitude: number; longitude: number }> = {
@@ -379,7 +380,8 @@ function worldToLatLon(x: number, y: number, zoom: number) {
 
 function clusterPins(pins: Pin[], zoom: number) {
   const clusters: Cluster[] = [];
-  const threshold = zoom >= 14 ? 34 : zoom >= 13 ? 44 : 58;
+  const threshold =
+    zoom >= 17 ? 16 : zoom >= 15 ? 24 : zoom >= 14 ? 34 : zoom >= 13 ? 44 : 58;
 
   pins.forEach((pin) => {
     const point = latLonToWorld(pin.latitudeValue, pin.longitudeValue, zoom);
@@ -656,6 +658,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     if (!browserStateLoaded) return;
 
     localStorage.setItem("roatan-trip-plan", JSON.stringify(savedTripIds));
+    window.dispatchEvent(new Event("roatan-trip-plan-change"));
   }, [browserStateLoaded, savedTripIds]);
 
   const suggestions = useMemo(() => {
@@ -1453,6 +1456,10 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           className={`relative mt-5 cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner ring-1 ring-[#071F2F]/10 active:cursor-grabbing ${
             fullMap ? "min-h-[calc(100vh-220px)]" : "min-h-[460px] sm:min-h-[560px]"
           }`}
+          onWheel={(event) => {
+            event.preventDefault();
+            zoomMap(event.deltaY < 0 ? 1 : -1);
+          }}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);
             dragRef.current = {
@@ -1510,6 +1517,14 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
             >
               -
+            </button>
+            <button
+              type="button"
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={() => setZoom(maxZoom)}
+              className="rounded-xl bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D] shadow"
+            >
+              Exact
             </button>
           </div>
           {userLocation ? (
@@ -1639,7 +1654,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 onClick={() => {
                   focusPin(primaryPin);
                   if (cluster.pins.length > 1) {
-                    setZoom((currentZoom) => Math.min(currentZoom + 1, 14));
+                    setZoom((currentZoom) => Math.min(currentZoom + 1, maxZoom));
                   }
                 }}
                 style={{

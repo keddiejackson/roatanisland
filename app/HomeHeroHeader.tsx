@@ -41,11 +41,11 @@ export default function HomeHeroHeader({
         />
       </div>
 
-      <nav aria-label="Mobile main navigation" className="w-full sm:hidden">
+      <nav aria-label="Mobile main navigation" className="hidden">
         <div className="mobile-scroll-row flex-wrap overflow-visible rounded-[1.15rem] border border-white/12 bg-white/[0.09] p-1 text-center text-[12px] font-black text-white/90 shadow-xl shadow-black/10 backdrop-blur-xl">
           {mobileControls.showMobileNavListings ? (
             <a
-              href="#marketplace"
+              href="/tours"
               className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
             >
               {mobileControls.mobileNavListingsLabel}
@@ -122,9 +122,9 @@ export default function HomeHeroHeader({
         aria-label="Desktop main navigation"
         className="hidden sm:flex items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.09] p-1 text-sm font-semibold text-white/90 shadow-2xl shadow-black/15 backdrop-blur-xl"
       >
-        <a href="#marketplace" className="rounded-full px-3 py-2 hover:bg-white/10">
+        <Link href="/tours" className="rounded-full px-3 py-2 hover:bg-white/10">
           Experiences
-        </a>
+        </Link>
         <Link href="/map" className="rounded-full px-3 py-2 hover:bg-white/10">
           Map
         </Link>
@@ -132,7 +132,7 @@ export default function HomeHeroHeader({
           href="/concierge"
           className="rounded-full px-3 py-2 hover:bg-white/10"
         >
-          Concierge
+          Ask Roa
         </Link>
         {accountLoading ? null : account ? (
           <details className="group relative">

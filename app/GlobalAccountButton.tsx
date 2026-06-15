@@ -74,7 +74,7 @@ export default function GlobalAccountButton() {
     return (
       <Link
         href="/signin"
-        className="fixed right-2 top-[calc(0.75rem+env(safe-area-inset-top))] z-40 max-w-[calc(100vw-1rem)] rounded-2xl bg-white px-3 py-2.5 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 transition hover:-translate-y-0.5 sm:right-5 sm:top-[calc(1rem+env(safe-area-inset-top))] sm:px-4 sm:py-3"
+        className="fixed right-2 top-[calc(0.75rem+env(safe-area-inset-top))] z-40 hidden max-w-[calc(100vw-1rem)] rounded-2xl bg-white px-3 py-2.5 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 transition hover:-translate-y-0.5 sm:right-5 sm:top-[calc(1rem+env(safe-area-inset-top))] sm:block sm:px-4 sm:py-3"
       >
         Sign in
       </Link>
@@ -85,7 +85,7 @@ export default function GlobalAccountButton() {
   const initials = profileInitials(profile.display_name, profile.email);
 
   return (
-    <div className="fixed right-2 top-[calc(0.75rem+env(safe-area-inset-top))] z-40 flex max-w-[calc(100vw-1rem)] items-center gap-1.5 rounded-2xl bg-white p-1.5 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 sm:right-5 sm:top-[calc(1rem+env(safe-area-inset-top))] sm:gap-2 sm:p-2">
+    <div className="fixed right-2 top-[calc(0.75rem+env(safe-area-inset-top))] z-40 hidden max-w-[calc(100vw-1rem)] items-center gap-1.5 rounded-2xl bg-white p-1.5 text-sm font-black text-[#0B3C5D] shadow-xl ring-1 ring-[#0B3C5D]/10 sm:right-5 sm:top-[calc(1rem+env(safe-area-inset-top))] sm:flex sm:gap-2 sm:p-2">
       <Link
         href="/account"
         className="flex min-w-0 items-center gap-3 rounded-xl px-1 py-1 transition hover:bg-[#EEF7F6]"
