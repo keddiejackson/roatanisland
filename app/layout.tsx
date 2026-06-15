@@ -3,6 +3,7 @@ import AnalyticsTracker from "./AnalyticsTracker";
 import GlobalBookingChat from "./GlobalBookingChat";
 import GlobalAccountButton from "./GlobalAccountButton";
 import GlobalRoaButton from "./GlobalRoaButton";
+import GuestMobilePlatform from "./GuestMobilePlatform";
 import SessionIdleTimeout from "./SessionIdleTimeout";
 import SiteBrandingProvider from "./SiteBrandingProvider";
 import "./globals.css";
@@ -41,6 +42,7 @@ export default function RootLayout({
           <AnalyticsTracker />
           <SessionIdleTimeout />
           {children}
+          <GuestMobilePlatform />
           <GlobalBookingChat />
           <GlobalRoaButton />
           <GlobalAccountButton />

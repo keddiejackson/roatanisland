@@ -2,12 +2,13 @@ import Link from "next/link";
 import SiteLogo from "@/app/SiteLogo";
 
 const footerLinks = [
-  { href: "/#marketplace", label: "Experiences" },
+  { href: "/tours", label: "Experiences" },
   { href: "/map", label: "Map" },
+  { href: "/concierge", label: "Ask Roa" },
+  { href: "/community", label: "Community" },
   { href: "/guides", label: "Guides" },
-  { href: "/tours", label: "Tours" },
-  { href: "/hotels", label: "Hotels" },
-  { href: "/transport", label: "Transport" },
+  { href: "/hotels", label: "Hotels & Stays" },
+  { href: "/transport", label: "Transportation" },
   { href: "/vendors", label: "Vendors" },
   { href: "/support", label: "Support" },
   { href: "/signin", label: "Sign in" },
