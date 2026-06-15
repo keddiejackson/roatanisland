@@ -97,25 +97,25 @@ export type MobileSiteControls = {
 };
 
 export const defaultMobileSiteControls: MobileSiteControls = {
-  mobileHeroEyebrow: "Experience the island",
-  mobileHeroHeadline: "Like Never Before.",
-  mobileHeroSubhead: "Have the Roatan Island Life, all for yourself.",
+  mobileHeroEyebrow: "Private Roatan days",
+  mobileHeroHeadline: "The island, arranged beautifully.",
+  mobileHeroSubhead: "Map the day, ask Roa, and request with confidence.",
   mobilePrimaryCtaLabel: "Plan your Roatan day",
   mobileSecondaryCtaLabel: "Explore",
   mobileHeroCountLabel: "curated option",
   mobileHeroMapLabel: "Map-first planning",
   mobileHeroSupportLabel: "Ask Roa support",
-  mobileListingsTitle: "Featured Roatan picks.",
+  mobileListingsTitle: "Curated Roatan experiences.",
   mobileListingsIntro:
-    "Search, choose a trip style, add your date and guests, then open the best matches.",
+    "Search, choose a pace, add your date and guests, then open the clearest matches.",
   mobileListingsSearchPlaceholder:
     "Search by tour, stay, transport, or location",
   mobileListingsMapButtonLabel: "Open matched map",
   mobileListingsFilterButtonLabel: "More filters",
   mobileListingsResultLabel: "curated matches ready.",
-  mobileFinalCtaTitle: "Ready for your Roatan day?",
+  mobileFinalCtaTitle: "Begin with the island.",
   mobileFinalCtaBody:
-    "Start with the map, request help, or open your trips when you are ready.",
+    "Open the map, ask Roa, or return to your saved trip plan.",
   mobileFinalCtaPrimaryLabel: "Browse the map",
   mobileListingHeroEyebrow: "Roatan experience",
   mobileListingOverviewTitle: "The day, clearly planned.",

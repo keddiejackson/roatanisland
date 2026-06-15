@@ -101,23 +101,55 @@ export default function GuestMobilePlatform() {
         </span>
       </button>
 
-      <button
-        type="button"
-        onClick={() => setPlanOpen(true)}
-        className="fixed bottom-[calc(0.85rem+env(safe-area-inset-bottom))] left-3 z-[55] rounded-2xl bg-[#071F2F] px-4 py-3 text-left text-sm font-black text-white shadow-2xl shadow-[#071F2F]/20 ring-1 ring-white/10 sm:hidden"
-        aria-label="Open saved plan"
+      <nav
+        aria-label="Mobile quick actions"
+        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] grid grid-cols-4 gap-1 rounded-[1.35rem] border border-white/16 bg-[#071F2F]/94 p-1 text-center text-[11px] font-black text-white shadow-2xl shadow-[#071F2F]/24 backdrop-blur-xl sm:hidden"
       >
-        <span className="block text-[10px] uppercase tracking-[0.18em] text-[#D6B56D]">
-          Saved Plan
-        </span>
-        <span className="block">
-          {savedCount > 0
-            ? `${savedCount} stop${savedCount === 1 ? "" : "s"}`
-            : savedPlanCount > 0
-              ? `${savedPlanCount} plan${savedPlanCount === 1 ? "" : "s"}`
-              : "Start saving"}
-        </span>
-      </button>
+        <Link
+          href="/tours"
+          className="rounded-2xl px-2 py-3 text-white/86 hover:bg-white/10"
+        >
+          <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
+            Browse
+          </span>
+          <span className="mt-0.5 block">Explore</span>
+        </Link>
+        <Link
+          href="/map"
+          className="rounded-2xl px-2 py-3 text-white/86 hover:bg-white/10"
+        >
+          <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
+            Island
+          </span>
+          <span className="mt-0.5 block">Map</span>
+        </Link>
+        <button
+          type="button"
+          onClick={() => setPlanOpen(true)}
+          className="rounded-2xl bg-white px-2 py-3 text-[#071F2F] shadow-lg shadow-black/10"
+          aria-label="Open saved plan"
+        >
+          <span className="block text-[10px] uppercase tracking-[0.12em] text-[#9C7A2F]">
+            Saved Plan
+          </span>
+          <span className="mt-0.5 block truncate">
+            {savedCount > 0
+              ? `${savedCount} stop${savedCount === 1 ? "" : "s"}`
+              : savedPlanCount > 0
+                ? `${savedPlanCount} plan${savedPlanCount === 1 ? "" : "s"}`
+                : "Saved"}
+          </span>
+        </button>
+        <Link
+          href="/concierge"
+          className="rounded-2xl px-2 py-3 text-white/86 hover:bg-white/10"
+        >
+          <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
+            Roa
+          </span>
+          <span className="mt-0.5 block">Ask</span>
+        </Link>
+      </nav>
 
       {menuOpen ? (
         <div className="fixed inset-0 z-[90] bg-[#071F2F]/45 backdrop-blur-sm sm:hidden">

@@ -120,7 +120,7 @@ export default function HomeHeroHeader({
 
       <nav
         aria-label="Desktop main navigation"
-        className="hidden sm:flex items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.09] p-1 text-sm font-semibold text-white/90 shadow-2xl shadow-black/15 backdrop-blur-xl"
+        className="hidden sm:flex items-center justify-end gap-1 rounded-full border border-white/12 bg-white/[0.09] p-1 text-sm font-semibold text-white/90 shadow-2xl shadow-black/15 backdrop-blur-xl"
       >
         <Link href="/tours" className="rounded-full px-3 py-2 hover:bg-white/10">
           Experiences
@@ -141,13 +141,13 @@ export default function HomeHeroHeader({
           Community
         </Link>
         <Link href="/hotels" className="rounded-full px-3 py-2 hover:bg-white/10">
-          Stays
+          Hotels & Stays
         </Link>
         <Link
           href="/transport"
           className="rounded-full px-3 py-2 hover:bg-white/10"
         >
-          Transport
+          Transportation
         </Link>
         {accountLoading ? null : account ? (
           <details className="group relative">

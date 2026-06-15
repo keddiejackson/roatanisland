@@ -57,6 +57,14 @@ export default function HomeListingCard({
   const cardPolish = getPremiumListingCardPolish(listing);
   const verifiedStatus = getRoaVerifiedStatus(listing);
 
+  const quickFacts = [
+    listing.location ? listing.location : "Roatan",
+    listing.tour_times?.[0] ? `From ${listing.tour_times[0]}` : "Request timing",
+    listing.max_guests
+      ? `Up to ${listing.max_guests} guests`
+      : "Guest count reviewed",
+  ];
+
   return (
     <motion.div
       initial="hidden"
@@ -67,7 +75,7 @@ export default function HomeListingCard({
       transition={{ duration: 0.28, ease: smoothEase }}
       className="h-full"
     >
-      <article className="brand-card-lift group block h-full overflow-hidden">
+      <article className="brand-card-lift group block h-full overflow-hidden rounded-[1.35rem]">
         <Link
           href={`/listings/${listing.id}`}
           className="block focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
@@ -104,10 +112,11 @@ export default function HomeListingCard({
                 </span>
               </>
             )}
-            <span className="brand-badge absolute left-4 top-4 rounded-lg bg-white px-3 py-1 text-xs uppercase shadow">
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(7,31,47,0)_0%,rgba(7,31,47,0.42)_100%)]" />
+            <span className="brand-badge absolute left-4 top-4 z-10 rounded-lg bg-white/94 px-3 py-1 text-[11px] uppercase shadow">
               {listingBadge(listing, homepageControls)}
             </span>
-            <span className="absolute bottom-4 right-4 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
+            <span className="absolute bottom-4 right-4 z-10 rounded-lg bg-[#071F2F] px-3 py-1 text-sm font-black text-white shadow">
               {cardPolish.priceLabel}
             </span>
           </div>
@@ -116,10 +125,12 @@ export default function HomeListingCard({
         <div className="p-4 sm:p-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="brand-eyebrow">{listing.location || "Roatan"}</p>
+              <p className="brand-eyebrow">
+                {listing.location || "Roatan"} / {listing.category || "Experience"}
+              </p>
               <Link
                 href={`/listings/${listing.id}`}
-                className="mt-2 block text-lg font-black leading-snug text-[#0B3C5D] focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
+                className="mt-2 block text-xl font-black leading-snug text-[#0B3C5D] focus:outline-none focus:ring-4 focus:ring-[#00A8A8]/25"
               >
                 {listing.title}
               </Link>
@@ -133,6 +144,17 @@ export default function HomeListingCard({
           <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
             {cardPolish.benefitLine}
           </p>
+          <div className="mt-4 grid gap-2 rounded-2xl border border-[#EADFCB] bg-[#FFFDF7] p-3">
+            {quickFacts.map((fact) => (
+              <div
+                key={fact}
+                className="flex items-center gap-2 text-xs font-black text-[#0B3C5D]"
+              >
+                <span className="size-1.5 rounded-full bg-[#D6B56D]" />
+                <span>{fact}</span>
+              </div>
+            ))}
+          </div>
           <div className="mt-4 grid grid-cols-2 gap-2 sm:hidden">
             <Link
               href={`/listings/${listing.id}`}
@@ -148,12 +170,15 @@ export default function HomeListingCard({
             </Link>
           </div>
           <div className="mt-5 hidden items-center justify-between border-t border-gray-100 pt-4 text-sm sm:flex">
-            <span className="font-bold text-gray-500">
-              {listing.category || "Experience"}
-            </span>
+            <Link
+              href={`/book?listing=${listing.id}`}
+              className="font-black text-[#007B7B]"
+            >
+              Request availability
+            </Link>
             <Link
               href={`/listings/${listing.id}`}
-              className="font-black text-[#007B7B]"
+              className="rounded-full border border-[#0B3C5D]/10 px-3 py-2 font-black text-[#0B3C5D] hover:border-[#00A8A8]/40"
             >
               View details
             </Link>

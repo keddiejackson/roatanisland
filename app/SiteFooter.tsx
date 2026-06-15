@@ -22,8 +22,9 @@ export default function SiteFooter() {
         <div>
           <SiteLogo variant="light" />
           <p className="mt-4 max-w-xl text-sm leading-6 text-white/70">
-            RoatanIsland.life helps travelers discover local operators, plan by
-            island area, and request trusted experiences with clearer expectations.
+            RoatanIsland.life brings island maps, trusted local operators, Ask
+            Roa planning, and guest trip details into one calmer way to plan
+            Roatan.
           </p>
         </div>
         <div className="mobile-scroll-row lg:flex lg:flex-wrap lg:justify-end">
