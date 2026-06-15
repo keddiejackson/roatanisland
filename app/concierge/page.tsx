@@ -1,4 +1,4 @@
-import Link from "next/link";
+import GuestDesktopNav from "@/app/GuestDesktopNav";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import RoaConcierge from "@/app/concierge/RoaConcierge";
@@ -27,26 +27,7 @@ export default async function ConciergePage() {
       <div className="brand-shell">
         <header className="brand-topbar mb-6 sm:mb-8">
           <SiteLogo />
-          <nav className="brand-nav-pills text-sm font-bold">
-            <Link
-              href="/"
-              className="brand-button-secondary shrink-0"
-            >
-              Home
-            </Link>
-            <Link
-              href="/map"
-              className="brand-button-secondary shrink-0"
-            >
-              Map
-            </Link>
-            <Link
-              href="/account"
-              className="brand-button-primary shrink-0"
-            >
-              My trips
-            </Link>
-          </nav>
+          <GuestDesktopNav />
         </header>
 
         <section className="brand-hero-panel mb-6 overflow-hidden p-5 text-white sm:p-8">

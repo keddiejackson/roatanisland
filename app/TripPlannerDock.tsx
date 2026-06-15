@@ -118,7 +118,7 @@ export default function TripPlannerDock() {
             href={savedIds.length > 0 ? "/account?tab=saved" : "/concierge"}
             className="rounded-lg bg-white px-4 py-3 text-center text-sm font-bold text-[#0B3C5D]"
           >
-            {savedIds.length > 0 ? "Trip board" : "Concierge"}
+            {savedIds.length > 0 ? "My trips" : "Ask Roa"}
           </Link>
         </div>
       </div>

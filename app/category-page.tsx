@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { connection } from "next/server";
 import EmptyState from "@/app/EmptyState";
+import GuestDesktopNav from "@/app/GuestDesktopNav";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import { getPremiumListingCardPolish } from "@/lib/marketplace-upgrade";
@@ -43,20 +44,7 @@ export default async function CategoryPage({
         <div className="mx-auto max-w-7xl">
           <header className="grid gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
             <SiteLogo variant="light" />
-            <div className="mobile-scroll-row sm:flex sm:flex-wrap sm:gap-2">
-              <Link
-                href="/"
-                className="brand-button-secondary shrink-0"
-              >
-                Home
-              </Link>
-              <Link
-                href="/map"
-                className="brand-button-ghost shrink-0"
-              >
-                Map
-              </Link>
-            </div>
+            <GuestDesktopNav variant="light" />
           </header>
           <div className="brand-hero-panel mt-6 px-5 py-10 sm:mt-8 sm:px-10 sm:py-16">
             <p className="brand-eyebrow-gold">

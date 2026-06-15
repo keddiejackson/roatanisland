@@ -336,7 +336,7 @@ export default async function ListingPage({
             <SiteLogo variant="light" />
             <div className="flex flex-wrap items-center justify-end gap-2 rounded-full border border-white/12 bg-white/[0.1] p-1 shadow-2xl shadow-black/15 backdrop-blur-xl">
               <Link
-                href="/"
+                href="/tours"
                 className="rounded-full px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/15"
               >
                 Experiences
@@ -346,6 +346,12 @@ export default async function ListingPage({
                 className="rounded-full px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/15"
               >
                 Map
+              </Link>
+              <Link
+                href="/concierge"
+                className="rounded-full px-4 py-2 text-sm font-semibold backdrop-blur transition hover:bg-white/15"
+              >
+                Ask Roa
               </Link>
               <Link
                 href={`/book?listing=${listing.id}`}

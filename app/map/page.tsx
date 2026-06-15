@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { connection } from "next/server";
+import GuestDesktopNav from "@/app/GuestDesktopNav";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import MapBrowser from "@/app/map/MapBrowser";
@@ -39,27 +39,7 @@ export default async function MapPage() {
       <div className="mx-auto max-w-7xl min-w-0">
         <header className="mb-6 grid gap-4 sm:mb-8 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
           <SiteLogo />
-          <div className="mobile-scroll-row flex gap-2 overflow-x-auto pb-1 sm:flex-wrap sm:justify-end sm:overflow-visible sm:pb-0">
-            <Link
-              href="/"
-              className="brand-button-secondary shrink-0"
-            >
-              Home
-            </Link>
-            <Link
-              href="/tours"
-              className="brand-button-secondary shrink-0"
-            >
-              Tours
-            </Link>
-            <Link
-              href="/vendor/signup"
-              className="brand-button-primary shrink-0"
-            >
-              <span className="sm:hidden">List</span>
-              <span className="hidden sm:inline">List your business</span>
-            </Link>
-          </div>
+          <GuestDesktopNav />
         </header>
 
         <section className="mb-5">

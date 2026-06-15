@@ -1,4 +1,4 @@
-import Link from "next/link";
+import GuestDesktopNav from "@/app/GuestDesktopNav";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import CommunityForum from "@/app/community/CommunityForum";
@@ -15,26 +15,7 @@ export default function CommunityPage() {
       <div className="mx-auto max-w-7xl px-5 py-8 sm:px-6">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <SiteLogo />
-          <nav className="hidden flex-wrap gap-2 text-sm font-bold sm:flex">
-            <Link
-              href="/"
-              className="rounded-xl bg-white px-4 py-2 text-[#0B3C5D] shadow"
-            >
-              Home
-            </Link>
-            <Link
-              href="/map"
-              className="rounded-xl bg-white px-4 py-2 text-[#0B3C5D] shadow"
-            >
-              Map
-            </Link>
-            <Link
-              href="/concierge"
-              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-white shadow"
-            >
-              Ask Roa
-            </Link>
-          </nav>
+          <GuestDesktopNav />
         </header>
 
         <section className="mb-6 overflow-hidden rounded-[2rem] bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">

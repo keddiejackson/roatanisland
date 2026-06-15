@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GuestDesktopNav from "@/app/GuestDesktopNav";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import { signInDestinations } from "@/lib/sign-in-destinations";
@@ -34,26 +35,7 @@ export default function SignInPage() {
         <div>
           <header className="brand-topbar">
             <SiteLogo />
-            <nav className="brand-nav-pills text-sm font-bold">
-              <Link
-                href="/"
-                className="brand-button-secondary shrink-0"
-              >
-                Home
-              </Link>
-              <Link
-                href="/vendor/signup"
-                className="brand-button-primary shrink-0"
-              >
-                List your business
-              </Link>
-              <Link
-                href="/concierge"
-                className="brand-button-secondary shrink-0"
-              >
-                Concierge
-              </Link>
-            </nav>
+            <GuestDesktopNav includeAccount={false} />
           </header>
 
           <div className="grid gap-10 py-14 lg:grid-cols-[0.82fr_1fr] lg:items-center">

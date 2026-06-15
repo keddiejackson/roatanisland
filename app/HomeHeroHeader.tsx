@@ -134,6 +134,21 @@ export default function HomeHeroHeader({
         >
           Ask Roa
         </Link>
+        <Link
+          href="/community"
+          className="rounded-full px-3 py-2 hover:bg-white/10"
+        >
+          Community
+        </Link>
+        <Link href="/hotels" className="rounded-full px-3 py-2 hover:bg-white/10">
+          Stays
+        </Link>
+        <Link
+          href="/transport"
+          className="rounded-full px-3 py-2 hover:bg-white/10"
+        >
+          Transport
+        </Link>
         {accountLoading ? null : account ? (
           <details className="group relative">
             <summary className="flex max-w-[240px] cursor-pointer list-none items-center gap-2 rounded-full border border-white/15 bg-white/12 px-2 py-1.5 text-white shadow-lg shadow-black/10 backdrop-blur hover:bg-white/15">

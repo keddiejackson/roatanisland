@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
 import EmptyState from "@/app/EmptyState";
+import GuestDesktopNav from "@/app/GuestDesktopNav";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -178,20 +179,7 @@ export default async function VendorProfilePage({
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <SiteLogo variant="light" />
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/"
-                className="brand-button-secondary"
-              >
-                Home
-              </Link>
-              <Link
-                href="/vendors"
-                className="brand-button-ghost"
-              >
-                Vendors
-              </Link>
-            </div>
+            <GuestDesktopNav variant="light" />
           </header>
 
           <div className="flex flex-col gap-8 py-16 lg:flex-row lg:items-center">

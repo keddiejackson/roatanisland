@@ -1,4 +1,4 @@
-import Link from "next/link";
+import GuestDesktopNav from "@/app/GuestDesktopNav";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
 import SupportRequestForm from "@/app/support/SupportRequestForm";
@@ -23,17 +23,7 @@ export default function SupportPage() {
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-3">
             <SiteLogo />
-            <nav className="flex flex-wrap gap-2 text-sm font-bold">
-              <Link href="/" className="brand-button-secondary">
-                Home
-              </Link>
-              <Link href="/account" className="brand-button-secondary">
-                My trips
-              </Link>
-              <Link href="/concierge" className="brand-button-primary">
-                Concierge
-              </Link>
-            </nav>
+            <GuestDesktopNav />
           </header>
 
           <section className="mt-8 grid gap-6 rounded-[2rem] bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/12 lg:grid-cols-[1fr_0.72fr] lg:items-end sm:p-10">

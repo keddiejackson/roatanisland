@@ -25,7 +25,7 @@ export default function GlobalRoaButton() {
       <span className="block text-[0.72rem] uppercase tracking-[0.16em] text-[#D6B56D] sm:text-[0.65rem]">
         Roa
       </span>
-      <span className="hidden leading-tight sm:block">Ask concierge</span>
+      <span className="hidden leading-tight sm:block">Ask Roa</span>
     </Link>
   );
 }
