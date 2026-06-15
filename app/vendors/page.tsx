@@ -38,7 +38,7 @@ export default async function VendorsPage() {
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-4">
             <SiteLogo variant="light" />
-            <GuestDesktopNav variant="light" />
+            <GuestDesktopNav />
           </header>
           <div className="brand-hero-panel mt-8 px-6 py-14 sm:px-10 sm:py-16">
             <p className="brand-eyebrow-gold">

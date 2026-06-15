@@ -18,6 +18,27 @@ type Listing = {
   rating: number | null;
 };
 
+const categoryPageCopy: Record<
+  string,
+  {
+    browseTitle: string;
+    emptyTitle: string;
+  }
+> = {
+  Hotels: {
+    browseTitle: "Hotels & stays",
+    emptyTitle: "No active hotels or stays yet.",
+  },
+  Tours: {
+    browseTitle: "Tours & experiences",
+    emptyTitle: "No active tours yet.",
+  },
+  Transport: {
+    browseTitle: "Transportation options",
+    emptyTitle: "No active transportation options yet.",
+  },
+};
+
 export default async function CategoryPage({
   category,
   title,
@@ -37,6 +58,10 @@ export default async function CategoryPage({
     .order("is_featured", { ascending: false })
     .order("created_at", { ascending: false });
   const listings = (data as Listing[]) || [];
+  const pageCopy = categoryPageCopy[category] || {
+    browseTitle: `${category} options`,
+    emptyTitle: `No active ${category.toLowerCase()} options yet.`,
+  };
 
   return (
     <main className="brand-page min-h-screen">
@@ -44,7 +69,7 @@ export default async function CategoryPage({
         <div className="mx-auto max-w-7xl">
           <header className="grid gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
             <SiteLogo variant="light" />
-            <GuestDesktopNav variant="light" />
+            <GuestDesktopNav />
           </header>
           <div className="brand-hero-panel mt-6 px-5 py-10 sm:mt-8 sm:px-10 sm:py-16">
             <p className="brand-eyebrow-gold">
@@ -81,7 +106,7 @@ export default async function CategoryPage({
               Browse
             </p>
             <h2 className="brand-display mt-2 text-3xl">
-              {category} experiences
+              {pageCopy.browseTitle}
             </h2>
           </div>
           <p className="brand-badge">
@@ -91,7 +116,7 @@ export default async function CategoryPage({
 
         {listings.length === 0 ? (
           <EmptyState
-            title={`No active ${category.toLowerCase()} experiences yet.`}
+            title={pageCopy.emptyTitle}
             text="This section is ready for local operators. Explore the map for nearby options or add your business to help grow the marketplace."
           />
         ) : (
