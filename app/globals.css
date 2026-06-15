@@ -158,7 +158,7 @@ body {
   .brand-card {
     border: 1px solid var(--brand-border);
     border-radius: var(--brand-radius);
-    background: rgba(255, 255, 255, 0.94);
+    background: rgba(255, 255, 255, 0.96);
     box-shadow: var(--brand-shadow-sm);
   }
 
@@ -198,6 +198,15 @@ body {
       border-color 180ms ease;
   }
 
+  .brand-button-primary:focus-visible,
+  .brand-button-secondary:focus-visible,
+  .brand-button-ghost:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 4px rgba(251, 248, 241, 0.96),
+      0 0 0 7px rgba(0, 168, 168, 0.35);
+  }
+
   .brand-button-primary {
     background: linear-gradient(135deg, var(--brand-teal), #079193);
     color: white;
@@ -221,6 +230,12 @@ body {
   .brand-button-secondary:hover,
   .brand-button-ghost:hover {
     transform: translateY(-2px);
+  }
+
+  .brand-button-primary:active,
+  .brand-button-secondary:active,
+  .brand-button-ghost:active {
+    transform: translateY(0);
   }
 
   .brand-badge {
@@ -259,6 +274,13 @@ body {
   .brand-input:focus {
     border-color: var(--brand-teal);
     box-shadow: 0 0 0 4px rgba(0, 168, 168, 0.16);
+  }
+
+  .brand-focus-ring:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 4px rgba(251, 248, 241, 0.96),
+      0 0 0 7px rgba(0, 168, 168, 0.35);
   }
 
   .mobile-scroll-row {

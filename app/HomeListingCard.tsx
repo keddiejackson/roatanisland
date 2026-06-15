@@ -59,10 +59,10 @@ export default function HomeListingCard({
 
   const quickFacts = [
     listing.location ? listing.location : "Roatan",
-    listing.tour_times?.[0] ? `From ${listing.tour_times[0]}` : "Request timing",
+    listing.tour_times?.[0] ? `From ${listing.tour_times[0]}` : "Timing on request",
     listing.max_guests
       ? `Up to ${listing.max_guests} guests`
-      : "Guest count reviewed",
+      : "Group size reviewed",
   ];
 
   return (
@@ -108,7 +108,7 @@ export default function HomeListingCard({
                 />
                 <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,31,47,0.04)_0%,rgba(7,31,47,0.24)_100%)]" />
                 <span className="absolute left-4 bottom-4 rounded-full bg-white/90 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#0B3C5D] shadow">
-                  Premium photo pending
+                  Image being prepared
                 </span>
               </>
             )}
@@ -158,13 +158,13 @@ export default function HomeListingCard({
           <div className="mt-4 grid grid-cols-2 gap-2 sm:hidden">
             <Link
               href={`/listings/${listing.id}`}
-              className="rounded-xl border border-[#0B3C5D]/10 bg-white px-3 py-3 text-center text-sm font-black text-[#0B3C5D]"
+              className="brand-focus-ring rounded-xl border border-[#0B3C5D]/10 bg-white px-3 py-3 text-center text-sm font-black text-[#0B3C5D]"
             >
               Details
             </Link>
             <Link
               href={`/book?listing=${listing.id}`}
-              className="rounded-xl bg-[#00A8A8] px-3 py-3 text-center text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
+              className="brand-focus-ring rounded-xl bg-[#00A8A8] px-3 py-3 text-center text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
             >
               Request
             </Link>
@@ -172,13 +172,13 @@ export default function HomeListingCard({
           <div className="mt-5 hidden items-center justify-between border-t border-gray-100 pt-4 text-sm sm:flex">
             <Link
               href={`/book?listing=${listing.id}`}
-              className="font-black text-[#007B7B]"
+              className="brand-focus-ring rounded-lg px-1 py-1 font-black text-[#007B7B]"
             >
               Request availability
             </Link>
             <Link
               href={`/listings/${listing.id}`}
-              className="rounded-full border border-[#0B3C5D]/10 px-3 py-2 font-black text-[#0B3C5D] hover:border-[#00A8A8]/40"
+              className="brand-focus-ring rounded-full border border-[#0B3C5D]/10 px-3 py-2 font-black text-[#0B3C5D] hover:border-[#00A8A8]/40"
             >
               View details
             </Link>

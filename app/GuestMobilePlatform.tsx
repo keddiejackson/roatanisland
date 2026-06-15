@@ -103,20 +103,20 @@ export default function GuestMobilePlatform() {
 
       <nav
         aria-label="Mobile quick actions"
-        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] grid grid-cols-4 gap-1 rounded-[1.35rem] border border-white/16 bg-[#071F2F]/94 p-1 text-center text-[11px] font-black text-white shadow-2xl shadow-[#071F2F]/24 backdrop-blur-xl sm:hidden"
+        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] grid grid-cols-4 gap-1 rounded-[1.25rem] border border-white/14 bg-[#071F2F]/94 p-1 text-center text-[11px] font-black text-white shadow-2xl shadow-[#071F2F]/24 backdrop-blur-xl sm:hidden"
       >
         <Link
           href="/tours"
-          className="rounded-2xl px-2 py-3 text-white/86 hover:bg-white/10"
+          className="rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
             Browse
           </span>
-          <span className="mt-0.5 block">Explore</span>
+          <span className="mt-0.5 block">Tours</span>
         </Link>
         <Link
           href="/map"
-          className="rounded-2xl px-2 py-3 text-white/86 hover:bg-white/10"
+          className="rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
             Island
@@ -126,11 +126,11 @@ export default function GuestMobilePlatform() {
         <button
           type="button"
           onClick={() => setPlanOpen(true)}
-          className="rounded-2xl bg-white px-2 py-3 text-[#071F2F] shadow-lg shadow-black/10"
-          aria-label="Open saved plan"
+          className="rounded-[1rem] bg-white px-2 py-2.5 text-[#071F2F] shadow-lg shadow-black/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
+          aria-label="Open Saved Plan"
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#9C7A2F]">
-            Saved Plan
+            Saved
           </span>
           <span className="mt-0.5 block truncate">
             {savedCount > 0
@@ -142,7 +142,7 @@ export default function GuestMobilePlatform() {
         </button>
         <Link
           href="/concierge"
-          className="rounded-2xl px-2 py-3 text-white/86 hover:bg-white/10"
+          className="rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
             Roa

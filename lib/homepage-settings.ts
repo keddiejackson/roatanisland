@@ -117,7 +117,7 @@ export const defaultHomepageControls: HomepageControls = {
   listingsEyebrow: "Selected island days",
   listingsTitle: "Curated Roatan experiences.",
   listingsIntro:
-    "Search by plan, choose your pace, add the basics, then compare only the clearest guest-ready matches.",
+    "Choose a pace, add the basics, and compare the clearest guest-ready matches.",
   mapEyebrow: "Plan by place",
   mapTitle: "The map is the planning layer.",
   mapBody:
@@ -127,12 +127,12 @@ export const defaultHomepageControls: HomepageControls = {
   planningEyebrow: "Ask Roa",
   planningTitle: "Give Roa the day you want.",
   planningBody:
-    "Send dates, group size, pickup area, ship time, arrival plans, and the pace you want. Roa turns it into a cleaner local request.",
+    "Share dates, group size, pickup area, arrival details, and pace. Roa turns it into a cleaner local request.",
   planningChips: ["Cruise timing", "Airport pickup", "Private boat", "Family beach day"],
   trustEyebrow: "Why guests trust it",
   trustTitle: "A clearer way to request Roatan.",
   trustBody:
-    "Understand the location, compare the operator details, and send a request with enough context for a useful reply.",
+    "See the location, compare operator details, and send a request with enough context for a useful reply.",
   trustPoints: [
     {
       title: "Verified local operators",
@@ -150,7 +150,7 @@ export const defaultHomepageControls: HomepageControls = {
   finalCtaEyebrow: "Ready when you are",
   finalCtaTitle: "Begin with the island. Refine with Roa.",
   finalCtaBody:
-    "Open the map, ask Roa for a better route, or keep saved plans and booking messages together in your trip dashboard.",
+    "Open the map, ask Roa for a better route, or keep saved plans and booking messages in one calm trip dashboard.",
   finalCtaPrimaryLabel: "Browse the map",
   finalCtaSecondaryLabel: "Ask Roa",
   finalCtaTertiaryLabel: "My trips",

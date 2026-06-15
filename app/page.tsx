@@ -556,7 +556,10 @@ export default function Home() {
                 <Link href="/map" className="brand-button-ghost">
                   Open the Roatan map
                 </Link>
-                <a href={homepageControls.secondaryCtaHref} className="brand-button-ghost">
+                <a
+                  href={homepageControls.secondaryCtaHref}
+                  className="brand-button-ghost hidden sm:inline-flex"
+                >
                   <span className="sm:hidden">
                     {mobileControls.mobileSecondaryCtaLabel}
                   </span>
@@ -589,7 +592,7 @@ export default function Home() {
               variants={
                 reduceMotion ? reducedMotionVariants : marketplaceSearchVariants
               }
-              className="rounded-[1.75rem] border border-white/18 bg-white/[0.13] p-3 shadow-2xl shadow-black/20 backdrop-blur-2xl sm:p-4"
+              className="hidden rounded-[1.75rem] border border-white/18 bg-white/[0.13] p-3 shadow-2xl shadow-black/20 backdrop-blur-2xl sm:p-4 lg:block"
             >
               <div className="rounded-[1.35rem] bg-[#FFFDF8] p-4 text-[#071F2F] shadow-2xl shadow-black/10 sm:p-5">
                 <div className="flex items-start justify-between gap-4">
@@ -703,9 +706,9 @@ export default function Home() {
                 <div key={signal.title} className="flex items-start gap-3 p-3">
                   <span className="mt-1 size-2 shrink-0 rounded-full bg-[#D6B56D]" />
                   <div>
-                    <h2 className="text-sm font-black text-[#0B3C5D]">
+                    <h3 className="text-sm font-black text-[#0B3C5D]">
                       {signal.title}
-                    </h2>
+                    </h3>
                     <p className="mt-1 hidden text-xs leading-5 text-[#5D6F7D] sm:block">
                       {signal.text}
                     </p>
@@ -749,10 +752,12 @@ export default function Home() {
                     <Link
                       key={card.href}
                       href={card.href}
-                      className="group rounded-[1.35rem] border border-[#EADFCB] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-[#D6B56D]/60 hover:shadow-xl"
+                      className="brand-focus-ring group rounded-[1.25rem] border border-[#EADFCB] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-[#D6B56D]/60 hover:shadow-xl"
                     >
                       <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#9C7A2F]">
-                        {count > 0 ? formatCount(count, "live option") : "Roa can help"}
+                        {count > 0
+                          ? formatCount(count, "live option")
+                          : "Roa can source it"}
                       </span>
                       <h3 className="mt-4 text-2xl font-black text-[#0B3C5D]">
                         {card.label}
@@ -761,7 +766,7 @@ export default function Home() {
                         {card.text}
                       </p>
                       <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
-                        Open path
+                        Explore this way
                       </span>
                     </Link>
                   );
@@ -887,8 +892,7 @@ export default function Home() {
                         Shape the day
                       </p>
                       <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
-                        Choose the Roatan pace you want. The map and Roa can do
-                        the refining.
+                        Pick the pace. Roa and the map will narrow the island.
                       </p>
                     </div>
                     <Link
@@ -1050,19 +1054,21 @@ export default function Home() {
                   <div className="brand-empty-state p-5 sm:p-8">
                     <EmptyState
                       title="Roa can still plan this."
-                      text="The homepage only shows polished, guest-ready experiences. Use the map for every active option, or ask Roa to match the day around your timing and pickup needs."
+                      text="This homepage shows only the clearest guest-ready options. Use the map for every active listing, or ask Roa to shape a route around timing, pickup, and pace."
                       primaryHref="/map"
                       primaryLabel="Open the map"
                       secondaryHref="/concierge"
                       secondaryLabel="Ask Roa"
                     />
-                    <button
-                      type="button"
-                      onClick={clearMarketplaceFilters}
-                      className="brand-button-primary mx-auto mt-5"
-                    >
-                      Reset trip search
-                    </button>
+                    {hasActiveFilters ? (
+                      <button
+                        type="button"
+                        onClick={clearMarketplaceFilters}
+                        className="brand-button-primary mx-auto mt-5"
+                      >
+                        Reset trip search
+                      </button>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -1150,19 +1156,19 @@ export default function Home() {
                     ))}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl bg-white p-4 text-[#071F2F]">
+                    <div className="rounded-[1.1rem] bg-white/95 p-4 text-[#071F2F] shadow-xl shadow-black/10">
                       <p className="text-3xl font-black">{exactPinCount}</p>
                       <p className="mt-1 text-xs font-bold uppercase tracking-[0.1em] text-[#5D6F7D]">
                         Exact pins
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-white p-4 text-[#071F2F]">
+                    <div className="rounded-[1.1rem] bg-white/95 p-4 text-[#071F2F] shadow-xl shadow-black/10">
                       <p className="text-3xl font-black">{activeAreaCount}</p>
                       <p className="mt-1 text-xs font-bold uppercase tracking-[0.1em] text-[#5D6F7D]">
                         Active areas
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-white p-4 text-[#071F2F]">
+                    <div className="rounded-[1.1rem] bg-white/95 p-4 text-[#071F2F] shadow-xl shadow-black/10">
                       <p className="text-3xl font-black">Roa</p>
                       <p className="mt-1 text-xs font-bold uppercase tracking-[0.1em] text-[#5D6F7D]">
                         Concierge layer
