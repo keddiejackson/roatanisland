@@ -1134,7 +1134,7 @@ export default function Home() {
                   </Link>
                 </div>
               </div>
-              <div className="relative min-h-[25rem] overflow-hidden border-t border-white/10 lg:border-l lg:border-t-0">
+              <div className="relative min-h-[21rem] overflow-hidden border-t border-white/10 sm:min-h-[25rem] lg:border-l lg:border-t-0">
                 <Image
                   src={homepageControls.listingFallbackImageUrl}
                   alt="Roatan map planning preview"
@@ -1144,33 +1144,37 @@ export default function Home() {
                   className="object-cover opacity-72"
                 />
                 <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(7,31,47,0.72),rgba(7,31,47,0.2))]" />
-                <div className="absolute inset-4 grid content-between rounded-[1.25rem] border border-white/18 bg-white/[0.08] p-4 backdrop-blur-sm sm:inset-8 sm:p-5">
+                <div className="absolute inset-4 grid content-between gap-5 rounded-[1.25rem] border border-white/18 bg-white/[0.08] p-4 pb-24 backdrop-blur-sm sm:inset-8 sm:p-5">
                   <div className="flex flex-wrap gap-2">
                     {mapAreas.map((area) => (
                       <span
                         key={area}
-                        className="rounded-full bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-[#071F2F] shadow"
+                        className="rounded-full bg-white px-3 py-2 text-[10px] font-black uppercase tracking-[0.08em] text-[#071F2F] shadow sm:text-xs"
                       >
                         {area}
                       </span>
                     ))}
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-[1.1rem] bg-white/95 p-4 text-[#071F2F] shadow-xl shadow-black/10">
-                      <p className="text-3xl font-black">{exactPinCount}</p>
-                      <p className="mt-1 text-xs font-bold uppercase tracking-[0.1em] text-[#5D6F7D]">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <div className="rounded-[1rem] bg-white/95 p-3 text-[#071F2F] shadow-xl shadow-black/10 sm:rounded-[1.1rem] sm:p-4">
+                      <p className="text-2xl font-black sm:text-3xl">
+                        {exactPinCount}
+                      </p>
+                      <p className="mt-1 text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-[#5D6F7D] sm:text-xs">
                         Exact pins
                       </p>
                     </div>
-                    <div className="rounded-[1.1rem] bg-white/95 p-4 text-[#071F2F] shadow-xl shadow-black/10">
-                      <p className="text-3xl font-black">{activeAreaCount}</p>
-                      <p className="mt-1 text-xs font-bold uppercase tracking-[0.1em] text-[#5D6F7D]">
+                    <div className="rounded-[1rem] bg-white/95 p-3 text-[#071F2F] shadow-xl shadow-black/10 sm:rounded-[1.1rem] sm:p-4">
+                      <p className="text-2xl font-black sm:text-3xl">
+                        {activeAreaCount}
+                      </p>
+                      <p className="mt-1 text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-[#5D6F7D] sm:text-xs">
                         Active areas
                       </p>
                     </div>
-                    <div className="rounded-[1.1rem] bg-white/95 p-4 text-[#071F2F] shadow-xl shadow-black/10">
-                      <p className="text-3xl font-black">Roa</p>
-                      <p className="mt-1 text-xs font-bold uppercase tracking-[0.1em] text-[#5D6F7D]">
+                    <div className="rounded-[1rem] bg-white/95 p-3 text-[#071F2F] shadow-xl shadow-black/10 sm:rounded-[1.1rem] sm:p-4">
+                      <p className="text-2xl font-black sm:text-3xl">Roa</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-[#5D6F7D] sm:text-xs">
                         Concierge layer
                       </p>
                     </div>
