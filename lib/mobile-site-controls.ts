@@ -104,7 +104,7 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   mobileSecondaryCtaLabel: "Explore",
   mobileHeroCountLabel: "curated option",
   mobileHeroMapLabel: "Map-first planning",
-  mobileHeroSupportLabel: "Concierge support",
+  mobileHeroSupportLabel: "Ask Roa support",
   mobileListingsTitle: "Featured Roatan picks.",
   mobileListingsIntro:
     "Search, choose a trip style, add your date and guests, then open the best matches.",
@@ -151,7 +151,7 @@ export const defaultMobileSiteControls: MobileSiteControls = {
   mobileChatBubbleNeedsResponseLabel: "need response",
   mobileNavListingsLabel: "Experiences",
   mobileNavMapLabel: "Map",
-  mobileNavConciergeLabel: "Concierge",
+  mobileNavConciergeLabel: "Ask Roa",
   mobileNavSignInLabel: "Sign in",
   mobileNavBusinessLabel: "List business",
   showMobileHeroPills: true,
@@ -193,6 +193,16 @@ function cleanText(value: unknown, fallback: string) {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return trimmed || fallback;
+}
+
+function cleanRoaLabel(value: unknown, fallback: string) {
+  const cleaned = cleanText(value, fallback);
+  const normalized = cleaned.toLowerCase();
+
+  if (normalized === "concierge") return "Ask Roa";
+  if (normalized === "concierge support") return "Ask Roa support";
+
+  return cleaned;
 }
 
 function cleanBoolean(value: unknown, fallback: boolean) {
@@ -322,7 +332,7 @@ export function normalizeMobileSiteControls(value: unknown): MobileSiteControls 
       settings.mobileHeroMapLabel,
       defaultMobileSiteControls.mobileHeroMapLabel,
     ),
-    mobileHeroSupportLabel: cleanText(
+    mobileHeroSupportLabel: cleanRoaLabel(
       settings.mobileHeroSupportLabel,
       defaultMobileSiteControls.mobileHeroSupportLabel,
     ),
@@ -466,7 +476,7 @@ export function normalizeMobileSiteControls(value: unknown): MobileSiteControls 
       settings.mobileNavMapLabel,
       defaultMobileSiteControls.mobileNavMapLabel,
     ),
-    mobileNavConciergeLabel: cleanText(
+    mobileNavConciergeLabel: cleanRoaLabel(
       settings.mobileNavConciergeLabel,
       defaultMobileSiteControls.mobileNavConciergeLabel,
     ),

@@ -805,7 +805,7 @@ export default function AccountPage() {
                     href="/concierge"
                     className="rounded-xl border border-[#00A8A8]/35 bg-white px-5 py-3 text-center text-sm font-black text-[#0B3C5D]"
                   >
-                    Ask concierge
+                    Ask Roa
                   </Link>
                 </>
               )}
@@ -1059,14 +1059,14 @@ export default function AccountPage() {
                             ? "Requested"
                             : requestingConciergePlanId === plan.id
                               ? "Sending..."
-                              : "Ask concierge"}
+                              : "Ask Roa"}
                         </button>
                       ) : (
                         <Link
                           href="/concierge"
                           className="rounded-xl border border-[#00A8A8]/30 px-4 py-2 text-sm font-black text-[#007B7B]"
                         >
-                          Ask concierge
+                          Ask Roa
                         </Link>
                       )}
                       {plan.id ? (

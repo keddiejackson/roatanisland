@@ -299,9 +299,9 @@ const mobileTextFields: {
   { field: "mobileAccountPrimaryActionLabel", label: "Primary action", group: "Account", rows: 1 },
   { field: "mobileChatBubbleLabel", label: "Chat bubble title", group: "Chat", rows: 1 },
   { field: "mobileChatBubbleNeedsResponseLabel", label: "Chat response text", group: "Chat", rows: 1 },
-  { field: "mobileNavListingsLabel", label: "Nav listings", group: "Nav", rows: 1 },
+  { field: "mobileNavListingsLabel", label: "Nav experiences", group: "Nav", rows: 1 },
   { field: "mobileNavMapLabel", label: "Nav map", group: "Nav", rows: 1 },
-  { field: "mobileNavConciergeLabel", label: "Nav concierge", group: "Nav", rows: 1 },
+  { field: "mobileNavConciergeLabel", label: "Nav Ask Roa", group: "Nav", rows: 1 },
   { field: "mobileNavSignInLabel", label: "Nav sign in", group: "Nav", rows: 1 },
   { field: "mobileNavBusinessLabel", label: "Nav business", group: "Nav", rows: 1 },
 ];
@@ -327,7 +327,7 @@ const mobileToggleFields: {
 }[] = [
   {
     field: "showMobileNavListings",
-    label: "Show Listings in mobile nav",
+    label: "Show Experiences in mobile nav",
     help: "Controls the top mobile menu on the homepage.",
   },
   {
@@ -337,8 +337,8 @@ const mobileToggleFields: {
   },
   {
     field: "showMobileNavConcierge",
-    label: "Show Concierge in mobile nav",
-    help: "Useful when concierge is a main sales path.",
+    label: "Show Ask Roa in mobile nav",
+    help: "Useful when Roa is a main sales path.",
   },
   {
     field: "showMobileNavSignIn",

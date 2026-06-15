@@ -41,7 +41,7 @@ export const roatanGuides: RoatanGuide[] = [
         bullets: [
           "Pick one main experience and one easy backup stop.",
           "Use the map to compare beach, port, and pickup distance.",
-          "Ask concierge to confirm weather and traffic considerations.",
+          "Ask Roa to confirm weather and traffic considerations.",
         ],
       },
     ],

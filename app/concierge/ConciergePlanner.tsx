@@ -546,7 +546,7 @@ export default function ConciergePlanner({
               disabled={sending}
               className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
             >
-              {sending ? "Sending..." : "Ask concierge to help"}
+              {sending ? "Sending..." : "Ask Roa to help"}
             </button>
           </div>
           {message ? (
