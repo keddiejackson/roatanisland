@@ -1194,8 +1194,8 @@ export default function Home() {
             style={{ order: 13 }}
             className="bg-[#FBF8F1] px-5 py-12 sm:px-6 sm:py-16"
           >
-            <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-stretch">
-              <div className="rounded-[1.5rem] border border-[#EADFCB] bg-white p-6 shadow-xl shadow-[#071F2F]/6 sm:p-8">
+            <div className="mx-auto grid max-w-7xl min-w-0 gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-stretch">
+              <div className="min-w-0 overflow-hidden rounded-[1.5rem] border border-[#EADFCB] bg-white p-6 shadow-xl shadow-[#071F2F]/6 sm:p-8">
                 <p className="brand-eyebrow">{homepageControls.planningEyebrow}</p>
                 <h2 className="brand-display mt-3 text-4xl sm:text-5xl">
                   {homepageControls.planningTitle}
@@ -1216,8 +1216,8 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="rounded-[1.5rem] bg-[#071F2F] p-4 text-white shadow-2xl shadow-[#071F2F]/14 sm:p-5">
-                <div className="rounded-[1.25rem] border border-white/10 bg-white/[0.07] p-4 sm:p-6">
+              <div className="min-w-0 overflow-hidden rounded-[1.5rem] bg-[#071F2F] p-4 text-white shadow-2xl shadow-[#071F2F]/14 sm:p-5">
+                <div className="min-w-0 overflow-hidden rounded-[1.25rem] border border-white/10 bg-white/[0.07] p-4 sm:p-6">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="brand-eyebrow-gold">Ask Roa</p>
@@ -1232,12 +1232,12 @@ export default function Home() {
                       Start with Roa
                     </Link>
                   </div>
-                  <div className="mobile-scroll-row mt-6">
+                  <div className="mt-6 flex min-w-0 flex-wrap gap-2">
                     {roaPrompts.map((prompt) => (
                       <Link
                         key={prompt}
                         href={`/concierge?prompt=${encodeURIComponent(prompt)}`}
-                        className="shrink-0 rounded-full border border-white/12 bg-white/10 px-4 py-2 text-sm font-black text-white hover:bg-white/15"
+                        className="max-w-full rounded-full border border-white/12 bg-white/10 px-4 py-2 text-sm font-black text-white hover:bg-white/15"
                       >
                         {prompt}
                       </Link>

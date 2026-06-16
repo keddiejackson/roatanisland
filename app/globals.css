@@ -286,6 +286,8 @@ body {
   .mobile-scroll-row {
     display: flex;
     gap: 0.5rem;
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
     overflow-x: auto;
     overscroll-behavior-x: contain;
