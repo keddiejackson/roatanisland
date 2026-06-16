@@ -38,8 +38,8 @@ export const guestMenuItems: GuestMenuItem[] = [
   },
   {
     href: "/community",
-    label: "Community",
-    description: "Ask other travelers and locals for island advice.",
+    label: "Roatan Circle",
+    description: "Ask travelers, locals, operators, and Roa for island advice.",
     group: "plan",
   },
   {

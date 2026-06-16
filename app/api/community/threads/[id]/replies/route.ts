@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import {
   cleanCommunityText,
   communityDisplayName,
+  normalizeCommunityAuthorRole,
+  normalizeCommunityStatus,
   type CommunityReply,
 } from "@/lib/community-forum";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -13,6 +15,13 @@ type ReplyRow = {
   display_name: string | null;
   profile_image_url: string | null;
   anonymous: boolean | null;
+  author_role: string | null;
+  is_verified_local: boolean | null;
+  is_verified_operator: boolean | null;
+  is_best_answer: boolean | null;
+  is_concierge_pick: boolean | null;
+  helpful_count: number | null;
+  status: string | null;
   created_at: string | null;
 };
 
@@ -53,6 +62,13 @@ function mapReply(row: ReplyRow): CommunityReply {
     displayName: row.display_name || "Roatan traveler",
     profileImageUrl: row.profile_image_url || null,
     anonymous: Boolean(row.anonymous),
+    authorRole: normalizeCommunityAuthorRole(row.author_role),
+    isVerifiedLocal: Boolean(row.is_verified_local),
+    isVerifiedOperator: Boolean(row.is_verified_operator),
+    isBestAnswer: Boolean(row.is_best_answer),
+    isConciergePick: Boolean(row.is_concierge_pick),
+    helpfulCount: row.helpful_count || 0,
+    status: normalizeCommunityStatus(row.status),
     createdAt: row.created_at || new Date().toISOString(),
   };
 }
@@ -99,11 +115,17 @@ export async function POST(
         display_name: displayName,
         profile_image_url: profileImageUrl,
         anonymous,
+        author_role: "traveler",
+        is_verified_local: false,
+        is_verified_operator: false,
+        is_best_answer: false,
+        is_concierge_pick: false,
+        helpful_count: 0,
         status: "active",
       },
     ])
     .select(
-      "id, thread_id, body, display_name, profile_image_url, anonymous, created_at",
+      "id, thread_id, body, display_name, profile_image_url, anonymous, author_role, is_verified_local, is_verified_operator, is_best_answer, is_concierge_pick, helpful_count, status, created_at",
     )
     .single();
 

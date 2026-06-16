@@ -138,7 +138,7 @@ export default function HomeHeroHeader({
           href="/community"
           className="rounded-full px-3 py-2 hover:bg-white/10"
         >
-          Community
+          Circle
         </Link>
         <Link href="/hotels" className="rounded-full px-3 py-2 hover:bg-white/10">
           Hotels & Stays

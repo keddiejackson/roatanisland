@@ -12,6 +12,7 @@ const navItems = [
   { href: "/admin/support", label: "Support" },
   { href: "/admin/reminders", label: "Reminders" },
   { href: "/admin/concierge", label: "Concierge" },
+  { href: "/admin/community", label: "Circle" },
   { href: "/admin/vendors", label: "Vendors" },
   { href: "/admin/listings", label: "Listings" },
   { href: "/admin/listing-quality", label: "Quality" },

@@ -32,11 +32,89 @@ create table if not exists public.community_replies (
   updated_at timestamptz not null default now()
 );
 
+alter table public.community_threads
+add column if not exists author_role text not null default 'traveler';
+
+alter table public.community_threads
+add column if not exists is_verified_local boolean not null default false;
+
+alter table public.community_threads
+add column if not exists is_verified_operator boolean not null default false;
+
+alter table public.community_threads
+add column if not exists trip_date date;
+
+alter table public.community_threads
+add column if not exists area text;
+
+alter table public.community_threads
+add column if not exists group_size integer check (group_size is null or group_size > 0);
+
+alter table public.community_threads
+add column if not exists arrival_type text not null default 'Not sure';
+
+alter table public.community_threads
+add column if not exists arrival_time text;
+
+alter table public.community_threads
+add column if not exists budget text;
+
+alter table public.community_threads
+add column if not exists related_listing_id uuid references public.listings(id) on delete set null;
+
+alter table public.community_threads
+add column if not exists related_listing_title text;
+
+alter table public.community_threads
+add column if not exists map_area text;
+
+alter table public.community_threads
+add column if not exists roa_summary text;
+
+alter table public.community_threads
+add column if not exists is_pinned boolean not null default false;
+
+alter table public.community_threads
+add column if not exists is_featured boolean not null default false;
+
+alter table public.community_threads
+add column if not exists best_reply_id uuid;
+
+alter table public.community_threads
+add column if not exists concierge_pick_reply_id uuid;
+
+alter table public.community_threads
+add column if not exists helpful_count integer not null default 0;
+
+alter table public.community_replies
+add column if not exists author_role text not null default 'traveler';
+
+alter table public.community_replies
+add column if not exists is_verified_local boolean not null default false;
+
+alter table public.community_replies
+add column if not exists is_verified_operator boolean not null default false;
+
+alter table public.community_replies
+add column if not exists is_best_answer boolean not null default false;
+
+alter table public.community_replies
+add column if not exists is_concierge_pick boolean not null default false;
+
+alter table public.community_replies
+add column if not exists helpful_count integer not null default 0;
+
 create index if not exists community_threads_status_last_reply_idx
 on public.community_threads (status, last_reply_at desc);
 
+create index if not exists community_threads_pinned_featured_idx
+on public.community_threads (status, is_pinned desc, is_featured desc, last_reply_at desc);
+
 create index if not exists community_threads_category_status_idx
 on public.community_threads (category, status);
+
+create index if not exists community_threads_map_area_idx
+on public.community_threads (map_area, status);
 
 create index if not exists community_threads_user_id_idx
 on public.community_threads (user_id);

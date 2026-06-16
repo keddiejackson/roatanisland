@@ -12,7 +12,7 @@ const mainItems = [
   { href: "/tours", label: "Experiences" },
   { href: "/map", label: "Map" },
   { href: "/concierge", label: "Ask Roa" },
-  { href: "/community", label: "Community" },
+  { href: "/community", label: "Circle" },
 ];
 
 const moreItems = [

@@ -5,7 +5,7 @@ const footerLinks = [
   { href: "/tours", label: "Experiences" },
   { href: "/map", label: "Map" },
   { href: "/concierge", label: "Ask Roa" },
-  { href: "/community", label: "Community" },
+  { href: "/community", label: "Roatan Circle" },
   { href: "/guides", label: "Guides" },
   { href: "/hotels", label: "Hotels & Stays" },
   { href: "/transport", label: "Transportation" },
