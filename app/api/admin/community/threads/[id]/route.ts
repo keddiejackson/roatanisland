@@ -5,6 +5,7 @@ import {
   normalizeCommunityAuthorRole,
   normalizeCommunityStatus,
 } from "@/lib/community-forum";
+import { normalizeCommunityVerificationType } from "@/lib/community-verification";
 import { supabaseServer } from "@/lib/supabase-server";
 
 async function verifyAdmin(request: Request) {
@@ -46,9 +47,12 @@ export async function PATCH(
     roaSummary?: string;
     bestReplyId?: string | null;
     conciergePickReplyId?: string | null;
+    isLocked?: boolean;
+    lockedReason?: string;
     authorRole?: string;
     isVerifiedLocal?: boolean;
     isVerifiedOperator?: boolean;
+    communityVerificationType?: string;
   };
   const updates: Record<string, string | boolean | null> = {
     updated_at: new Date().toISOString(),
@@ -78,6 +82,18 @@ export async function PATCH(
     updates.concierge_pick_reply_id = body.conciergePickReplyId || null;
   }
 
+  if (typeof body.isLocked === "boolean") {
+    updates.is_locked = body.isLocked;
+    updates.locked_at = body.isLocked ? new Date().toISOString() : null;
+    updates.locked_by = body.isLocked ? adminEmail.toLowerCase() : null;
+    updates.locked_reason = body.isLocked
+      ? cleanCommunityText(
+          body.lockedReason || "Best answer selected",
+          160,
+        ) || "Best answer selected"
+      : null;
+  }
+
   if (typeof body.authorRole === "string") {
     updates.author_role = normalizeCommunityAuthorRole(body.authorRole);
   }
@@ -88,6 +104,12 @@ export async function PATCH(
 
   if (typeof body.isVerifiedOperator === "boolean") {
     updates.is_verified_operator = body.isVerifiedOperator;
+  }
+
+  if (typeof body.communityVerificationType === "string") {
+    updates.community_verification_type = normalizeCommunityVerificationType(
+      body.communityVerificationType,
+    );
   }
 
   const { data: thread, error } = await supabaseServer
@@ -127,6 +149,7 @@ export async function PATCH(
         .update({
           is_concierge_pick: true,
           author_role: "concierge",
+          community_verification_type: "admin",
           is_verified_local: true,
         })
         .eq("id", body.conciergePickReplyId);

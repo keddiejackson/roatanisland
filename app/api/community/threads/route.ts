@@ -3,14 +3,15 @@ import {
   buildCommunityRoaSummary,
   cleanCommunityNumber,
   cleanCommunityText,
-  communityDisplayName,
   normalizeCommunityArrivalType,
   normalizeCommunityAuthorRole,
+  normalizeCommunityIdentity,
   normalizeCommunityCategory,
   normalizeCommunityStatus,
   type CommunityReply,
   type CommunityThread,
 } from "@/lib/community-forum";
+import { getCommunityIdentity, getCommunityUser } from "@/lib/community-server";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type ThreadRow = {
@@ -22,9 +23,13 @@ type ThreadRow = {
   profile_image_url: string | null;
   anonymous: boolean | null;
   author_role: string | null;
+  community_verification_type: string | null;
   is_verified_local: boolean | null;
   is_verified_operator: boolean | null;
   status: string | null;
+  is_locked: boolean | null;
+  locked_at: string | null;
+  locked_reason: string | null;
   trip_date: string | null;
   area: string | null;
   group_size: number | null;
@@ -53,6 +58,7 @@ type ReplyRow = {
   profile_image_url: string | null;
   anonymous: boolean | null;
   author_role: string | null;
+  community_verification_type: string | null;
   is_verified_local: boolean | null;
   is_verified_operator: boolean | null;
   is_best_answer: boolean | null;
@@ -62,36 +68,14 @@ type ReplyRow = {
   created_at: string | null;
 };
 
-async function getUser(request: Request) {
-  const token = request.headers
-    .get("authorization")
-    ?.replace(/^Bearer\s+/i, "");
-
-  if (!token) return null;
-
-  const { data } = await supabaseServer.auth.getUser(token);
-  return data.user
-    ? {
-        id: data.user.id,
-        email: data.user.email || null,
-      }
-    : null;
-}
-
-async function getProfile(userId: string) {
-  const { data } = await supabaseServer
-    .from("guest_profiles")
-    .select("display_name, profile_image_url")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  return {
-    displayName: data?.display_name || "",
-    profileImageUrl: data?.profile_image_url || null,
-  };
-}
-
 function mapReply(row: ReplyRow): CommunityReply {
+  const verificationType = normalizeCommunityIdentity({
+    authorRole: row.author_role,
+    isVerifiedLocal: row.is_verified_local,
+    isVerifiedOperator: row.is_verified_operator,
+    verificationType: row.community_verification_type,
+  });
+
   return {
     id: row.id,
     threadId: row.thread_id,
@@ -100,6 +84,7 @@ function mapReply(row: ReplyRow): CommunityReply {
     profileImageUrl: row.profile_image_url || null,
     anonymous: Boolean(row.anonymous),
     authorRole: normalizeCommunityAuthorRole(row.author_role),
+    verificationType,
     isVerifiedLocal: Boolean(row.is_verified_local),
     isVerifiedOperator: Boolean(row.is_verified_operator),
     isBestAnswer: Boolean(row.is_best_answer),
@@ -111,6 +96,13 @@ function mapReply(row: ReplyRow): CommunityReply {
 }
 
 function mapThread(row: ThreadRow, replies: CommunityReply[]): CommunityThread {
+  const verificationType = normalizeCommunityIdentity({
+    authorRole: row.author_role,
+    isVerifiedLocal: row.is_verified_local,
+    isVerifiedOperator: row.is_verified_operator,
+    verificationType: row.community_verification_type,
+  });
+
   return {
     id: row.id,
     category: normalizeCommunityCategory(row.category),
@@ -120,9 +112,13 @@ function mapThread(row: ThreadRow, replies: CommunityReply[]): CommunityThread {
     profileImageUrl: row.profile_image_url || null,
     anonymous: Boolean(row.anonymous),
     authorRole: normalizeCommunityAuthorRole(row.author_role),
+    verificationType,
     isVerifiedLocal: Boolean(row.is_verified_local),
     isVerifiedOperator: Boolean(row.is_verified_operator),
     status: normalizeCommunityStatus(row.status),
+    isLocked: Boolean(row.is_locked),
+    lockedAt: row.locked_at || null,
+    lockedReason: row.locked_reason || null,
     tripDate: row.trip_date || null,
     area: row.area || null,
     groupSize: row.group_size || null,
@@ -155,7 +151,7 @@ export async function GET() {
   const { data: threadRows, error } = await supabaseServer
     .from("community_threads")
     .select(
-      "id, category, title, body, display_name, profile_image_url, anonymous, author_role, is_verified_local, is_verified_operator, status, trip_date, area, group_size, arrival_type, arrival_time, budget, related_listing_id, related_listing_title, map_area, roa_summary, is_pinned, is_featured, best_reply_id, concierge_pick_reply_id, helpful_count, reply_count, created_at, last_reply_at",
+      "id, category, title, body, display_name, profile_image_url, anonymous, author_role, community_verification_type, is_verified_local, is_verified_operator, status, is_locked, locked_at, locked_reason, trip_date, area, group_size, arrival_type, arrival_time, budget, related_listing_id, related_listing_title, map_area, roa_summary, is_pinned, is_featured, best_reply_id, concierge_pick_reply_id, helpful_count, reply_count, created_at, last_reply_at",
     )
     .eq("status", "active")
     .order("is_pinned", { ascending: false })
@@ -178,7 +174,7 @@ export async function GET() {
     const { data: replyRows } = await supabaseServer
       .from("community_replies")
       .select(
-        "id, thread_id, body, display_name, profile_image_url, anonymous, author_role, is_verified_local, is_verified_operator, is_best_answer, is_concierge_pick, helpful_count, status, created_at",
+        "id, thread_id, body, display_name, profile_image_url, anonymous, author_role, community_verification_type, is_verified_local, is_verified_operator, is_best_answer, is_concierge_pick, helpful_count, status, created_at",
       )
       .in("thread_id", threadIds)
       .eq("status", "active")
@@ -201,7 +197,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await getUser(request);
+  const user = await getCommunityUser(request);
 
   if (!user?.email) {
     return NextResponse.json({ error: "Sign in to post." }, { status: 401 });
@@ -243,13 +239,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const profile = await getProfile(user.id);
-  const displayName = communityDisplayName({
-    anonymous,
-    displayName: profile.displayName,
-    email: user.email,
-  });
-  const profileImageUrl = anonymous ? null : profile.profileImageUrl;
+  const identity = await getCommunityIdentity({ anonymous, user });
   const now = new Date().toISOString();
 
   const { data, error } = await supabaseServer
@@ -261,13 +251,15 @@ export async function POST(request: Request) {
         category,
         title,
         body: message,
-        display_name: displayName,
-        profile_image_url: profileImageUrl,
+        display_name: identity.displayName,
+        profile_image_url: identity.profileImageUrl,
         anonymous,
-        author_role: "traveler",
-        is_verified_local: false,
-        is_verified_operator: false,
+        author_role: identity.authorRole,
+        community_verification_type: identity.verificationType,
+        is_verified_local: identity.isVerifiedLocal,
+        is_verified_operator: identity.isVerifiedOperator,
         status: "active",
+        is_locked: false,
         trip_date: tripDate || null,
         area: area || null,
         group_size: groupSize,
@@ -291,7 +283,7 @@ export async function POST(request: Request) {
       },
     ])
     .select(
-      "id, category, title, body, display_name, profile_image_url, anonymous, author_role, is_verified_local, is_verified_operator, status, trip_date, area, group_size, arrival_type, arrival_time, budget, related_listing_id, related_listing_title, map_area, roa_summary, is_pinned, is_featured, best_reply_id, concierge_pick_reply_id, helpful_count, reply_count, created_at, last_reply_at",
+      "id, category, title, body, display_name, profile_image_url, anonymous, author_role, community_verification_type, is_verified_local, is_verified_operator, status, is_locked, locked_at, locked_reason, trip_date, area, group_size, arrival_type, arrival_time, budget, related_listing_id, related_listing_title, map_area, roa_summary, is_pinned, is_featured, best_reply_id, concierge_pick_reply_id, helpful_count, reply_count, created_at, last_reply_at",
     )
     .single();
 

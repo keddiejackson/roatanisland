@@ -1,3 +1,9 @@
+import {
+  communityVerificationTypeFromFlags,
+  normalizeCommunityVerificationType,
+  type CommunityVerificationType,
+} from "@/lib/community-verification";
+
 export const communityCategories = [
   "Cruise Day Help",
   "Beaches & Areas",
@@ -40,6 +46,7 @@ export type CommunityReply = {
   profileImageUrl: string | null;
   anonymous: boolean;
   authorRole: CommunityAuthorRole;
+  verificationType: CommunityVerificationType;
   isVerifiedLocal: boolean;
   isVerifiedOperator: boolean;
   isBestAnswer: boolean;
@@ -58,9 +65,13 @@ export type CommunityThread = {
   profileImageUrl: string | null;
   anonymous: boolean;
   authorRole: CommunityAuthorRole;
+  verificationType: CommunityVerificationType;
   isVerifiedLocal: boolean;
   isVerifiedOperator: boolean;
   status: CommunityStatus;
+  isLocked: boolean;
+  lockedAt: string | null;
+  lockedReason: string | null;
   tripDate: string | null;
   area: string | null;
   groupSize: number | null;
@@ -101,9 +112,13 @@ export const sampleCommunityThreads: CommunityThread[] = [
     profileImageUrl: null,
     anonymous: true,
     authorRole: "traveler",
+    verificationType: "unverified",
     isVerifiedLocal: false,
     isVerifiedOperator: false,
     status: "active",
+    isLocked: true,
+    lockedAt: "2026-05-25T15:35:00.000Z",
+    lockedReason: "Best answer selected",
     tripDate: null,
     area: "Coxen Hole",
     groupSize: 4,
@@ -132,6 +147,7 @@ export const sampleCommunityThreads: CommunityThread[] = [
         profileImageUrl: null,
         anonymous: false,
         authorRole: "local",
+        verificationType: "local",
         isVerifiedLocal: true,
         isVerifiedOperator: false,
         isBestAnswer: true,
@@ -148,6 +164,7 @@ export const sampleCommunityThreads: CommunityThread[] = [
         profileImageUrl: null,
         anonymous: false,
         authorRole: "concierge",
+        verificationType: "admin",
         isVerifiedLocal: true,
         isVerifiedOperator: false,
         isBestAnswer: false,
@@ -167,9 +184,13 @@ export const sampleCommunityThreads: CommunityThread[] = [
     profileImageUrl: null,
     anonymous: false,
     authorRole: "traveler",
+    verificationType: "unverified",
     isVerifiedLocal: false,
     isVerifiedOperator: false,
     status: "active",
+    isLocked: true,
+    lockedAt: "2026-05-24T18:25:00.000Z",
+    lockedReason: "Best answer selected",
     tripDate: null,
     area: "West Bay",
     groupSize: 5,
@@ -198,6 +219,7 @@ export const sampleCommunityThreads: CommunityThread[] = [
         profileImageUrl: null,
         anonymous: false,
         authorRole: "local",
+        verificationType: "local",
         isVerifiedLocal: true,
         isVerifiedOperator: false,
         isBestAnswer: true,
@@ -237,6 +259,25 @@ export function normalizeCommunityAuthorRole(
     communityAuthorRoles.includes(value as CommunityAuthorRole)
     ? (value as CommunityAuthorRole)
     : "traveler";
+}
+
+export function normalizeCommunityIdentity({
+  authorRole,
+  isVerifiedLocal,
+  isVerifiedOperator,
+  verificationType,
+}: {
+  authorRole?: string | null;
+  isVerifiedLocal?: boolean | null;
+  isVerifiedOperator?: boolean | null;
+  verificationType?: string | null;
+}) {
+  return communityVerificationTypeFromFlags({
+    authorRole,
+    isVerifiedLocal,
+    isVerifiedOperator,
+    verificationType: normalizeCommunityVerificationType(verificationType),
+  });
 }
 
 export function normalizeCommunityStatus(value: unknown): CommunityStatus {
@@ -341,6 +382,7 @@ export function getCommunityThreadBadges(thread: CommunityThread) {
 
   if (thread.isPinned) badges.push("Pinned");
   if (thread.isFeatured) badges.push("Featured");
+  if (thread.isLocked) badges.push("Closed");
   if (thread.conciergePickReplyId || thread.roaSummary) badges.push("Roa summary");
   if (thread.bestReplyId) badges.push("Best answer");
   if (thread.isVerifiedOperator) badges.push("Operator");

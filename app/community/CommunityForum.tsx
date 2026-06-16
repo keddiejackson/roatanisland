@@ -20,12 +20,42 @@ import {
   type CommunityReply,
   type CommunityThread,
 } from "@/lib/community-forum";
+import {
+  canReplyToCommunityThread,
+  communityVerificationBadge,
+  normalizeCommunityVerificationType,
+  verificationStatusLabel,
+  type CommunityVerificationRequestStatus,
+  type CommunityVerificationType,
+} from "@/lib/community-verification";
 import { supabase } from "@/lib/supabase";
 
 type CommunityResponse = {
   threads?: CommunityThread[];
   setupRequired?: boolean;
   error?: string;
+};
+
+type VerificationMessage = {
+  id: string;
+  requestId: string;
+  senderEmail: string;
+  senderRole: "admin" | "traveler";
+  body: string;
+  createdAt: string;
+};
+
+type VerificationRequest = {
+  id: string;
+  requestedType: CommunityVerificationType;
+  approvedType: CommunityVerificationType;
+  status: CommunityVerificationRequestStatus;
+  socialLinks: string[];
+  notes: string;
+  adminNote: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: VerificationMessage[];
 };
 
 const areaOptions = [
@@ -66,6 +96,18 @@ function displayTime(value: string) {
   }).format(date);
 }
 
+function IdentityBadge({ type }: { type: CommunityVerificationType }) {
+  const badge = communityVerificationBadge(type);
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] ring-1 ${badge.className}`}
+    >
+      {badge.label}
+    </span>
+  );
+}
+
 function readLocalThreads() {
   try {
     const stored = window.localStorage.getItem("roatan-community-threads");
@@ -94,6 +136,7 @@ function normalizeClientReply(reply: CommunityReply): CommunityReply {
     profileImageUrl: reply.profileImageUrl || null,
     anonymous: Boolean(reply.anonymous),
     authorRole: normalizeCommunityAuthorRole(reply.authorRole),
+    verificationType: normalizeCommunityVerificationType(reply.verificationType),
     isVerifiedLocal: Boolean(reply.isVerifiedLocal),
     isVerifiedOperator: Boolean(reply.isVerifiedOperator),
     isBestAnswer: Boolean(reply.isBestAnswer),
@@ -117,9 +160,13 @@ function normalizeClientThread(thread: CommunityThread): CommunityThread {
     profileImageUrl: thread.profileImageUrl || null,
     anonymous: Boolean(thread.anonymous),
     authorRole: normalizeCommunityAuthorRole(thread.authorRole),
+    verificationType: normalizeCommunityVerificationType(thread.verificationType),
     isVerifiedLocal: Boolean(thread.isVerifiedLocal),
     isVerifiedOperator: Boolean(thread.isVerifiedOperator),
     status: normalizeCommunityStatus(thread.status),
+    isLocked: Boolean(thread.isLocked),
+    lockedAt: thread.lockedAt || null,
+    lockedReason: thread.lockedReason || null,
     tripDate: thread.tripDate || null,
     area: thread.area || null,
     groupSize: thread.groupSize || null,
@@ -162,8 +209,6 @@ function replyBadges(reply: CommunityReply) {
   return [
     reply.isBestAnswer ? "Best answer" : "",
     reply.isConciergePick ? "Concierge pick" : "",
-    reply.isVerifiedOperator ? "Verified operator" : "",
-    reply.isVerifiedLocal ? "Local insight" : "",
   ].filter(Boolean);
 }
 
@@ -219,6 +264,17 @@ export default function CommunityForum() {
   const [anonymous, setAnonymous] = useState(false);
   const [replyAnonymous, setReplyAnonymous] = useState(false);
   const [savedThreadIds, setSavedThreadIds] = useState<string[]>([]);
+  const [profileVerificationType, setProfileVerificationType] =
+    useState<CommunityVerificationType>("unverified");
+  const [verificationRequests, setVerificationRequests] = useState<
+    VerificationRequest[]
+  >([]);
+  const [verificationDraft, setVerificationDraft] = useState({
+    requestedType: "local" as CommunityVerificationType,
+    socialLinks: "",
+    notes: "",
+  });
+  const [verificationMessage, setVerificationMessage] = useState("");
   const [draft, setDraft] = useState({
     category: "Cruise Day Help" as CommunityCategory,
     title: "",
@@ -239,6 +295,28 @@ export default function CommunityForum() {
       setAccessToken(token);
       setSignedIn(Boolean(token));
       setSavedThreadIds(readSavedThreadIds());
+
+      if (token) {
+        try {
+          const response = await fetch("/api/community/verification", {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          const result = (await response.json()) as {
+            profileVerificationType?: CommunityVerificationType;
+            requests?: VerificationRequest[];
+          };
+
+          if (result.profileVerificationType) {
+            setProfileVerificationType(
+              normalizeCommunityVerificationType(result.profileVerificationType),
+            );
+          }
+
+          setVerificationRequests(result.requests || []);
+        } catch {
+          setVerificationRequests([]);
+        }
+      }
 
       try {
         const response = await fetch("/api/community/threads");
@@ -322,9 +400,13 @@ export default function CommunityForum() {
       profileImageUrl: null,
       anonymous,
       authorRole: "traveler",
+      verificationType: "unverified",
       isVerifiedLocal: false,
       isVerifiedOperator: false,
       status: "active",
+      isLocked: false,
+      lockedAt: null,
+      lockedReason: null,
       tripDate: draft.tripDate || null,
       area: draft.area || null,
       groupSize: draft.groupSize ? Number(draft.groupSize) : null,
@@ -403,6 +485,11 @@ export default function CommunityForum() {
       return;
     }
 
+    if (!canReplyToCommunityThread(activeThread)) {
+      setStatus("This discussion is closed because a best answer was selected.");
+      return;
+    }
+
     const now = new Date().toISOString();
     const optimisticReply = normalizeClientReply({
       id: `local-reply-${now}`,
@@ -412,6 +499,7 @@ export default function CommunityForum() {
       profileImageUrl: null,
       anonymous: replyAnonymous,
       authorRole: "traveler",
+      verificationType: "unverified",
       isVerifiedLocal: false,
       isVerifiedOperator: false,
       isBestAnswer: false,
@@ -455,6 +543,74 @@ export default function CommunityForum() {
     if (!result.reply) writeLocalThreads(nextThreads);
     setReplyBody("");
     setStatus(result.error ? "Reply saved locally for now." : "Reply posted.");
+  }
+
+  async function submitVerificationRequest() {
+    if (!signedIn || !accessToken) {
+      setStatus("Sign in before requesting a community badge.");
+      return;
+    }
+
+    const response = await fetch("/api/community/verification", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(verificationDraft),
+    });
+    const result = (await response.json()) as {
+      request?: VerificationRequest;
+      error?: string;
+    };
+
+    if (!response.ok || result.error || !result.request) {
+      setStatus(result.error || "Unable to send verification request.");
+      return;
+    }
+
+    setVerificationRequests((current) => [result.request!, ...current]);
+    setVerificationDraft({
+      requestedType: "local",
+      socialLinks: "",
+      notes: "",
+    });
+    setStatus("Verification request sent to the admin.");
+  }
+
+  async function sendVerificationMessage(requestId: string) {
+    if (!verificationMessage.trim() || !accessToken) return;
+
+    const response = await fetch(
+      `/api/community/verification/${requestId}/messages`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ body: verificationMessage }),
+      },
+    );
+    const result = (await response.json()) as {
+      message?: VerificationMessage;
+      error?: string;
+    };
+
+    if (!response.ok || result.error || !result.message) {
+      setStatus(result.error || "Unable to send verification message.");
+      return;
+    }
+
+    setVerificationRequests((current) =>
+      current.map((request) =>
+        request.id === requestId
+          ? { ...request, messages: [...request.messages, result.message!] }
+          : request,
+      ),
+    );
+    setVerificationMessage("");
+    setStatus("Message sent to the admin.");
   }
 
   function handleSaveThread(thread: CommunityThread) {
@@ -673,6 +829,146 @@ export default function CommunityForum() {
             </p>
           ) : null}
         </div>
+
+        <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8 ring-1 ring-[#071F2F]/6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#00A8A8]">
+                Verification
+              </p>
+              <h2 className="mt-2 text-2xl font-black text-[#071F2F]">
+                Show who is answering.
+              </h2>
+              <p className="mt-2 text-sm font-semibold leading-6 text-[#0B3C5D]/65">
+                Send social links so the admin can approve the right Circle
+                badge.
+              </p>
+            </div>
+            <IdentityBadge type={profileVerificationType} />
+          </div>
+
+          {verificationRequests[0] ? (
+            <div className="mt-4 rounded-3xl bg-[#F7F3EA] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-[#D6B56D]">
+                    Latest request
+                  </p>
+                  <p className="mt-1 text-sm font-black text-[#071F2F]">
+                    {verificationStatusLabel(verificationRequests[0].status)} /
+                    requested{" "}
+                    {
+                      communityVerificationBadge(
+                        verificationRequests[0].requestedType,
+                      ).label
+                    }
+                  </p>
+                </div>
+                {verificationRequests[0].status === "approved" ? (
+                  <IdentityBadge type={verificationRequests[0].approvedType} />
+                ) : null}
+              </div>
+
+              <div className="mt-3 grid max-h-56 gap-2 overflow-y-auto pr-1">
+                {verificationRequests[0].messages.length === 0 ? (
+                  <p className="rounded-2xl bg-white px-3 py-2 text-xs font-bold text-[#0B3C5D]/65">
+                    No messages yet. The admin can reply here if more info is
+                    needed.
+                  </p>
+                ) : (
+                  verificationRequests[0].messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`rounded-2xl px-3 py-2 text-xs font-bold leading-5 ${
+                        message.senderRole === "admin"
+                          ? "bg-[#071F2F] text-white"
+                          : "bg-white text-[#0B3C5D]"
+                      }`}
+                    >
+                      <p className="text-[10px] uppercase tracking-[0.12em] opacity-70">
+                        {message.senderRole === "admin" ? "Admin" : "You"}
+                      </p>
+                      {message.body}
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {verificationRequests[0].status !== "approved" ? (
+                <div className="mt-3 grid gap-2">
+                  <textarea
+                    value={verificationMessage}
+                    onChange={(event) =>
+                      setVerificationMessage(event.target.value)
+                    }
+                    rows={3}
+                    placeholder="Reply to the admin..."
+                    className="rounded-2xl border border-[#071F2F]/10 px-3 py-2 text-sm font-semibold outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      sendVerificationMessage(verificationRequests[0].id)
+                    }
+                    className="rounded-2xl bg-[#071F2F] px-4 py-3 text-sm font-black text-white"
+                  >
+                    Send verification message
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-4 grid gap-3">
+              <select
+                value={verificationDraft.requestedType}
+                onChange={(event) =>
+                  setVerificationDraft((current) => ({
+                    ...current,
+                    requestedType: normalizeCommunityVerificationType(
+                      event.target.value,
+                    ),
+                  }))
+                }
+                className="min-h-12 rounded-2xl border border-[#071F2F]/10 px-4 text-sm font-bold text-[#0B3C5D] outline-none"
+              >
+                <option value="local">Local</option>
+                <option value="vendor">Vendor</option>
+                <option value="traveler">Traveler</option>
+              </select>
+              <textarea
+                value={verificationDraft.socialLinks}
+                onChange={(event) =>
+                  setVerificationDraft((current) => ({
+                    ...current,
+                    socialLinks: event.target.value,
+                  }))
+                }
+                rows={3}
+                placeholder="Instagram, Facebook, website, LinkedIn, or public profile links..."
+                className="rounded-2xl border border-[#071F2F]/10 px-4 py-3 text-sm font-semibold outline-none"
+              />
+              <textarea
+                value={verificationDraft.notes}
+                onChange={(event) =>
+                  setVerificationDraft((current) => ({
+                    ...current,
+                    notes: event.target.value,
+                  }))
+                }
+                rows={3}
+                placeholder="Tell the admin who you are and what badge fits..."
+                className="rounded-2xl border border-[#071F2F]/10 px-4 py-3 text-sm font-semibold outline-none"
+              />
+              <button
+                type="button"
+                onClick={submitVerificationRequest}
+                className="rounded-2xl bg-[#00A8A8] px-5 py-4 text-sm font-black text-white shadow-xl shadow-[#00A8A8]/20"
+              >
+                Request verification
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="min-w-0 space-y-5">
@@ -739,6 +1035,14 @@ export default function CommunityForum() {
                     ))}
                   </div>
                 ) : null}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <IdentityBadge type={thread.verificationType} />
+                  {thread.isLocked ? (
+                    <span className="rounded-full bg-[#FFF6DA] px-3 py-1 text-[11px] font-black uppercase tracking-[0.1em] text-[#7A5A00] ring-1 ring-[#D6B56D]/40">
+                      Closed
+                    </span>
+                  ) : null}
+                </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {threadContextLabels(thread).slice(0, 4).map((label) => (
                     <span
@@ -779,6 +1083,14 @@ export default function CommunityForum() {
                   <p className="mt-3 text-sm font-semibold text-white/60">
                     {activeThread.displayName} / {displayTime(activeThread.createdAt)}
                   </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <IdentityBadge type={activeThread.verificationType} />
+                    {activeThread.isLocked ? (
+                      <span className="rounded-full bg-[#FFF6DA] px-3 py-1 text-xs font-black uppercase tracking-[0.1em] text-[#7A5A00]">
+                        Discussion closed
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <Link
@@ -873,9 +1185,12 @@ export default function CommunityForum() {
                             )}
                           </span>
                           <div className="min-w-0">
-                            <p className="text-sm font-black text-[#071F2F]">
-                              {reply.displayName}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-sm font-black text-[#071F2F]">
+                                {reply.displayName}
+                              </p>
+                              <IdentityBadge type={reply.verificationType} />
+                            </div>
                             <p className="text-xs font-semibold text-[#0B3C5D]/55">
                               {displayTime(reply.createdAt)}
                             </p>
@@ -903,31 +1218,42 @@ export default function CommunityForum() {
               </div>
 
               <div className="rounded-3xl border border-[#00A8A8]/20 bg-[#FBF8EF] p-4">
-                <textarea
-                  value={replyBody}
-                  onChange={(event) => setReplyBody(event.target.value)}
-                  rows={4}
-                  placeholder="Reply with a local tip, route idea, or timing note..."
-                  className="w-full rounded-2xl border border-[#071F2F]/10 px-4 py-3 text-sm font-semibold leading-6 text-[#0B3C5D] outline-none"
-                />
-                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <label className="flex items-center gap-3 text-sm font-bold text-[#0B3C5D]">
-                    <input
-                      type="checkbox"
-                      checked={replyAnonymous}
-                      onChange={(event) => setReplyAnonymous(event.target.checked)}
-                      className="size-5 accent-[#00A8A8]"
+                {canReplyToCommunityThread(activeThread) ? (
+                  <>
+                    <textarea
+                      value={replyBody}
+                      onChange={(event) => setReplyBody(event.target.value)}
+                      rows={4}
+                      placeholder="Reply with a local tip, route idea, or timing note..."
+                      className="w-full rounded-2xl border border-[#071F2F]/10 px-4 py-3 text-sm font-semibold leading-6 text-[#0B3C5D] outline-none"
                     />
-                    Reply anonymously
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addReply}
-                    className="rounded-2xl bg-[#071F2F] px-5 py-3 text-sm font-black text-white"
-                  >
-                    Reply
-                  </button>
-                </div>
+                    <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <label className="flex items-center gap-3 text-sm font-bold text-[#0B3C5D]">
+                        <input
+                          type="checkbox"
+                          checked={replyAnonymous}
+                          onChange={(event) =>
+                            setReplyAnonymous(event.target.checked)
+                          }
+                          className="size-5 accent-[#00A8A8]"
+                        />
+                        Reply anonymously
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addReply}
+                        className="rounded-2xl bg-[#071F2F] px-5 py-3 text-sm font-black text-white"
+                      >
+                        Reply
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <p className="rounded-2xl bg-[#FFF6DA] px-4 py-3 text-sm font-black text-[#7A5A00]">
+                    This discussion is closed because a best answer has been
+                    selected. Start a new thread if your situation is different.
+                  </p>
+                )}
               </div>
             </div>
           </article>

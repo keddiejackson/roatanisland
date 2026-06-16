@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import {
   cleanCommunityText,
-  communityDisplayName,
   normalizeCommunityAuthorRole,
+  normalizeCommunityIdentity,
   normalizeCommunityStatus,
   type CommunityReply,
 } from "@/lib/community-forum";
+import { getCommunityIdentity, getCommunityUser } from "@/lib/community-server";
+import { canReplyToCommunityThread } from "@/lib/community-verification";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type ReplyRow = {
@@ -16,6 +18,7 @@ type ReplyRow = {
   profile_image_url: string | null;
   anonymous: boolean | null;
   author_role: string | null;
+  community_verification_type: string | null;
   is_verified_local: boolean | null;
   is_verified_operator: boolean | null;
   is_best_answer: boolean | null;
@@ -25,36 +28,14 @@ type ReplyRow = {
   created_at: string | null;
 };
 
-async function getUser(request: Request) {
-  const token = request.headers
-    .get("authorization")
-    ?.replace(/^Bearer\s+/i, "");
-
-  if (!token) return null;
-
-  const { data } = await supabaseServer.auth.getUser(token);
-  return data.user
-    ? {
-        id: data.user.id,
-        email: data.user.email || null,
-      }
-    : null;
-}
-
-async function getProfile(userId: string) {
-  const { data } = await supabaseServer
-    .from("guest_profiles")
-    .select("display_name, profile_image_url")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  return {
-    displayName: data?.display_name || "",
-    profileImageUrl: data?.profile_image_url || null,
-  };
-}
-
 function mapReply(row: ReplyRow): CommunityReply {
+  const verificationType = normalizeCommunityIdentity({
+    authorRole: row.author_role,
+    isVerifiedLocal: row.is_verified_local,
+    isVerifiedOperator: row.is_verified_operator,
+    verificationType: row.community_verification_type,
+  });
+
   return {
     id: row.id,
     threadId: row.thread_id,
@@ -63,6 +44,7 @@ function mapReply(row: ReplyRow): CommunityReply {
     profileImageUrl: row.profile_image_url || null,
     anonymous: Boolean(row.anonymous),
     authorRole: normalizeCommunityAuthorRole(row.author_role),
+    verificationType,
     isVerifiedLocal: Boolean(row.is_verified_local),
     isVerifiedOperator: Boolean(row.is_verified_operator),
     isBestAnswer: Boolean(row.is_best_answer),
@@ -77,13 +59,36 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const user = await getUser(request);
+  const user = await getCommunityUser(request);
 
   if (!user?.email) {
     return NextResponse.json({ error: "Sign in to reply." }, { status: 401 });
   }
 
   const { id } = await context.params;
+  const { data: thread, error: threadError } = await supabaseServer
+    .from("community_threads")
+    .select("status, is_locked")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (threadError) {
+    return NextResponse.json({ error: threadError.message }, { status: 500 });
+  }
+
+  if (
+    !thread ||
+    !canReplyToCommunityThread({
+      status: thread.status,
+      isLocked: thread.is_locked,
+    })
+  ) {
+    return NextResponse.json(
+      { error: "This discussion is closed because a best answer was selected." },
+      { status: 423 },
+    );
+  }
+
   const body = (await request.json()) as {
     body?: string;
     anonymous?: boolean;
@@ -95,13 +100,7 @@ export async function POST(
     return NextResponse.json({ error: "Write a reply first." }, { status: 400 });
   }
 
-  const profile = await getProfile(user.id);
-  const displayName = communityDisplayName({
-    anonymous,
-    displayName: profile.displayName,
-    email: user.email,
-  });
-  const profileImageUrl = anonymous ? null : profile.profileImageUrl;
+  const identity = await getCommunityIdentity({ anonymous, user });
   const now = new Date().toISOString();
 
   const { data, error } = await supabaseServer
@@ -112,12 +111,13 @@ export async function POST(
         user_id: user.id,
         email: user.email.toLowerCase(),
         body: message,
-        display_name: displayName,
-        profile_image_url: profileImageUrl,
+        display_name: identity.displayName,
+        profile_image_url: identity.profileImageUrl,
         anonymous,
-        author_role: "traveler",
-        is_verified_local: false,
-        is_verified_operator: false,
+        author_role: identity.authorRole,
+        community_verification_type: identity.verificationType,
+        is_verified_local: identity.isVerifiedLocal,
+        is_verified_operator: identity.isVerifiedOperator,
         is_best_answer: false,
         is_concierge_pick: false,
         helpful_count: 0,
@@ -125,7 +125,7 @@ export async function POST(
       },
     ])
     .select(
-      "id, thread_id, body, display_name, profile_image_url, anonymous, author_role, is_verified_local, is_verified_operator, is_best_answer, is_concierge_pick, helpful_count, status, created_at",
+      "id, thread_id, body, display_name, profile_image_url, anonymous, author_role, community_verification_type, is_verified_local, is_verified_operator, is_best_answer, is_concierge_pick, helpful_count, status, created_at",
     )
     .single();
 

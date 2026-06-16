@@ -4,6 +4,7 @@ import {
   normalizeCommunityAuthorRole,
   normalizeCommunityStatus,
 } from "@/lib/community-forum";
+import { normalizeCommunityVerificationType } from "@/lib/community-verification";
 import { supabaseServer } from "@/lib/supabase-server";
 
 async function verifyAdmin(request: Request) {
@@ -43,6 +44,7 @@ export async function PATCH(
     authorRole?: string;
     isVerifiedLocal?: boolean;
     isVerifiedOperator?: boolean;
+    communityVerificationType?: string;
   };
   const updates: Record<string, string | boolean> = {
     updated_at: new Date().toISOString(),
@@ -62,6 +64,12 @@ export async function PATCH(
 
   if (typeof body.isVerifiedOperator === "boolean") {
     updates.is_verified_operator = body.isVerifiedOperator;
+  }
+
+  if (typeof body.communityVerificationType === "string") {
+    updates.community_verification_type = normalizeCommunityVerificationType(
+      body.communityVerificationType,
+    );
   }
 
   const { data: reply, error } = await supabaseServer

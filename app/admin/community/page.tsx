@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminNav from "@/app/admin/AdminNav";
+import CommunityVerificationDesk from "@/app/admin/community/CommunityVerificationDesk";
 import { isAdminUser } from "@/lib/admin";
 import {
   communityCategories,
@@ -12,6 +13,11 @@ import {
   type CommunityCategory,
   type CommunityStatus,
 } from "@/lib/community-forum";
+import {
+  communityVerificationBadge,
+  normalizeCommunityVerificationType,
+  type CommunityVerificationType,
+} from "@/lib/community-verification";
 import { supabase } from "@/lib/supabase";
 
 type CommunityReplyAdminRow = {
@@ -20,6 +26,7 @@ type CommunityReplyAdminRow = {
   body: string;
   display_name: string;
   author_role: CommunityAuthorRole;
+  community_verification_type: CommunityVerificationType;
   is_verified_local: boolean;
   is_verified_operator: boolean;
   is_best_answer: boolean;
@@ -37,9 +44,13 @@ type CommunityThreadAdminRow = {
   display_name: string;
   anonymous: boolean;
   author_role: CommunityAuthorRole;
+  community_verification_type: CommunityVerificationType;
   is_verified_local: boolean;
   is_verified_operator: boolean;
   status: CommunityStatus;
+  is_locked: boolean;
+  locked_at: string | null;
+  locked_reason: string | null;
   trip_date: string | null;
   area: string | null;
   group_size: number | null;
@@ -68,6 +79,18 @@ function statusClass(status: CommunityStatus) {
 
 function roleLabel(role: string) {
   return role.replaceAll("_", " ");
+}
+
+function IdentityBadge({ type }: { type: CommunityVerificationType }) {
+  const badge = communityVerificationBadge(type);
+
+  return (
+    <span
+      className={`rounded-full px-2 py-1 text-[11px] font-black uppercase tracking-[0.1em] ring-1 ${badge.className}`}
+    >
+      {badge.label}
+    </span>
+  );
 }
 
 function formatDate(value: string) {
@@ -130,15 +153,16 @@ export default function AdminCommunityPage() {
         .select(
           `
           id, category, title, body, display_name, anonymous, author_role,
-          is_verified_local, is_verified_operator, status, trip_date, area,
+          community_verification_type, is_verified_local, is_verified_operator,
+          status, is_locked, locked_at, locked_reason, trip_date, area,
           group_size, arrival_type, arrival_time, budget, related_listing_title,
           map_area, roa_summary, is_pinned, is_featured, best_reply_id,
           concierge_pick_reply_id, helpful_count, reply_count, created_at,
           last_reply_at,
           community_replies (
-            id, thread_id, body, display_name, author_role, is_verified_local,
-            is_verified_operator, is_best_answer, is_concierge_pick,
-            helpful_count, status, created_at
+            id, thread_id, body, display_name, author_role,
+            community_verification_type, is_verified_local, is_verified_operator,
+            is_best_answer, is_concierge_pick, helpful_count, status, created_at
           )
         `,
         )
@@ -155,7 +179,21 @@ export default function AdminCommunityPage() {
         return;
       }
 
-      const rows = (data || []) as unknown as CommunityThreadAdminRow[];
+      const rows = ((data || []) as unknown as CommunityThreadAdminRow[]).map(
+        (thread) => ({
+          ...thread,
+          community_verification_type: normalizeCommunityVerificationType(
+            thread.community_verification_type,
+          ),
+          is_locked: Boolean(thread.is_locked),
+          community_replies: (thread.community_replies || []).map((reply) => ({
+            ...reply,
+            community_verification_type: normalizeCommunityVerificationType(
+              reply.community_verification_type,
+            ),
+          })),
+        }),
+      );
       setThreads(rows);
       setRoaDrafts(
         Object.fromEntries(
@@ -177,6 +215,7 @@ export default function AdminCommunityPage() {
       unanswered: activeThreads.filter((thread) => !thread.reply_count).length,
       featured: activeThreads.filter((thread) => thread.is_featured).length,
       pinned: activeThreads.filter((thread) => thread.is_pinned).length,
+      closed: activeThreads.filter((thread) => thread.is_locked).length,
     };
   }, [threads]);
 
@@ -305,16 +344,31 @@ export default function AdminCommunityPage() {
       kind === "best" ? "is_best_answer" : "is_concierge_pick";
     const body =
       kind === "best"
-        ? { bestReplyId: reply.id }
+        ? {
+            bestReplyId: reply.id,
+            isLocked: true,
+            lockedReason: "Best answer selected",
+          }
         : { conciergePickReplyId: reply.id };
 
     patchThread(thread, body, {
       [replyField]: reply.id,
+      ...(kind === "best"
+        ? {
+            is_locked: true,
+            locked_at: new Date().toISOString(),
+            locked_reason: "Best answer selected",
+          }
+        : {}),
       community_replies: (thread.community_replies || []).map((currentReply) => ({
         ...currentReply,
         [replyFlag]: currentReply.id === reply.id,
         ...(kind === "concierge" && currentReply.id === reply.id
-          ? { author_role: "concierge" as CommunityAuthorRole, is_verified_local: true }
+          ? {
+              author_role: "concierge" as CommunityAuthorRole,
+              community_verification_type: "admin" as CommunityVerificationType,
+              is_verified_local: true,
+            }
           : {}),
       })),
     });
@@ -347,12 +401,13 @@ export default function AdminCommunityPage() {
             </Link>
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-4">
+          <div className="mt-6 grid gap-3 sm:grid-cols-5">
             {[
               ["Active", digest.active],
               ["Unanswered", digest.unanswered],
               ["Featured", digest.featured],
               ["Pinned", digest.pinned],
+              ["Closed", digest.closed],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl bg-[#EEF7F6] p-4">
                 <p className="text-2xl font-black text-[#0B3C5D]">{value}</p>
@@ -363,6 +418,8 @@ export default function AdminCommunityPage() {
             ))}
           </div>
         </section>
+
+        <CommunityVerificationDesk />
 
         <section className="mt-6 rounded-3xl bg-white p-5 shadow ring-1 ring-[#071F2F]/5">
           <div className="grid gap-3 lg:grid-cols-[1fr_180px_220px]">
@@ -433,6 +490,12 @@ export default function AdminCommunityPage() {
                       >
                         {thread.status}
                       </span>
+                      <IdentityBadge type={thread.community_verification_type} />
+                      {thread.is_locked ? (
+                        <span className="rounded-full bg-[#FFF3D2] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#7A5A00]">
+                          Closed
+                        </span>
+                      ) : null}
                       {thread.is_pinned ? (
                         <span className="rounded-full bg-[#D6B56D] px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-[#071F2F]">
                           Pinned
@@ -452,6 +515,15 @@ export default function AdminCommunityPage() {
                       {" "}
                       {formatDate(thread.created_at)}
                     </p>
+                    {thread.is_locked ? (
+                      <p className="mt-2 rounded-2xl bg-[#FFF8E5] px-4 py-2 text-sm font-bold text-[#7A5A00]">
+                        This discussion is closed
+                        {thread.locked_reason
+                          ? `: ${thread.locked_reason}`
+                          : " after the best answer was selected"}
+                        .
+                      </p>
+                    ) : null}
                     <p className="mt-3 max-w-4xl text-sm leading-6 text-gray-700">
                       {thread.body}
                     </p>
@@ -495,6 +567,31 @@ export default function AdminCommunityPage() {
                       disabled={savingId === thread.id}
                     >
                       {thread.is_featured ? "Unfeature" : "Feature"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        patchThread(
+                          thread,
+                          {
+                            isLocked: !thread.is_locked,
+                            lockedReason: "Best answer selected",
+                          },
+                          {
+                            is_locked: !thread.is_locked,
+                            locked_at: !thread.is_locked
+                              ? new Date().toISOString()
+                              : null,
+                            locked_reason: !thread.is_locked
+                              ? "Best answer selected"
+                              : null,
+                          },
+                        )
+                      }
+                      className="rounded-xl bg-[#FFF3D2] px-4 py-3 text-sm font-black text-[#7A5A00]"
+                      disabled={savingId === thread.id}
+                    >
+                      {thread.is_locked ? "Reopen discussion" : "Close discussion"}
                     </button>
                     <select
                       value={thread.status}
@@ -566,6 +663,9 @@ export default function AdminCommunityPage() {
                               <span className="rounded-full bg-[#EEF7F6] px-2 py-1 text-[11px] font-black uppercase tracking-[0.1em] text-[#007B7B]">
                                 {roleLabel(reply.author_role)}
                               </span>
+                              <IdentityBadge
+                                type={reply.community_verification_type}
+                              />
                               {reply.is_best_answer ? (
                                 <span className="rounded-full bg-[#D6B56D] px-2 py-1 text-[11px] font-black uppercase tracking-[0.1em] text-[#071F2F]">
                                   Best answer
