@@ -72,7 +72,7 @@ function getInitialGuestValues() {
     return {
       guests: "2",
       arrivalType: "Cruise",
-      pickupArea: "Coxen Hole",
+      pickupArea: "Coxen Hole or Isla Tropicale",
       tripStyle: "Family",
       budget: "Moderate",
       guestName: "",
@@ -86,7 +86,7 @@ function getInitialGuestValues() {
   return {
     guests: prefill.guests || "2",
     arrivalType: prefill.arrivalType || "Cruise",
-    pickupArea: prefill.pickupArea || "Coxen Hole",
+    pickupArea: prefill.pickupArea || "Coxen Hole or Isla Tropicale",
     tripStyle: prefill.tripStyle || "Family",
     budget: prefill.budget || "Moderate",
     guestName: prefill.guestName,

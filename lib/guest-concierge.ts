@@ -91,7 +91,7 @@ const tripTemplates: ConciergeTripTemplate[] = [
     description: "Port timing, easy pickup, beach time, and reliable return.",
     name: "Cruise guest Roatan day",
     arrivalType: "Cruise",
-    pickupArea: "Coxen Hole",
+    pickupArea: "Coxen Hole or Isla Tropicale",
     tripStyle: "Family",
     budget: "Moderate",
     interests: ["cruise", "beach", "food"],
@@ -211,7 +211,12 @@ function capacityScore(maxGuests: number | null, guests: string) {
 
 function arrivalScore(text: string, arrivalType: string) {
   if (arrivalType === "Cruise") {
-    return text.includes("cruise") || text.includes("port") || text.includes("coxen")
+    return text.includes("cruise") ||
+      text.includes("port") ||
+      text.includes("coxen") ||
+      text.includes("isla tropicale") ||
+      text.includes("tropicale") ||
+      text.includes("dixon")
       ? 18
       : 0;
   }

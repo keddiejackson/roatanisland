@@ -114,7 +114,7 @@ export const sampleCommunityThreads: CommunityThread[] = [
     relatedListingTitle: null,
     mapArea: "Coxen Hole",
     roaSummary:
-      "Keep the route tight around Coxen Hole, West Bay, or West End so beach time stays relaxed and the return window stays protected.",
+      "Start from the correct cruise port, Coxen Hole or Isla Tropicale, then keep the route tight so beach time stays relaxed and the return window stays protected.",
     isPinned: true,
     isFeatured: true,
     bestReplyId: "sample-cruise-day-reply-1",

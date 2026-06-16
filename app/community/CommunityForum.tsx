@@ -33,6 +33,7 @@ const areaOptions = [
   "West End",
   "Sandy Bay",
   "Coxen Hole",
+  "Isla Tropicale",
   "French Harbour",
   "Oak Ridge",
   "Camp Bay",

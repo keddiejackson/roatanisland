@@ -128,6 +128,7 @@ const mapAreas = [
   "West End",
   "Sandy Bay",
   "Coxen Hole",
+  "Isla Tropicale",
   "French Harbour",
   "Airport",
 ];
@@ -1258,9 +1259,9 @@ export default function Home() {
                         Roa suggests
                       </p>
                       <p className="mt-3 text-sm leading-6 text-[#0B3C5D]/78">
-                        Start near Coxen Hole, compare West Bay and West End,
-                        add pickup timing, then request the operator with the
-                        clearest map pin and guest capacity.
+                        Start from Coxen Hole or Isla Tropicale, compare West
+                        Bay and West End, add pickup timing, then request the
+                        operator with the clearest map pin and guest capacity.
                       </p>
                     </div>
                   </div>

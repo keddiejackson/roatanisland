@@ -136,6 +136,7 @@ const roatanAreas = [
   "West End",
   "Sandy Bay",
   "Coxen Hole",
+  "Isla Tropicale",
   "French Harbour",
   "Oak Ridge",
   "Camp Bay",
@@ -146,6 +147,8 @@ const roatanAreas = [
 const interestKeywords = [
   "beach",
   "cruise",
+  "isla tropicale",
+  "tropicale",
   "airport",
   "private",
   "snorkel",
@@ -312,7 +315,7 @@ function scoreRoaListing(
 
   if (
     preferences.arrivalType === "Cruise" &&
-    /(cruise|port|coxen|ship)/.test(text)
+    /(cruise|port|coxen|ship|isla tropicale|tropicale|dixon)/.test(text)
   ) {
     score += 16;
     reasons.push("Cruise friendly");
@@ -464,11 +467,15 @@ export function deriveRoaPreferencesFromMessage(
 ): ConciergePreferences {
   const text = lower([message, traveler.notes].filter(Boolean).join(" "));
   const isAirport = /\b(airport|flight|luggage)\b/.test(text);
-  const isCruise = /\b(cruise|ship|port)\b/.test(text);
+  const isCruise = /\b(cruise|ship|port|coxen|isla tropicale|tropicale|dixon)\b/.test(text);
   const pickupArea =
     traveler.pickupArea ||
     roatanAreas.find((area) => text.includes(area.toLowerCase())) ||
-    (isAirport ? "Roatan Airport" : isCruise ? "Coxen Hole" : "West Bay");
+    (isAirport
+      ? "Roatan Airport"
+      : isCruise
+        ? "Coxen Hole or Isla Tropicale"
+        : "West Bay");
   const arrivalType =
     traveler.arrivalType ||
     (isAirport ? "Airport" : isCruise ? "Cruise" : "Staying on island");
@@ -529,7 +536,7 @@ export function detectRoaIntent(
     return "booking_help";
   }
 
-  if (/\b(cruise|ship|port|all aboard|coxen)\b/.test(text)) {
+  if (/\b(cruise|ship|port|all aboard|coxen|isla tropicale|tropicale|dixon)\b/.test(text)) {
     return "cruise_day";
   }
 

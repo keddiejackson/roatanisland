@@ -111,7 +111,7 @@ const travelerPersonaPresets: TravelerPersonaPreset[] = [
     id: "cruise-day",
     label: "Cruise guest day",
     description: "Port-friendly timing, short routes, beaches, and easy return.",
-    searchTerms: ["cruise", "port", "beach", "coxen"],
+    searchTerms: ["cruise", "port", "beach", "coxen", "isla tropicale"],
     filters: {
       search: "cruise beach",
       category: "Tours",
@@ -273,7 +273,12 @@ export function getLuxuryMarketplaceMatch(
 
   if (persona.id === "cruise-day") {
     const cruiseFit =
-      text.includes("cruise") || text.includes("port") || text.includes("coxen");
+      text.includes("cruise") ||
+      text.includes("port") ||
+      text.includes("coxen") ||
+      text.includes("isla tropicale") ||
+      text.includes("tropicale") ||
+      text.includes("dixon");
     const beachFit = text.includes("beach");
 
     addPersonaReason({ reasons, condition: cruiseFit, reason: "Cruise-friendly" });

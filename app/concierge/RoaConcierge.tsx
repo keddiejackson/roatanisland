@@ -31,7 +31,7 @@ const guidedStarts = [
     detail: "Port timing, beach time, safe return buffer",
     traveler: {
       arrivalType: "Cruise",
-      pickupArea: "Coxen Hole",
+      pickupArea: "Coxen Hole or Isla Tropicale",
       tripStyle: "Family",
     },
     prompt:
