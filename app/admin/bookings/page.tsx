@@ -897,6 +897,426 @@ export default function AdminBookingsPage() {
                             );
                           })()}
                         </div>
+                        <div className="mt-3 rounded-xl border border-[#0B3C5D]/10 bg-white p-3 shadow-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                                Mobile booking command
+                              </p>
+                              <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
+                                Status, payment, payout, notes, and guest thread
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBookingId(booking.id);
+                                setChatOpen(true);
+                              }}
+                              disabled={savingBookingId === booking.id}
+                              className="min-h-11 rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                            >
+                              Open thread
+                            </button>
+                          </div>
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                              Status
+                              <select
+                                value={booking.status || "new"}
+                                onChange={(event) =>
+                                  updateBooking(
+                                    booking.id,
+                                    {
+                                      status: event.target.value as BookingStatus,
+                                      admin_notes: booking.admin_notes,
+                                    },
+                                    event.target.value !== booking.status,
+                                  )
+                                }
+                                className="min-h-11 rounded-xl border border-gray-200 px-3 text-sm font-bold normal-case tracking-normal outline-none focus:border-[#00A8A8]"
+                                disabled={savingBookingId === booking.id}
+                              >
+                                <option value="new">New</option>
+                                <option value="confirmed">Confirmed</option>
+                                <option value="completed">Completed</option>
+                                <option value="cancelled">Cancelled</option>
+                              </select>
+                            </label>
+                            <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                              Admin notes
+                              <textarea
+                                value={booking.admin_notes || ""}
+                                onChange={(event) =>
+                                  patchLocalBooking(booking.id, {
+                                    admin_notes: event.target.value,
+                                  })
+                                }
+                                onBlur={(event) =>
+                                  updateBooking(booking.id, {
+                                    status: booking.status || "new",
+                                    admin_notes: event.currentTarget.value,
+                                  })
+                                }
+                                rows={2}
+                                placeholder="Private booking note"
+                                className="min-h-20 rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal outline-none focus:border-[#00A8A8]"
+                                disabled={savingBookingId === booking.id}
+                              />
+                            </label>
+                          </div>
+                          <details className="mt-3 rounded-xl border border-[#00A8A8]/15 bg-[#EEF7F6] p-3">
+                            <summary className="min-h-11 cursor-pointer py-2 text-sm font-black text-[#0B3C5D]">
+                              Money controls
+                            </summary>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Payment schedule
+                                <select
+                                  value={
+                                    booking.payment_schedule_type ||
+                                    "request_later"
+                                  }
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      payment_schedule_type: event.target.value,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      paymentScheduleType: event.target.value,
+                                    });
+                                  }}
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                >
+                                  {paymentPresets.map((preset) => (
+                                    <option key={preset.id} value={preset.id}>
+                                      {preset.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Deposit status
+                                <select
+                                  value={booking.deposit_status || "not_requested"}
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      deposit_status: event.target.value,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      depositStatus: event.target.value,
+                                    });
+                                  }}
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                >
+                                  <option value="not_requested">Not requested</option>
+                                  <option value="checkout_started">
+                                    Checkout started
+                                  </option>
+                                  <option value="paid">Deposit paid</option>
+                                  <option value="full_paid">Full paid</option>
+                                  <option value="manual_paid">Manual paid</option>
+                                  <option value="failed">Failed</option>
+                                  <option value="waived">Waived</option>
+                                </select>
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Booking value cents
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={moneyInputValue(
+                                    booking.booking_value_cents,
+                                  )}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      booking_value_cents: toNullableCents(
+                                        event.target.value,
+                                      ),
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      bookingValueCents:
+                                        event.currentTarget.value,
+                                    })
+                                  }
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Amount paid cents
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={moneyInputValue(booking.amount_paid_cents)}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      amount_paid_cents: toNullableCents(
+                                        event.target.value,
+                                      ),
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      amountPaidCents:
+                                        event.currentTarget.value,
+                                    })
+                                  }
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Balance due cents
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={moneyInputValue(booking.balance_due_cents)}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      balance_due_cents: toNullableCents(
+                                        event.target.value,
+                                      ),
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      balanceDueCents:
+                                        event.currentTarget.value,
+                                    })
+                                  }
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Balance due date
+                                <input
+                                  type="date"
+                                  value={booking.balance_due_date || ""}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      balance_due_date:
+                                        event.target.value || null,
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      balanceDueDate:
+                                        event.currentTarget.value || null,
+                                    })
+                                  }
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                />
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Payment method
+                                <select
+                                  value={booking.payment_method || ""}
+                                  onChange={(event) => {
+                                    patchLocalBooking(booking.id, {
+                                      payment_method:
+                                        event.target.value || null,
+                                    });
+                                    saveMoneyCommand(booking, {
+                                      paymentMethod:
+                                        event.target.value || null,
+                                    });
+                                  }}
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                >
+                                  <option value="">Not set</option>
+                                  <option value="stripe">Stripe</option>
+                                  <option value="cash">Cash</option>
+                                  <option value="zelle">Zelle</option>
+                                  <option value="paypal">PayPal</option>
+                                  <option value="bank">Bank transfer</option>
+                                  <option value="other">Other</option>
+                                </select>
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Payment link
+                                <input
+                                  value={booking.payment_link_url || ""}
+                                  onChange={(event) =>
+                                    patchLocalBooking(booking.id, {
+                                      payment_link_url: event.target.value,
+                                    })
+                                  }
+                                  onBlur={(event) =>
+                                    saveMoneyCommand(booking, {
+                                      paymentLinkUrl:
+                                        event.currentTarget.value,
+                                    })
+                                  }
+                                  placeholder="https://..."
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                />
+                              </label>
+                            </div>
+                            <label className="mt-3 flex min-h-11 items-center gap-3 rounded-xl bg-white px-3 text-sm font-bold text-[#0B3C5D]">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(booking.payment_issue_flag)}
+                                onChange={(event) => {
+                                  patchLocalBooking(booking.id, {
+                                    payment_issue_flag: event.target.checked,
+                                  });
+                                  saveMoneyCommand(booking, {
+                                    paymentIssueFlag: event.target.checked,
+                                  });
+                                }}
+                                disabled={savingBookingId === booking.id}
+                              />
+                              Flag payment issue
+                            </label>
+                            <textarea
+                              value={booking.payment_issue_note || ""}
+                              onChange={(event) =>
+                                patchLocalBooking(booking.id, {
+                                  payment_issue_note: event.target.value,
+                                })
+                              }
+                              onBlur={(event) =>
+                                saveMoneyCommand(booking, {
+                                  paymentIssueNote: event.currentTarget.value,
+                                })
+                              }
+                              rows={2}
+                              placeholder="Payment issue, refund, or manual payment note"
+                              className="mt-3 w-full rounded-xl border border-white px-3 py-2 text-sm font-semibold outline-none"
+                              disabled={savingBookingId === booking.id}
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                saveMoneyCommand(booking, {
+                                  sendPaymentRequest: true,
+                                  paymentLinkUrl:
+                                    booking.payment_link_url ||
+                                    `${window.location.origin}/book/status/${booking.id}`,
+                                })
+                              }
+                              disabled={savingBookingId === booking.id}
+                              className="mt-3 min-h-11 w-full rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                            >
+                              Send payment request
+                            </button>
+                          </details>
+                          <details className="mt-3 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3">
+                            <summary className="min-h-11 cursor-pointer py-2 text-sm font-black text-[#0B3C5D]">
+                              Payout controls
+                            </summary>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Payout status
+                                <select
+                                  value={booking.commission_status || "unpaid"}
+                                  onChange={(event) =>
+                                    updateBooking(
+                                      booking.id,
+                                      {
+                                        status: booking.status || "new",
+                                        admin_notes: booking.admin_notes,
+                                      },
+                                      false,
+                                      {
+                                        commissionStatus:
+                                          event.target
+                                            .value as VendorPayoutStatus,
+                                      },
+                                    )
+                                  }
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                >
+                                  <option value="unpaid">Unpaid</option>
+                                  <option value="scheduled">Scheduled</option>
+                                  <option value="paid">Paid</option>
+                                  <option value="waived">Waived</option>
+                                </select>
+                              </label>
+                              <label className="grid gap-1 text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                                Payout date
+                                <input
+                                  type="date"
+                                  value={booking.payout_scheduled_for || ""}
+                                  onChange={(event) =>
+                                    updateBooking(
+                                      booking.id,
+                                      {
+                                        status: booking.status || "new",
+                                        admin_notes: booking.admin_notes,
+                                      },
+                                      false,
+                                      {
+                                        payoutScheduledFor:
+                                          event.target.value || null,
+                                        commissionStatus:
+                                          event.target.value &&
+                                          (booking.commission_status ||
+                                            "unpaid") === "unpaid"
+                                            ? "scheduled"
+                                            : ((booking.commission_status ||
+                                                "unpaid") as VendorPayoutStatus),
+                                      },
+                                    )
+                                  }
+                                  className="min-h-11 rounded-xl border border-white px-3 text-sm font-bold normal-case tracking-normal outline-none"
+                                  disabled={savingBookingId === booking.id}
+                                />
+                              </label>
+                            </div>
+                            <textarea
+                              value={booking.payout_note || ""}
+                              onChange={(event) =>
+                                patchLocalBooking(booking.id, {
+                                  payout_note: event.target.value,
+                                })
+                              }
+                              onBlur={(event) =>
+                                updateBooking(
+                                  booking.id,
+                                  {
+                                    status: booking.status || "new",
+                                    admin_notes: booking.admin_notes,
+                                  },
+                                  false,
+                                  { payoutNote: event.currentTarget.value || null },
+                                )
+                              }
+                              rows={2}
+                              placeholder="Payout note"
+                              className="mt-3 w-full rounded-xl border border-white px-3 py-2 text-sm font-semibold outline-none"
+                              disabled={savingBookingId === booking.id}
+                            />
+                            <textarea
+                              value={booking.vendor_private_payout_note || ""}
+                              onChange={(event) =>
+                                patchLocalBooking(booking.id, {
+                                  vendor_private_payout_note:
+                                    event.target.value,
+                                })
+                              }
+                              onBlur={(event) =>
+                                saveMoneyCommand(booking, {
+                                  vendorPrivatePayoutNote:
+                                    event.currentTarget.value,
+                                })
+                              }
+                              rows={2}
+                              placeholder="Private payout note visible to vendor"
+                              className="mt-3 w-full rounded-xl border border-white px-3 py-2 text-sm font-semibold outline-none"
+                              disabled={savingBookingId === booking.id}
+                            />
+                          </details>
+                        </div>
                         {(changeRequestsByBooking[booking.id] || []).filter(
                           (request) => request.status === "pending",
                         ).length > 0 ? (

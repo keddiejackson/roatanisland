@@ -2416,6 +2416,308 @@ export default function VendorDashboardPage() {
                             </div>
                           );
                         })()}
+                        <div className="mt-3 rounded-xl border border-[#0B3C5D]/10 bg-white p-3 shadow-sm">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
+                                Mobile booking command
+                              </p>
+                              <p className="mt-1 text-sm font-bold text-[#0B3C5D]">
+                                Respond, confirm, suggest a time, or open the
+                                guest thread.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBookingId(booking.id);
+                                setChatOpen(true);
+                              }}
+                              disabled={savingBookingId === booking.id}
+                              className="min-h-11 rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                            >
+                              Open thread
+                            </button>
+                          </div>
+                          <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+                            <p className="rounded-xl bg-[#EEF7F6] p-3">
+                              <span className="block text-xs font-black uppercase text-gray-500">
+                                Status
+                              </span>
+                              <span className="font-black text-[#0B3C5D]">
+                                {formatBookingStatus(booking.status)}
+                              </span>
+                            </p>
+                            <p className="rounded-xl bg-[#EEF7F6] p-3">
+                              <span className="block text-xs font-black uppercase text-gray-500">
+                                Payment
+                              </span>
+                              <span className="font-black text-[#0B3C5D]">
+                                {formatDepositStatus(booking.deposit_status)}
+                              </span>
+                            </p>
+                            <p className="rounded-xl bg-[#EEF7F6] p-3">
+                              <span className="block text-xs font-black uppercase text-gray-500">
+                                Value
+                              </span>
+                              <span className="font-black text-[#0B3C5D]">
+                                {formatBookingCents(
+                                  booking.booking_value_cents,
+                                )}
+                              </span>
+                            </p>
+                          </div>
+                          <label className="mt-3 block text-xs font-black uppercase tracking-[0.1em] text-[#0B3C5D]">
+                            Guest response
+                            <textarea
+                              value={vendorNotes[booking.id] || ""}
+                              onChange={(event) =>
+                                setVendorNotes((currentNotes) => ({
+                                  ...currentNotes,
+                                  [booking.id]: event.target.value,
+                                }))
+                              }
+                              rows={3}
+                              maxLength={1000}
+                              placeholder="Pickup details, confirmation note, or suggested time"
+                              className="mt-2 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold normal-case tracking-normal outline-none focus:border-[#00A8A8]"
+                              disabled={savingBookingId === booking.id}
+                            />
+                          </label>
+                          <div className="mt-3 grid gap-2 sm:grid-cols-4">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateBookingStatus(booking.id, "confirmed")
+                              }
+                              disabled={savingBookingId === booking.id}
+                              className="min-h-11 rounded-xl bg-green-600 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateBookingStatus(booking.id, "suggest_time")
+                              }
+                              disabled={
+                                savingBookingId === booking.id ||
+                                !(vendorNotes[booking.id] || "").trim()
+                              }
+                              className="min-h-11 rounded-xl bg-[#D6B56D] px-4 py-2 text-sm font-black text-[#0B3C5D] disabled:opacity-50"
+                            >
+                              Suggest time
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateBookingStatus(booking.id, "cancelled")
+                              }
+                              disabled={savingBookingId === booking.id}
+                              className="min-h-11 rounded-xl bg-red-500 px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedBookingId(booking.id);
+                                setChatOpen(true);
+                              }}
+                              disabled={savingBookingId === booking.id}
+                              className="min-h-11 rounded-xl border border-[#00A8A8]/30 bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] disabled:opacity-50"
+                            >
+                              Message
+                            </button>
+                          </div>
+                          <details className="mt-3 rounded-xl border border-gray-200 bg-[#F7F3EA] p-3">
+                            <summary className="min-h-11 cursor-pointer py-2 text-sm font-black text-[#0B3C5D]">
+                              Guest details and requests
+                            </summary>
+                            <div className="mt-3 grid gap-3 text-sm text-gray-700">
+                              <p className="rounded-xl bg-white p-3">
+                                {booking.guest_message ||
+                                  "No guest message yet."}
+                              </p>
+                              {booking.selected_addons?.length ? (
+                                <p className="rounded-xl bg-white p-3">
+                                  <span className="font-black text-[#0B3C5D]">
+                                    Add-ons:{" "}
+                                  </span>
+                                  {booking.selected_addons
+                                    .map((addon) => addon.name || "Add-on")
+                                    .join(", ")}
+                                </p>
+                              ) : null}
+                              <p className="rounded-xl bg-white p-3">
+                                {threadSummaries[booking.id]
+                                  ?.lastMessagePreview ||
+                                  "No thread messages yet."}
+                              </p>
+                            </div>
+                          </details>
+                          {(booking.change_requests || []).filter(
+                            (request) => request.status === "pending",
+                          ).length > 0 ? (
+                            <details
+                              open
+                              className="mt-3 rounded-xl border border-[#D6B56D]/30 bg-[#FFF8E8] p-3"
+                            >
+                              <summary className="min-h-11 cursor-pointer py-2 text-sm font-black text-[#0B3C5D]">
+                                Change request
+                              </summary>
+                              <p className="text-sm font-bold text-[#0B3C5D]">
+                                {
+                                  getBookingChangeRequestSummary(
+                                    booking.change_requests || [],
+                                  ).latestLabel
+                                }
+                              </p>
+                              {(booking.change_requests || [])
+                                .filter((request) => request.status === "pending")
+                                .slice(0, 1)
+                                .map((request) => (
+                                  <div key={request.id} className="mt-3 grid gap-3">
+                                    <p className="text-sm leading-6 text-gray-700">
+                                      Requested:{" "}
+                                      {request.requested_tour_date ||
+                                        booking.tour_date}{" "}
+                                      at{" "}
+                                      {request.requested_tour_time ||
+                                        booking.tour_time}
+                                      {request.requested_guests
+                                        ? ` for ${request.requested_guests} guests`
+                                        : ""}
+                                    </p>
+                                    <textarea
+                                      value={changeActionNotes[request.id] || ""}
+                                      onChange={(event) =>
+                                        setChangeActionNotes((current) => ({
+                                          ...current,
+                                          [request.id]: event.target.value,
+                                        }))
+                                      }
+                                      rows={2}
+                                      placeholder="Response note"
+                                      className="rounded-xl border border-white px-3 py-2 text-sm outline-none"
+                                    />
+                                    <div className="grid gap-2 sm:grid-cols-3">
+                                      <input
+                                        type="date"
+                                        value={
+                                          changeCounterForms[request.id]
+                                            ?.tourDate || ""
+                                        }
+                                        onChange={(event) =>
+                                          setChangeCounterForms((current) => ({
+                                            ...current,
+                                            [request.id]: {
+                                              tourDate: event.target.value,
+                                              tourTime:
+                                                current[request.id]
+                                                  ?.tourTime || "",
+                                              guests:
+                                                current[request.id]?.guests ||
+                                                "",
+                                            },
+                                          }))
+                                        }
+                                        className="min-h-11 rounded-xl border border-white px-3 text-sm outline-none"
+                                        aria-label="Suggested date"
+                                      />
+                                      <input
+                                        value={
+                                          changeCounterForms[request.id]
+                                            ?.tourTime || ""
+                                        }
+                                        onChange={(event) =>
+                                          setChangeCounterForms((current) => ({
+                                            ...current,
+                                            [request.id]: {
+                                              tourDate:
+                                                current[request.id]
+                                                  ?.tourDate || "",
+                                              tourTime: event.target.value,
+                                              guests:
+                                                current[request.id]?.guests ||
+                                                "",
+                                            },
+                                          }))
+                                        }
+                                        placeholder="Suggest time"
+                                        className="min-h-11 rounded-xl border border-white px-3 text-sm outline-none"
+                                      />
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        value={
+                                          changeCounterForms[request.id]
+                                            ?.guests || ""
+                                        }
+                                        onChange={(event) =>
+                                          setChangeCounterForms((current) => ({
+                                            ...current,
+                                            [request.id]: {
+                                              tourDate:
+                                                current[request.id]
+                                                  ?.tourDate || "",
+                                              tourTime:
+                                                current[request.id]
+                                                  ?.tourTime || "",
+                                              guests: event.target.value,
+                                            },
+                                          }))
+                                        }
+                                        placeholder="Guests"
+                                        className="min-h-11 rounded-xl border border-white px-3 text-sm outline-none"
+                                      />
+                                    </div>
+                                    <div className="grid gap-2 sm:grid-cols-3">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateChangeRequest(
+                                            booking.id,
+                                            request.id,
+                                            "approved",
+                                          )
+                                        }
+                                        className="min-h-11 rounded-xl bg-green-600 px-3 py-2 text-sm font-black text-white"
+                                      >
+                                        Approve
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateChangeRequest(
+                                            booking.id,
+                                            request.id,
+                                            "countered",
+                                          )
+                                        }
+                                        className="min-h-11 rounded-xl bg-[#D6B56D] px-3 py-2 text-sm font-black text-[#0B3C5D]"
+                                      >
+                                        Suggest
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          updateChangeRequest(
+                                            booking.id,
+                                            request.id,
+                                            "declined",
+                                          )
+                                        }
+                                        className="min-h-11 rounded-xl bg-red-500 px-3 py-2 text-sm font-black text-white"
+                                      >
+                                        Decline
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                            </details>
+                          ) : null}
+                        </div>
                       </article>
                     ))}
                   </div>
@@ -2423,8 +2725,8 @@ export default function VendorDashboardPage() {
               ))}
             </div>
             <div className="mt-8 rounded-xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-4 text-sm font-semibold text-[#0B3C5D] md:hidden">
-              The full table is available on wider screens. On your phone, use
-              the booking cards above for faster updates.
+              Every booking action is available in the mobile calendar cards.
+              The wide table stays available on desktop for bulk review.
             </div>
             <div className="mt-8 hidden md:block overflow-x-auto">
               <table className="min-w-[1320px] border-collapse">
