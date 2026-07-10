@@ -632,11 +632,11 @@ export default function AdminListingsPage() {
   }
 
   return (
-    <main className="brand-workspace min-h-screen px-4 py-6 text-[#1F2937] sm:px-6 sm:py-12">
-      <div className="mx-auto max-w-7xl">
+    <main className="brand-workspace min-h-screen overflow-x-hidden px-4 py-6 pb-36 text-[#1F2937] sm:px-6 sm:py-12">
+      <div className="mx-auto min-w-0 max-w-7xl">
         <AdminNav />
 
-        <div className="brand-auth-card p-5 shadow sm:p-8">
+        <div className="brand-auth-card min-w-0 p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
               <h1 className="text-3xl font-bold text-[#0B3C5D]">
@@ -779,7 +779,7 @@ export default function AdminListingsPage() {
                 return (
                   <section
                     key={listing.id}
-                    className="rounded-xl border border-gray-200 p-5"
+                    className="min-w-0 overflow-hidden rounded-xl border border-gray-200 p-4 sm:p-5"
                   >
                     <div className="mb-5 grid gap-4 rounded-xl bg-[#F7F3EA] p-4 lg:grid-cols-[220px_1fr_auto] lg:items-center">
                       <div>
@@ -1202,60 +1202,6 @@ export default function AdminListingsPage() {
                       </div>
                     </div>
 
-                    <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto]">
-                      <div className="flex items-end gap-4">
-                        <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-2">
-                          <input
-                            type="checkbox"
-                            checked={draft.is_active}
-                            disabled={Boolean(setupMessage)}
-                            onChange={(e) =>
-                              updateDraft(
-                                listing.id,
-                                "is_active",
-                                e.target.checked,
-                              )
-                            }
-                          />
-                          Show on public site
-                        </label>
-
-                        <label className="flex items-center gap-3 rounded-lg border border-gray-300 px-4 py-2">
-                          <input
-                            type="checkbox"
-                            checked={draft.is_featured}
-                            disabled={Boolean(setupMessage)}
-                            onChange={(e) =>
-                              updateDraft(
-                                listing.id,
-                                "is_featured",
-                                e.target.checked,
-                              )
-                            }
-                          />
-                          Featured
-                        </label>
-
-                        <button
-                          onClick={() => saveListing(listing.id)}
-                          disabled={savingListingId === listing.id}
-                          className="rounded-xl bg-[#00A8A8] px-5 py-2 font-semibold text-white disabled:opacity-50"
-                        >
-                          {savingListingId === listing.id ? "Saving..." : "Save"}
-                        </button>
-
-                        <button
-                          onClick={() => deleteListing(listing)}
-                          disabled={deletingListingId === listing.id}
-                          className="rounded-xl bg-red-500 px-5 py-2 font-semibold text-white disabled:opacity-50"
-                        >
-                          {deletingListingId === listing.id
-                            ? "Deleting..."
-                            : "Permanent delete"}
-                        </button>
-                      </div>
-                    </div>
-
                     <div className="mt-4">
                       <label className="mb-2 block text-sm font-medium">
                         Description
@@ -1268,6 +1214,64 @@ export default function AdminListingsPage() {
                         rows={3}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none"
                       />
+                    </div>
+
+                    <div className="mt-5 grid min-w-0 gap-3 border-t border-gray-200 pt-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-center">
+                      <label className="flex min-h-12 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+                        <input
+                          type="checkbox"
+                          checked={draft.is_active}
+                          disabled={Boolean(setupMessage)}
+                          onChange={(e) =>
+                            updateDraft(
+                              listing.id,
+                              "is_active",
+                              e.target.checked,
+                            )
+                          }
+                          className="h-5 w-5 shrink-0"
+                        />
+                        <span className="min-w-0">Show on public site</span>
+                      </label>
+
+                      <label className="flex min-h-12 min-w-0 cursor-pointer items-center gap-3 rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+                        <input
+                          type="checkbox"
+                          checked={draft.is_featured}
+                          disabled={Boolean(setupMessage)}
+                          onChange={(e) =>
+                            updateDraft(
+                              listing.id,
+                              "is_featured",
+                              e.target.checked,
+                            )
+                          }
+                          className="h-5 w-5 shrink-0"
+                        />
+                        <span className="min-w-0">Featured</span>
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => saveListing(listing.id)}
+                        disabled={savingListingId === listing.id}
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#00A8A8] px-5 py-3 text-center font-semibold text-white disabled:opacity-50 lg:w-auto"
+                      >
+                        {savingListingId === listing.id
+                          ? "Saving..."
+                          : "Save changes"}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => deleteListing(listing)}
+                        disabled={deletingListingId === listing.id}
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-red-200 bg-red-50 px-5 py-3 text-center font-semibold text-red-700 disabled:opacity-50 lg:w-auto"
+                      >
+                        {deletingListingId === listing.id
+                          ? "Deleting..."
+                          : "Permanent delete"}
+                      </button>
                     </div>
                   </section>
                 );
