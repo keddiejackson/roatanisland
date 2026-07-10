@@ -208,10 +208,10 @@ export default function AdminMediaPage() {
   if (checkingAuth || !authorized) return null;
 
   return (
-    <main className="brand-workspace min-h-screen px-4 py-6 text-[#1F2937] sm:px-6 sm:py-12">
+    <main className="brand-workspace min-h-screen overflow-x-hidden px-4 py-6 pb-36 text-[#1F2937] sm:px-6 sm:py-12">
       <div className="mx-auto max-w-6xl">
         <AdminNav />
-        <section className="brand-auth-card p-5 shadow sm:p-8">
+        <section className="brand-auth-card min-w-0 p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -233,10 +233,15 @@ export default function AdminMediaPage() {
             </Link>
           </div>
 
-          <div className="mt-8 grid gap-4 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-5 lg:grid-cols-[1fr_auto] lg:items-end">
-            <label className="grid gap-2 text-sm font-bold text-[#0B3C5D]">
-              Upload brand logo or icon
+          <div className="mt-8 grid min-w-0 gap-4 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-end">
+            <label
+              htmlFor="brand-logo-upload"
+              aria-disabled={uploading}
+              className="grid min-w-0 cursor-pointer gap-2 text-sm font-bold text-[#0B3C5D]"
+            >
+              <span>Upload brand logo or icon</span>
               <input
+                id="brand-logo-upload"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 disabled={uploading}
@@ -244,8 +249,14 @@ export default function AdminMediaPage() {
                   const file = e.target.files?.[0];
                   if (file) uploadLogo(file);
                 }}
-                className="rounded-xl border border-gray-300 bg-white px-4 py-3 disabled:opacity-60"
+                className="sr-only"
               />
+              <span className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#0B3C5D] px-4 py-3 text-center font-black text-white shadow-sm">
+                {uploading ? "Uploading logo..." : "Choose an image"}
+              </span>
+              <span className="text-xs font-semibold leading-5 text-[#5D6F7D]">
+                JPG, PNG, WEBP, or GIF. Upload begins after you choose a file.
+              </span>
             </label>
             <p className="text-sm font-semibold text-[#0B3C5D]">
               {uploading ? "Uploading..." : `${media.length} saved logo${media.length === 1 ? "" : "s"}`}
@@ -289,14 +300,14 @@ export default function AdminMediaPage() {
             ))}
           </section>
 
-          <section className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {media.map((item) => {
+          <section className="mt-8 grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-3">
+            {media.map((item, index) => {
               const selectedTarget = targetByPath[item.path] || "logoUrl";
 
               return (
                 <article
                   key={item.path}
-                  className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                  className="min-w-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
                   <div className="grid h-52 place-items-center bg-[#EEF7F6] p-5">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -306,11 +317,14 @@ export default function AdminMediaPage() {
                       className="max-h-full max-w-full object-contain"
                     />
                   </div>
-                  <div className="grid gap-4 p-5">
-                    <div>
-                      <h2 className="truncate font-black text-[#0B3C5D]">
-                        {item.name}
+                  <div className="grid min-w-0 gap-4 p-4 sm:p-5">
+                    <div className="min-w-0">
+                      <h2 className="font-black text-[#0B3C5D]">
+                        Brand asset {index + 1}
                       </h2>
+                      <p className="mt-1 break-all text-xs leading-5 text-gray-500">
+                        {item.name}
+                      </p>
                       <p className="mt-1 text-sm text-gray-500">
                         {formatBytes(item.size)}
                       </p>
@@ -325,7 +339,7 @@ export default function AdminMediaPage() {
                             [item.path]: e.target.value as LogoTarget["field"],
                           }))
                         }
-                        className="rounded-xl border border-gray-300 px-4 py-3"
+                        className="min-h-12 w-full min-w-0 rounded-xl border border-gray-300 bg-white px-4 py-3"
                       >
                         {logoTargets.map((target) => (
                           <option key={target.field} value={target.field}>
@@ -338,24 +352,25 @@ export default function AdminMediaPage() {
                       <button
                         type="button"
                         onClick={() => applyLogo(item.url, selectedTarget)}
-                        className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white"
+                        aria-label={`Apply ${item.name} to ${logoTargets.find((target) => target.field === selectedTarget)?.label || "selected placement"}`}
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#071F2F] px-4 py-3 text-center text-sm font-black text-white shadow-sm"
                       >
-                        Apply logo
+                        <span>Apply logo</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => navigator.clipboard.writeText(item.url)}
-                        className="rounded-xl border border-[#00A8A8]/35 px-4 py-3 text-sm font-black text-[#007B7B]"
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-[#00A8A8]/35 bg-white px-4 py-3 text-center text-sm font-black text-[#006B70]"
                       >
-                        Copy URL
+                        <span>Copy URL</span>
                       </button>
                     </div>
                     <button
                       type="button"
                       onClick={() => deleteLogo(item)}
-                      className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-black text-red-700"
+                      className="inline-flex min-h-12 w-full items-center justify-center rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-black text-red-700"
                     >
-                      Delete from library
+                      <span>Delete from library</span>
                     </button>
                   </div>
                 </article>

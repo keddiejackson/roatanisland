@@ -13,7 +13,7 @@ export type GlobalBookingChatBooking = {
   listing_name?: string | null;
 };
 
-const dedicatedChatPaths = ["/account", "/admin/bookings", "/vendor/dashboard"];
+const dedicatedChatPaths = ["/account", "/admin", "/vendor/dashboard"];
 
 export function shouldShowGlobalBookingChat(pathname: string | null | undefined) {
   const currentPath = pathname || "";

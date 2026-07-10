@@ -1493,12 +1493,20 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     <section
       className={
         fullMap
-          ? "fixed inset-0 z-50 grid min-w-0 gap-3 overflow-auto bg-[#071F2F] p-2 text-[#17324D] sm:gap-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start"
+          ? "fixed inset-0 z-50 flex min-w-0 flex-col gap-3 overflow-y-auto bg-[#071F2F] p-2 pb-[calc(6.75rem+env(safe-area-inset-bottom))] text-[#17324D] sm:gap-4 sm:p-5 lg:grid lg:grid-cols-[minmax(0,1fr)_420px] lg:items-start lg:overflow-hidden lg:pb-5"
           : "grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start"
       }
     >
-      <div className="min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-3 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5">
-        <div className="mb-3 flex min-w-0 flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] px-4 py-3 text-white sm:flex-row sm:items-center">
+      <div
+        className={`min-w-0 overflow-hidden rounded-2xl border border-[#D6B56D]/35 bg-[#FFFDF7] p-3 shadow-2xl shadow-[#0B3C5D]/10 sm:p-5 ${
+          fullMap ? "flex shrink-0 flex-col" : ""
+        }`}
+      >
+        <div
+          className={`mb-3 flex min-w-0 flex-col justify-between gap-3 rounded-2xl bg-[#071F2F] px-4 py-3 text-white sm:flex-row sm:items-center ${
+            fullMap ? "order-1" : ""
+          }`}
+        >
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#D6B56D]">
               Island Planner
@@ -1522,7 +1530,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </div>
         </div>
 
-        <div className="mb-3 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3">
+        <div
+          className={`mb-3 rounded-2xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-3 ${
+            fullMap ? "order-3 lg:order-2" : ""
+          }`}
+        >
           <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#007B7B]">
               Start point
@@ -1568,7 +1580,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3">
+        <div
+          className={`rounded-2xl border border-[#D6B56D]/25 bg-[#FFF8E8] p-3 ${
+            fullMap ? "order-4 lg:order-3" : ""
+          }`}
+        >
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#9C7A2F]">
               Day style
@@ -1791,52 +1807,62 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         </div>
 
         {locationMessage ? (
-          <p className="mt-3 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D]">
+          <p
+            className={`mt-3 rounded-xl border border-[#00A8A8]/20 bg-[#EEF7F6] px-4 py-3 text-sm font-semibold text-[#0B3C5D] ${
+              fullMap ? "order-5 lg:order-4" : ""
+            }`}
+          >
             {locationMessage}
           </p>
         ) : null}
 
-        <LeafletMapSurface
-          center={center}
-          zoom={zoom}
-          fullMap={fullMap}
-          clusters={clusters}
-          selectedClusterId={selectedCluster?.id || ""}
-          hoveredId={hoveredId}
-          savedTripPins={savedTripPins}
-          selectedPickup={selectedPickup}
-          userLocation={userLocation}
-          onViewChange={handleMapViewChange}
-          onClusterClick={handleClusterClick}
-          onPinFocus={focusPin}
-          onHoverPin={setHoveredId}
-          onExactZoom={handleExactZoom}
-        >
-          {pins.length === 0 ? (
-            <div className="absolute inset-0 z-[500] pointer-events-none flex items-center justify-center p-8 text-center">
-              <div className="pointer-events-auto max-w-md rounded-2xl bg-white/95 p-6 shadow">
-                <p className="font-bold text-[#0B3C5D]">No matches here yet</p>
-                <p className="mt-2 text-sm text-gray-600">
-                  Try a guest-ready mode or clear the filters to reopen the map.
-                </p>
-                <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                  {mapConciergeModes.slice(0, 3).map((mode) => (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      onClick={() => applyMapConciergeMode(mode)}
-                      className="rounded-xl bg-[#EEF7F6] px-3 py-2 text-xs font-bold text-[#0B3C5D]"
-                    >
-                      {mode.label}
-                    </button>
-                  ))}
+        <div className={fullMap ? "order-2 lg:order-5" : ""}>
+          <LeafletMapSurface
+            center={center}
+            zoom={zoom}
+            fullMap={fullMap}
+            clusters={clusters}
+            selectedClusterId={selectedCluster?.id || ""}
+            hoveredId={hoveredId}
+            savedTripPins={savedTripPins}
+            selectedPickup={selectedPickup}
+            userLocation={userLocation}
+            onViewChange={handleMapViewChange}
+            onClusterClick={handleClusterClick}
+            onPinFocus={focusPin}
+            onHoverPin={setHoveredId}
+            onExactZoom={handleExactZoom}
+          >
+            {pins.length === 0 ? (
+              <div className="pointer-events-none absolute inset-x-3 bottom-3 z-[500] sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-8 sm:text-center">
+                <div className="pointer-events-auto max-w-md rounded-2xl bg-white/95 p-4 shadow sm:p-6">
+                  <p className="font-bold text-[#0B3C5D]">No matches here yet</p>
+                  <p className="mt-2 hidden text-sm text-gray-600 sm:block">
+                    Try a guest-ready mode or clear the filters to reopen the map.
+                  </p>
+                  <div className="mt-3 flex gap-2 overflow-x-auto sm:mt-4 sm:grid sm:grid-cols-3">
+                    {mapConciergeModes.slice(0, 3).map((mode) => (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => applyMapConciergeMode(mode)}
+                        className="shrink-0 rounded-xl bg-[#EEF7F6] px-3 py-2 text-xs font-bold text-[#0B3C5D]"
+                      >
+                        {mode.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : null}
-        </LeafletMapSurface>
+            ) : null}
+          </LeafletMapSurface>
+        </div>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+        <div
+          className={`mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600 ${
+            fullMap ? "order-6" : ""
+          }`}
+        >
           <span className="inline-flex items-center gap-2">
             <span className="h-3 w-3 rounded-full bg-[#0B3C5D]" />
             Exact coordinate
@@ -1856,7 +1882,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         </div>
       </div>
 
-      <aside className="grid min-w-0 gap-4 self-start lg:max-h-[760px] lg:overflow-y-auto">
+      <aside
+        className={`grid min-w-0 gap-4 self-start lg:max-h-[760px] lg:overflow-y-auto ${
+          fullMap ? "shrink-0" : ""
+        }`}
+      >
         <section className="min-w-0 rounded-2xl bg-[#071F2F] p-5 text-white shadow-2xl shadow-[#071F2F]/15">
           <div className="flex items-start justify-between gap-3">
             <div>
