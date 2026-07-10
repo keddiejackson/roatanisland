@@ -2,7 +2,22 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import type {
+  CircleMarker,
+  LayerGroup,
+  Map as LeafletMap,
+  Marker,
+  Polyline,
+} from "leaflet";
 import type { MapListing } from "@/app/map/page";
 import {
   getListingTrustBadges,
@@ -75,7 +90,6 @@ const luxuryLayers = [
   "Private Charters",
 ];
 const zoomLevels = [11, 12, 13, 14, 15, 16, 17, 18, 19];
-const minZoom = zoomLevels[0];
 const maxZoom = zoomLevels[zoomLevels.length - 1];
 const roatanCenter = { latitude: 16.34, longitude: -86.48 };
 
@@ -374,15 +388,6 @@ function latLonToWorld(latitude: number, longitude: number, zoom: number) {
   };
 }
 
-function worldToLatLon(x: number, y: number, zoom: number) {
-  const scale = 256 * 2 ** zoom;
-  const longitude = (x / scale) * 360 - 180;
-  const n = Math.PI - (2 * Math.PI * y) / scale;
-  const latitude = (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-
-  return { latitude, longitude };
-}
-
 function clusterPins(pins: Pin[], zoom: number) {
   const clusters: Cluster[] = [];
   const threshold =
@@ -423,24 +428,354 @@ function clusterPins(pins: Pin[], zoom: number) {
   return clusters;
 }
 
-function getTiles(center: typeof roatanCenter, zoom: number) {
-  const centerWorld = latLonToWorld(center.latitude, center.longitude, zoom);
-  const centerTileX = Math.floor(centerWorld.x / 256);
-  const centerTileY = Math.floor(centerWorld.y / 256);
-  const tiles: { x: number; y: number; left: number; top: number }[] = [];
+type LeafletRuntime = typeof import("leaflet");
 
-  for (let x = centerTileX - 3; x <= centerTileX + 3; x += 1) {
-    for (let y = centerTileY - 3; y <= centerTileY + 3; y += 1) {
-      tiles.push({
-        x,
-        y,
-        left: x * 256 - centerWorld.x,
-        top: y * 256 - centerWorld.y,
-      });
+type LeafletLayerStore = {
+  clusters: LayerGroup;
+  route: LayerGroup;
+  routeStops: LayerGroup;
+  points: LayerGroup;
+};
+
+type MapPoint = { latitude: number; longitude: number };
+
+type LeafletMapSurfaceProps = {
+  center: MapPoint;
+  zoom: number;
+  fullMap: boolean;
+  clusters: Cluster[];
+  selectedClusterId: string;
+  hoveredId: string;
+  savedTripPins: Pin[];
+  selectedPickup: PickupPoint | null;
+  userLocation: MapPoint | null;
+  onViewChange: (center: MapPoint, zoom: number) => void;
+  onClusterClick: (cluster: Cluster) => void;
+  onPinFocus: (pin: Pin) => void;
+  onHoverPin: (pinId: string) => void;
+  onExactZoom: () => void;
+  children?: ReactNode;
+};
+
+const leafletTileUrl =
+  process.env.NEXT_PUBLIC_MAP_TILE_URL ||
+  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const leafletTileAttribution =
+  process.env.NEXT_PUBLIC_MAP_TILE_ATTRIBUTION ||
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case '"':
+        return "&quot;";
+      case "'":
+        return "&#39;";
+      default:
+        return character;
     }
-  }
+  });
+}
 
-  return tiles;
+function leafletPinHtml(label: string, state: string) {
+  return `<span class="leaflet-roatan-pin leaflet-roatan-pin--${state}">${escapeHtml(
+    label,
+  )}</span>`;
+}
+
+function leafletRouteStopHtml(index: number) {
+  return `<span class="leaflet-roatan-route-stop">${index}</span>`;
+}
+
+function leafletPickupHtml(label: string) {
+  return `<span class="leaflet-roatan-pickup">${escapeHtml(label)}</span>`;
+}
+
+function LeafletMapSurface({
+  center,
+  zoom,
+  fullMap,
+  clusters,
+  selectedClusterId,
+  hoveredId,
+  savedTripPins,
+  selectedPickup,
+  userLocation,
+  onViewChange,
+  onClusterClick,
+  onPinFocus,
+  onHoverPin,
+  onExactZoom,
+  children,
+}: LeafletMapSurfaceProps) {
+  const mapElementRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
+  const leafletRef = useRef<LeafletRuntime | null>(null);
+  const layersRef = useRef<LeafletLayerStore | null>(null);
+  const initialCenterRef = useRef(center);
+  const initialZoomRef = useRef(zoom);
+  const onViewChangeRef = useRef(onViewChange);
+  const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    onViewChangeRef.current = onViewChange;
+  }, [onViewChange]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLeaflet() {
+      const Leaflet = await import("leaflet");
+
+      if (cancelled || !mapElementRef.current) return;
+
+      leafletRef.current = Leaflet;
+      const map = Leaflet.map(mapElementRef.current, {
+        attributionControl: true,
+        maxZoom,
+        minZoom: zoomLevels[0],
+        scrollWheelZoom: true,
+        zoomControl: false,
+      }).setView(
+        [initialCenterRef.current.latitude, initialCenterRef.current.longitude],
+        initialZoomRef.current,
+      );
+
+      Leaflet.tileLayer(leafletTileUrl, {
+        attribution: leafletTileAttribution,
+        maxZoom,
+      }).addTo(map);
+
+      layersRef.current = {
+        clusters: Leaflet.layerGroup().addTo(map),
+        route: Leaflet.layerGroup().addTo(map),
+        routeStops: Leaflet.layerGroup().addTo(map),
+        points: Leaflet.layerGroup().addTo(map),
+      };
+
+      const handleViewChange = () => {
+        const nextCenter = map.getCenter();
+        onViewChangeRef.current(
+          { latitude: nextCenter.lat, longitude: nextCenter.lng },
+          map.getZoom(),
+        );
+      };
+
+      map.on("moveend", handleViewChange);
+      map.on("zoomend", handleViewChange);
+      mapRef.current = map;
+      setMapReady(true);
+
+      window.setTimeout(() => map.invalidateSize(), 0);
+    }
+
+    loadLeaflet();
+
+    return () => {
+      cancelled = true;
+      mapRef.current?.remove();
+      mapRef.current = null;
+      layersRef.current = null;
+      leafletRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const currentCenter = map.getCenter();
+    const centerChanged =
+      Math.abs(currentCenter.lat - center.latitude) > 0.00001 ||
+      Math.abs(currentCenter.lng - center.longitude) > 0.00001;
+
+    if (centerChanged || map.getZoom() !== zoom) {
+      map.setView([center.latitude, center.longitude], zoom, { animate: true });
+    }
+  }, [center.latitude, center.longitude, zoom]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    window.setTimeout(() => map.invalidateSize(), 80);
+  }, [fullMap]);
+
+  useEffect(() => {
+    const Leaflet = leafletRef.current;
+    const layers = layersRef.current;
+    if (!mapReady || !Leaflet || !layers) return;
+
+    layers.clusters.clearLayers();
+    layers.route.clearLayers();
+    layers.routeStops.clearLayers();
+    layers.points.clearLayers();
+
+    if (savedTripPins.length > 1) {
+      const routeLine: Polyline = Leaflet.polyline(
+        savedTripPins.map((pin) => [pin.latitudeValue, pin.longitudeValue]),
+        {
+          color: "#D6B56D",
+          lineCap: "round",
+          lineJoin: "round",
+          opacity: 0.92,
+          weight: 5,
+        },
+      );
+      routeLine.addTo(layers.route);
+    }
+
+    clusters.forEach((cluster) => {
+      const primaryPin = cluster.pins[0];
+      const selected = selectedClusterId === cluster.id;
+      const hovered = cluster.pins.some((pin) => pin.id === hoveredId);
+      const state = selected
+        ? "selected"
+        : hovered
+          ? "hovered"
+          : primaryPin.hasExactPin
+            ? "exact"
+            : "area";
+      const label =
+        cluster.pins.length > 1
+          ? `${cluster.pins.length} places`
+          : pinLabel(primaryPin);
+      const marker: Marker = Leaflet.marker([cluster.latitude, cluster.longitude], {
+        icon: Leaflet.divIcon({
+          className: "leaflet-roatan-div-icon",
+          html: leafletPinHtml(label, state),
+          iconAnchor: [58, 36],
+          iconSize: [116, 36],
+        }),
+        keyboard: true,
+        title: primaryPin.hasExactPin ? "Exact map pin" : "Area pin",
+      });
+
+      marker.on("click", () => onClusterClick(cluster));
+      marker.on("mouseover", () => onHoverPin(primaryPin.id));
+      marker.on("mouseout", () => onHoverPin(""));
+      marker.addTo(layers.clusters);
+    });
+
+    savedTripPins.forEach((pin, index) => {
+      const marker: Marker = Leaflet.marker(
+        [pin.latitudeValue, pin.longitudeValue],
+        {
+          icon: Leaflet.divIcon({
+            className: "leaflet-roatan-div-icon",
+            html: leafletRouteStopHtml(index + 1),
+            iconAnchor: [16, 16],
+            iconSize: [32, 32],
+          }),
+          keyboard: true,
+          title: `Stop ${index + 1}: ${pin.title}`,
+        },
+      );
+
+      marker.on("click", () => onPinFocus(pin));
+      marker.addTo(layers.routeStops);
+    });
+
+    if (selectedPickup) {
+      const marker: Marker = Leaflet.marker(
+        [selectedPickup.latitude, selectedPickup.longitude],
+        {
+          icon: Leaflet.divIcon({
+            className: "leaflet-roatan-div-icon",
+            html: leafletPickupHtml("Pickup"),
+            iconAnchor: [48, 34],
+            iconSize: [96, 34],
+          }),
+          keyboard: true,
+          title: selectedPickup.label,
+        },
+      );
+      marker.addTo(layers.points);
+    }
+
+    if (userLocation) {
+      const userDot: CircleMarker = Leaflet.circleMarker(
+        [userLocation.latitude, userLocation.longitude],
+        {
+          color: "#ffffff",
+          fillColor: "#2563eb",
+          fillOpacity: 1,
+          radius: 8,
+          weight: 4,
+        },
+      );
+      userDot.bindTooltip("Your location");
+      userDot.addTo(layers.points);
+    }
+  }, [
+    clusters,
+    hoveredId,
+    mapReady,
+    onClusterClick,
+    onHoverPin,
+    onPinFocus,
+    savedTripPins,
+    selectedClusterId,
+    selectedPickup,
+    userLocation,
+  ]);
+
+  return (
+    <div
+      className={`relative mt-5 overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner ring-1 ring-[#071F2F]/10 ${
+        fullMap ? "min-h-[calc(100vh-220px)]" : "min-h-[460px] sm:min-h-[560px]"
+      }`}
+    >
+      <div
+        ref={mapElementRef}
+        role="application"
+        aria-label="Interactive Roatan day map. Drag to pan, pinch or use the controls to zoom."
+        tabIndex={0}
+        className="absolute inset-0 leaflet-container leaflet-roatan-map"
+      />
+
+      {!mapReady ? (
+        <div className="absolute inset-0 z-[450] grid place-items-center bg-[#98D1CA] text-sm font-black uppercase tracking-[0.16em] text-[#0B3C5D]">
+          Loading map
+        </div>
+      ) : null}
+
+      <div className="absolute left-4 top-4 z-[650] grid gap-2">
+        <button
+          type="button"
+          onClick={() => mapRef.current?.zoomIn()}
+          className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
+          aria-label="Zoom map in"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => mapRef.current?.zoomOut()}
+          className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
+          aria-label="Zoom map out"
+        >
+          -
+        </button>
+        <button
+          type="button"
+          onClick={onExactZoom}
+          aria-label="Zoom to maximum precision"
+          className="rounded-xl bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D] shadow"
+        >
+          Exact
+        </button>
+      </div>
+
+      {children}
+    </div>
+  );
 }
 
 function readSavedTripIds(listings: MapListing[]) {
@@ -576,13 +911,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     longitude: number;
   } | null>(null);
   const [locationMessage, setLocationMessage] = useState("");
-  const dragRef = useRef<{
-    x: number;
-    y: number;
-    centerWorld: { x: number; y: number };
-  } | null>(null);
-  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
-  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
   const listingRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const locations = useMemo(
@@ -801,8 +1129,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         cluster.pins.some((pin) => pin.id === selectedPin.id),
       )
     : null;
-  const centerWorld = latLonToWorld(center.latitude, center.longitude, zoom);
-  const tiles = getTiles(center, zoom);
   const savedTripPins = useMemo(
     () =>
       savedTripIds
@@ -828,19 +1154,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       );
     }, 0);
   }, [savedTripPins]);
-  const tripRoutePoints = useMemo(
-    () =>
-      savedTripPins.map((pin) => {
-        const point = latLonToWorld(pin.latitudeValue, pin.longitudeValue, zoom);
-
-        return {
-          id: pin.id,
-          x: point.x - centerWorld.x,
-          y: point.y - centerWorld.y,
-        };
-      }),
-    [centerWorld.x, centerWorld.y, savedTripPins, zoom],
-  );
   const nearbyPins = useMemo(() => {
     if (!selectedPin) return [];
 
@@ -904,20 +1217,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     });
   }, [selectedId]);
 
-  function zoomMap(direction: 1 | -1) {
-    const currentIndex = zoomLevels.indexOf(zoom);
-    const nextIndex = Math.min(
-      Math.max(currentIndex + direction, 0),
-      zoomLevels.length - 1,
-    );
-    setZoom(zoomLevels[nextIndex]);
-  }
-
-  function panMap(deltaX: number, deltaY: number) {
-    const world = latLonToWorld(center.latitude, center.longitude, zoom);
-    setCenter(worldToLatLon(world.x + deltaX, world.y + deltaY, zoom));
-  }
-
   function focusArea(area: string) {
     setActiveModeId("");
     setActiveCollectionId("");
@@ -927,12 +1226,12 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     setZoom(area === "All" ? 12 : 13);
   }
 
-  function focusPin(pin: Pin) {
+  const focusPin = useCallback((pin: Pin) => {
     setSelectedId(pin.id);
     setMobileDrawerOpen(true);
     setCenter({ latitude: pin.latitudeValue, longitude: pin.longitudeValue });
     setZoom((currentZoom) => Math.max(currentZoom, 13));
-  }
+  }, []);
 
   function applyCollection(collection: MapCollection) {
     setActiveModeId("");
@@ -1156,6 +1455,39 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
     return `/book?${params.toString()}`;
   }
+
+  const handleMapViewChange = useCallback(
+    (nextCenter: MapPoint, nextZoom: number) => {
+      setCenter((currentCenter) => {
+        const centerChanged =
+          Math.abs(currentCenter.latitude - nextCenter.latitude) > 0.00001 ||
+          Math.abs(currentCenter.longitude - nextCenter.longitude) > 0.00001;
+
+        return centerChanged ? nextCenter : currentCenter;
+      });
+      setZoom((currentZoom) =>
+        currentZoom === nextZoom ? currentZoom : nextZoom,
+      );
+    },
+    [],
+  );
+
+  const handleClusterClick = useCallback(
+    (cluster: Cluster) => {
+      const primaryPin = cluster.pins[0];
+      if (!primaryPin) return;
+
+      focusPin(primaryPin);
+      if (cluster.pins.length > 1) {
+        setZoom((currentZoom) => Math.min(currentZoom + 1, maxZoom));
+      }
+    },
+    [focusPin],
+  );
+
+  const handleExactZoom = useCallback(() => {
+    setZoom(maxZoom);
+  }, []);
 
   return (
     <section
@@ -1464,243 +1796,25 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </p>
         ) : null}
 
-        <div
-          role="application"
-          aria-label="Interactive Roatan day map. Drag to pan, pinch or use the controls to zoom."
-          tabIndex={0}
-          className={`relative mt-5 cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner ring-1 ring-[#071F2F]/10 active:cursor-grabbing ${
-            fullMap ? "min-h-[calc(100vh-220px)]" : "min-h-[460px] sm:min-h-[560px]"
-          }`}
-          onKeyDown={(event) => {
-            if (event.key === "+" || event.key === "=") {
-              event.preventDefault();
-              zoomMap(1);
-            } else if (event.key === "-") {
-              event.preventDefault();
-              zoomMap(-1);
-            } else if (event.key === "ArrowLeft") {
-              event.preventDefault();
-              panMap(-96, 0);
-            } else if (event.key === "ArrowRight") {
-              event.preventDefault();
-              panMap(96, 0);
-            } else if (event.key === "ArrowUp") {
-              event.preventDefault();
-              panMap(0, -96);
-            } else if (event.key === "ArrowDown") {
-              event.preventDefault();
-              panMap(0, 96);
-            }
-          }}
-          onWheel={(event) => {
-            event.preventDefault();
-            zoomMap(event.deltaY < 0 ? 1 : -1);
-          }}
-          onPointerDown={(event) => {
-            event.currentTarget.setPointerCapture(event.pointerId);
-            pointersRef.current.set(event.pointerId, {
-              x: event.clientX,
-              y: event.clientY,
-            });
-
-            const points = [...pointersRef.current.values()];
-            if (points.length === 1) {
-              dragRef.current = {
-                x: event.clientX,
-                y: event.clientY,
-                centerWorld,
-              };
-              pinchRef.current = null;
-            } else if (points.length === 2) {
-              pinchRef.current = {
-                distance: Math.hypot(
-                  points[1].x - points[0].x,
-                  points[1].y - points[0].y,
-                ),
-                zoom,
-              };
-              dragRef.current = null;
-            }
-          }}
-          onPointerMove={(event) => {
-            if (!pointersRef.current.has(event.pointerId)) return;
-            pointersRef.current.set(event.pointerId, {
-              x: event.clientX,
-              y: event.clientY,
-            });
-            const points = [...pointersRef.current.values()];
-
-            if (points.length === 2 && pinchRef.current) {
-              const distance = Math.hypot(
-                points[1].x - points[0].x,
-                points[1].y - points[0].y,
-              );
-              const zoomDelta = Math.round(
-                Math.log2(distance / Math.max(pinchRef.current.distance, 1)),
-              );
-              setZoom(
-                Math.min(
-                  Math.max(pinchRef.current.zoom + zoomDelta, minZoom),
-                  maxZoom,
-                ),
-              );
-              return;
-            }
-
-            if (!dragRef.current || points.length !== 1) return;
-
-            const deltaX = event.clientX - dragRef.current.x;
-            const deltaY = event.clientY - dragRef.current.y;
-            setCenter(
-              worldToLatLon(
-                dragRef.current.centerWorld.x - deltaX,
-                dragRef.current.centerWorld.y - deltaY,
-                zoom,
-              ),
-            );
-          }}
-          onPointerUp={(event) => {
-            pointersRef.current.delete(event.pointerId);
-            dragRef.current = null;
-            pinchRef.current = null;
-          }}
-          onPointerCancel={(event) => {
-            pointersRef.current.delete(event.pointerId);
-            dragRef.current = null;
-            pinchRef.current = null;
-          }}
+        <LeafletMapSurface
+          center={center}
+          zoom={zoom}
+          fullMap={fullMap}
+          clusters={clusters}
+          selectedClusterId={selectedCluster?.id || ""}
+          hoveredId={hoveredId}
+          savedTripPins={savedTripPins}
+          selectedPickup={selectedPickup}
+          userLocation={userLocation}
+          onViewChange={handleMapViewChange}
+          onClusterClick={handleClusterClick}
+          onPinFocus={focusPin}
+          onHoverPin={setHoveredId}
+          onExactZoom={handleExactZoom}
         >
-          {tiles.map((tile) => (
-            <div
-              key={`${zoom}-${tile.x}-${tile.y}`}
-              style={{
-                left: `calc(50% + ${tile.left}px)`,
-                top: `calc(50% + ${tile.top}px)`,
-                backgroundImage: `url(https://tile.openstreetmap.org/${zoom}/${tile.x}/${tile.y}.png)`,
-              }}
-              className="absolute h-64 w-64 bg-cover"
-            />
-          ))}
-          <div className="absolute inset-0 bg-[#071F2F]/10" />
-
-          <div className="absolute left-4 top-4 z-20 grid gap-2">
-            <button
-              type="button"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={() => zoomMap(1)}
-              aria-label="Zoom map in"
-              className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
-            >
-              +
-            </button>
-            <button
-              type="button"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={() => zoomMap(-1)}
-              aria-label="Zoom map out"
-              className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
-            >
-              -
-            </button>
-            <button
-              type="button"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={() => setZoom(maxZoom)}
-              aria-label="Zoom to maximum precision"
-              className="rounded-xl bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D] shadow"
-            >
-              Exact
-            </button>
-          </div>
-          {userLocation ? (
-            <div
-              style={{
-                left: `calc(50% + ${
-                  latLonToWorld(userLocation.latitude, userLocation.longitude, zoom)
-                    .x - centerWorld.x
-                }px)`,
-                top: `calc(50% + ${
-                  latLonToWorld(userLocation.latitude, userLocation.longitude, zoom)
-                    .y - centerWorld.y
-                }px)`,
-              }}
-              className="absolute z-20 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600 ring-4 ring-white shadow"
-              title="Your location"
-            />
-          ) : null}
-
-          {selectedPickup ? (
-            <div
-              style={{
-                left: `calc(50% + ${
-                  latLonToWorld(
-                    selectedPickup.latitude,
-                    selectedPickup.longitude,
-                    zoom,
-                  ).x - centerWorld.x
-                }px)`,
-                top: `calc(50% + ${
-                  latLonToWorld(
-                    selectedPickup.latitude,
-                    selectedPickup.longitude,
-                    zoom,
-                  ).y - centerWorld.y
-                }px)`,
-              }}
-              className="absolute z-20 -translate-x-1/2 -translate-y-full rounded-full bg-[#D6B56D] px-3 py-2 text-xs font-black text-[#071F2F] shadow-lg ring-4 ring-white"
-              title={selectedPickup.label}
-            >
-              Pickup
-            </div>
-          ) : null}
-
-          {tripRoutePoints.length > 1 ? (
-            <div className="pointer-events-none absolute inset-0 z-[9]">
-              {tripRoutePoints.slice(1).map((point, index) => {
-                const previousPoint = tripRoutePoints[index];
-                const deltaX = point.x - previousPoint.x;
-                const deltaY = point.y - previousPoint.y;
-                const length = Math.hypot(deltaX, deltaY);
-                const angle = (Math.atan2(deltaY, deltaX) * 180) / Math.PI;
-
-                return (
-                  <span
-                    key={`${previousPoint.id}-${point.id}`}
-                    style={{
-                      left: `calc(50% + ${previousPoint.x}px)`,
-                      top: `calc(50% + ${previousPoint.y}px)`,
-                      width: `${length}px`,
-                      transform: `rotate(${angle}deg)`,
-                    }}
-                    className="absolute h-1 origin-left rounded-full bg-[#D6B56D] shadow-[0_0_18px_rgba(214,181,109,0.65)]"
-                  />
-                );
-              })}
-            </div>
-          ) : null}
-
-          {tripRoutePoints.map((point, index) => (
-            <button
-              key={point.id}
-              type="button"
-              onPointerDown={(event) => event.stopPropagation()}
-              onClick={() => {
-                const pin = savedTripPins[index];
-                if (pin) focusPin(pin);
-              }}
-              style={{
-                left: `calc(50% + ${point.x}px)`,
-                top: `calc(50% + ${point.y}px)`,
-              }}
-              className="absolute z-[12] flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-[#D6B56D] text-xs font-black text-[#071F2F] shadow-lg ring-4 ring-white"
-            >
-              {index + 1}
-            </button>
-          ))}
-
           {pins.length === 0 ? (
-            <div className="absolute inset-0 z-10 flex items-center justify-center p-8 text-center">
-              <div className="max-w-md rounded-2xl bg-white/95 p-6 shadow">
+            <div className="absolute inset-0 z-[500] pointer-events-none flex items-center justify-center p-8 text-center">
+              <div className="pointer-events-auto max-w-md rounded-2xl bg-white/95 p-6 shadow">
                 <p className="font-bold text-[#0B3C5D]">No matches here yet</p>
                 <p className="mt-2 text-sm text-gray-600">
                   Try a guest-ready mode or clear the filters to reopen the map.
@@ -1710,7 +1824,6 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                     <button
                       key={mode.id}
                       type="button"
-                      onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => applyMapConciergeMode(mode)}
                       className="rounded-xl bg-[#EEF7F6] px-3 py-2 text-xs font-bold text-[#0B3C5D]"
                     >
@@ -1721,50 +1834,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               </div>
             </div>
           ) : null}
-
-          {clusters.map((cluster) => {
-            const point = latLonToWorld(cluster.latitude, cluster.longitude, zoom);
-            const left = point.x - centerWorld.x;
-            const top = point.y - centerWorld.y;
-            const primaryPin = cluster.pins[0];
-            const isSelected = selectedCluster?.id === cluster.id;
-            const isHovered = cluster.pins.some((pin) => pin.id === hoveredId);
-
-            return (
-              <button
-                key={cluster.id}
-                type="button"
-                onPointerDown={(event) => event.stopPropagation()}
-                onMouseEnter={() => setHoveredId(primaryPin.id)}
-                onMouseLeave={() => setHoveredId("")}
-                onClick={() => {
-                  focusPin(primaryPin);
-                  if (cluster.pins.length > 1) {
-                    setZoom((currentZoom) => Math.min(currentZoom + 1, maxZoom));
-                  }
-                }}
-                style={{
-                  left: `calc(50% + ${left}px)`,
-                  top: `calc(50% + ${top}px)`,
-                }}
-                className={`absolute z-10 -translate-x-1/2 -translate-y-full rounded-full px-3 py-2 text-xs font-bold shadow-lg ring-4 transition hover:scale-105 ${
-                  isSelected
-                    ? "bg-[#00A8A8] text-white ring-[#D6B56D]"
-                    : isHovered
-                      ? "bg-[#D6B56D] text-[#071F2F] ring-white"
-                    : primaryPin.hasExactPin
-                      ? "bg-[#0B3C5D] text-white ring-white/80"
-                      : "bg-white text-[#0B3C5D] ring-white/80"
-                }`}
-                title={primaryPin.hasExactPin ? "Exact map pin" : "Area pin"}
-              >
-                {cluster.pins.length > 1
-                  ? `${cluster.pins.length} places`
-                  : pinLabel(primaryPin)}
-              </button>
-            );
-          })}
-        </div>
+        </LeafletMapSurface>
 
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span className="inline-flex items-center gap-2">
