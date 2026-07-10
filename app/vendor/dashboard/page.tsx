@@ -45,6 +45,7 @@ import {
 } from "@/lib/admin-revenue";
 import { getMonthCalendarDays } from "@/lib/marketplace-upgrade";
 import { supabase } from "@/lib/supabase";
+import VendorMobileNav from "@/app/vendor/VendorMobileNav";
 import {
   countListingPhotos,
   getListingReadinessSummary,
@@ -1353,7 +1354,9 @@ export default function VendorDashboardPage() {
           </div>
         </header>
 
-        <section className="rounded-2xl bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">
+        <VendorMobileNav />
+
+        <section id="vendor-today" className="scroll-mt-24 rounded-2xl bg-[#071F2F] p-6 text-white shadow-2xl shadow-[#071F2F]/10 sm:p-8">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
             <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D8EFEC] text-3xl font-bold text-[#0B3C5D]">
@@ -1710,7 +1713,7 @@ export default function VendorDashboardPage() {
               </h2>
             </div>
             <Link
-              href="#bookings"
+              href="#vendor-calendar"
               className="rounded-xl bg-[#0B3C5D] px-4 py-3 text-sm font-bold text-white"
             >
               Open bookings
@@ -1808,7 +1811,7 @@ export default function VendorDashboardPage() {
               </h2>
             </div>
             <Link
-              href="#profile"
+              href="#vendor-business"
               className="rounded-xl bg-[#F7F3EA] px-4 py-3 text-sm font-bold text-[#0B3C5D]"
             >
               Update profile
@@ -1836,7 +1839,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section id="profile" className="mt-8 brand-auth-card p-5 shadow sm:p-8">
+        <section id="vendor-business" className="mt-8 scroll-mt-24 brand-auth-card p-5 shadow sm:p-8">
           <h2 className="text-2xl font-bold text-[#0B3C5D]">
             Public Vendor Profile
           </h2>
@@ -2034,7 +2037,7 @@ export default function VendorDashboardPage() {
           </div>
         </section>
 
-        <section id="listings" className="mt-8 scroll-mt-24 brand-auth-card p-5 shadow sm:p-8">
+        <section id="vendor-calendar" className="mt-8 scroll-mt-24 brand-auth-card p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
@@ -2043,6 +2046,7 @@ export default function VendorDashboardPage() {
               <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
                 Booking command center
               </h2>
+              <span id="vendor-inbox" className="scroll-mt-24" aria-hidden="true" />
               <p className="mt-2 text-gray-600">
                 Confirm requests, decline unavailable dates, and send pickup or
                 payment notes back to guests.
@@ -2939,7 +2943,7 @@ export default function VendorDashboardPage() {
           )}
         </section>
 
-        <section className="mt-8 brand-auth-card p-5 shadow sm:p-8">
+        <section id="vendor-listings" className="mt-8 scroll-mt-24 brand-auth-card p-5 shadow sm:p-8">
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold text-[#0B3C5D]">

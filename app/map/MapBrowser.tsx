@@ -74,7 +74,8 @@ const luxuryLayers = [
   "Beaches",
   "Private Charters",
 ];
-const zoomLevels = [11, 12, 13, 14, 15, 16, 17, 18];
+const zoomLevels = [11, 12, 13, 14, 15, 16, 17, 18, 19];
+const minZoom = zoomLevels[0];
 const maxZoom = zoomLevels[zoomLevels.length - 1];
 const roatanCenter = { latitude: 16.34, longitude: -86.48 };
 
@@ -580,6 +581,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
     y: number;
     centerWorld: { x: number; y: number };
   } | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
   const listingRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   const locations = useMemo(
@@ -908,6 +911,11 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
       zoomLevels.length - 1,
     );
     setZoom(zoomLevels[nextIndex]);
+  }
+
+  function panMap(deltaX: number, deltaY: number) {
+    const world = latLonToWorld(center.latitude, center.longitude, zoom);
+    setCenter(worldToLatLon(world.x + deltaX, world.y + deltaY, zoom));
   }
 
   function focusArea(area: string) {
@@ -1457,23 +1465,89 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
         ) : null}
 
         <div
+          role="application"
+          aria-label="Interactive Roatan day map. Drag to pan, pinch or use the controls to zoom."
+          tabIndex={0}
           className={`relative mt-5 cursor-grab touch-none overflow-hidden rounded-2xl bg-[#98D1CA] shadow-inner ring-1 ring-[#071F2F]/10 active:cursor-grabbing ${
             fullMap ? "min-h-[calc(100vh-220px)]" : "min-h-[460px] sm:min-h-[560px]"
           }`}
+          onKeyDown={(event) => {
+            if (event.key === "+" || event.key === "=") {
+              event.preventDefault();
+              zoomMap(1);
+            } else if (event.key === "-") {
+              event.preventDefault();
+              zoomMap(-1);
+            } else if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              panMap(-96, 0);
+            } else if (event.key === "ArrowRight") {
+              event.preventDefault();
+              panMap(96, 0);
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              panMap(0, -96);
+            } else if (event.key === "ArrowDown") {
+              event.preventDefault();
+              panMap(0, 96);
+            }
+          }}
           onWheel={(event) => {
             event.preventDefault();
             zoomMap(event.deltaY < 0 ? 1 : -1);
           }}
           onPointerDown={(event) => {
             event.currentTarget.setPointerCapture(event.pointerId);
-            dragRef.current = {
+            pointersRef.current.set(event.pointerId, {
               x: event.clientX,
               y: event.clientY,
-              centerWorld,
-            };
+            });
+
+            const points = [...pointersRef.current.values()];
+            if (points.length === 1) {
+              dragRef.current = {
+                x: event.clientX,
+                y: event.clientY,
+                centerWorld,
+              };
+              pinchRef.current = null;
+            } else if (points.length === 2) {
+              pinchRef.current = {
+                distance: Math.hypot(
+                  points[1].x - points[0].x,
+                  points[1].y - points[0].y,
+                ),
+                zoom,
+              };
+              dragRef.current = null;
+            }
           }}
           onPointerMove={(event) => {
-            if (!dragRef.current) return;
+            if (!pointersRef.current.has(event.pointerId)) return;
+            pointersRef.current.set(event.pointerId, {
+              x: event.clientX,
+              y: event.clientY,
+            });
+            const points = [...pointersRef.current.values()];
+
+            if (points.length === 2 && pinchRef.current) {
+              const distance = Math.hypot(
+                points[1].x - points[0].x,
+                points[1].y - points[0].y,
+              );
+              const zoomDelta = Math.round(
+                Math.log2(distance / Math.max(pinchRef.current.distance, 1)),
+              );
+              setZoom(
+                Math.min(
+                  Math.max(pinchRef.current.zoom + zoomDelta, minZoom),
+                  maxZoom,
+                ),
+              );
+              return;
+            }
+
+            if (!dragRef.current || points.length !== 1) return;
 
             const deltaX = event.clientX - dragRef.current.x;
             const deltaY = event.clientY - dragRef.current.y;
@@ -1485,11 +1559,15 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               ),
             );
           }}
-          onPointerUp={() => {
+          onPointerUp={(event) => {
+            pointersRef.current.delete(event.pointerId);
             dragRef.current = null;
+            pinchRef.current = null;
           }}
-          onPointerCancel={() => {
+          onPointerCancel={(event) => {
+            pointersRef.current.delete(event.pointerId);
             dragRef.current = null;
+            pinchRef.current = null;
           }}
         >
           {tiles.map((tile) => (
@@ -1510,6 +1588,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               type="button"
               onPointerDown={(event) => event.stopPropagation()}
               onClick={() => zoomMap(1)}
+              aria-label="Zoom map in"
               className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
             >
               +
@@ -1518,6 +1597,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               type="button"
               onPointerDown={(event) => event.stopPropagation()}
               onClick={() => zoomMap(-1)}
+              aria-label="Zoom map out"
               className="h-10 w-10 rounded-xl bg-white text-xl font-bold text-[#0B3C5D] shadow"
             >
               -
@@ -1526,6 +1606,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               type="button"
               onPointerDown={(event) => event.stopPropagation()}
               onClick={() => setZoom(maxZoom)}
+              aria-label="Zoom to maximum precision"
               className="rounded-xl bg-white px-3 py-2 text-xs font-black uppercase tracking-[0.14em] text-[#0B3C5D] shadow"
             >
               Exact
@@ -1653,6 +1734,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               <button
                 key={cluster.id}
                 type="button"
+                onPointerDown={(event) => event.stopPropagation()}
                 onMouseEnter={() => setHoveredId(primaryPin.id)}
                 onMouseLeave={() => setHoveredId("")}
                 onClick={() => {
@@ -1867,7 +1949,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
 
         {selectedPin ? (
           <article
-            className={`sticky bottom-3 z-30 overflow-hidden rounded-2xl bg-white shadow-2xl shadow-[#071F2F]/15 ring-2 ring-[#D6B56D]/35 lg:static ${
+            className={`sticky bottom-[calc(6.5rem+env(safe-area-inset-bottom))] z-30 overflow-hidden rounded-2xl bg-white shadow-2xl shadow-[#071F2F]/15 ring-2 ring-[#D6B56D]/35 sm:bottom-3 lg:static ${
               mobileDrawerOpen ? "max-h-[82vh]" : "max-h-28"
             } transition-[max-height] duration-300 lg:max-h-none`}
           >

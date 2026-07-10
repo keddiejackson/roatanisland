@@ -6,6 +6,11 @@ import {
   sendAdminNotification,
   sendEmailNotification,
 } from "@/lib/notifications";
+import {
+  enforceRateLimit,
+  isValidEmail,
+  readJsonObject,
+} from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 import { buildSupportTicketInsert } from "@/lib/support-tickets";
 
@@ -27,9 +32,17 @@ type ContactRequest = {
 };
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as ContactRequest;
+  const limited = await enforceRateLimit(request, "contact:create", {
+    limit: 6,
+    windowSeconds: 60 * 60,
+  });
+  if (limited) return limited;
 
-  if (!body.name || !body.email || !body.message) {
+  const parsedBody = await readJsonObject<ContactRequest>(request, 64 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
+
+  if (!body.name || !isValidEmail(body.email) || !body.message) {
     return NextResponse.json(
       { error: "Please add your name, email, and message." },
       { status: 400 },

@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { logAppError } from "@/lib/error-log";
+import {
+  enforceRateLimit,
+  getRequestUser,
+  unauthorized,
+} from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 const bucketName = "listing-images";
@@ -21,6 +26,15 @@ function cleanFileName(name: string) {
 }
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "upload:review-image", {
+    limit: 12,
+    windowSeconds: 24 * 60 * 60,
+  });
+  if (limited) return limited;
+
+  const user = await getRequestUser(request);
+  if (!user) return unauthorized("Sign in before adding trip photos.");
+
   const formData = await request.formData();
   const images = formData
     .getAll("image")
@@ -30,6 +44,22 @@ export async function POST(request: Request) {
     /[^a-zA-Z0-9-]/g,
     "",
   );
+
+  const { data: completedBooking } = await supabaseServer
+    .from("bookings")
+    .select("id")
+    .eq("listing_id", listingId)
+    .eq("email", user.email)
+    .eq("status", "completed")
+    .limit(1)
+    .maybeSingle();
+
+  if (!completedBooking) {
+    return NextResponse.json(
+      { error: "Trip photos can be added after a completed booking." },
+      { status: 403 },
+    );
+  }
 
   if (images.length === 0) {
     return NextResponse.json(

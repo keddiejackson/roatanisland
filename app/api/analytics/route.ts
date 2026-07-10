@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logAppError } from "@/lib/error-log";
+import { enforceRateLimit, readJsonObject } from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type AnalyticsRequest = {
@@ -12,7 +13,15 @@ type AnalyticsRequest = {
 };
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as AnalyticsRequest;
+  const limited = await enforceRateLimit(request, "analytics:event", {
+    limit: 180,
+    windowSeconds: 10 * 60,
+  });
+  if (limited) return limited;
+
+  const parsedBody = await readJsonObject<AnalyticsRequest>(request, 16 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
 
   if (!body.eventType && !body.path) {
     return NextResponse.json({ ok: true });

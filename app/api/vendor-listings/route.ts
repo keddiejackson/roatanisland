@@ -7,6 +7,11 @@ import {
   supabaseServer,
 } from "@/lib/supabase-server";
 import { normalizeWebsiteUrl } from "@/lib/url";
+import {
+  enforceRateLimit,
+  readJsonObject,
+  unauthorized,
+} from "@/lib/server-security";
 
 type VendorListingRequest = {
   vendorId?: string | null;
@@ -99,7 +104,20 @@ async function getSessionFromRequest(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as VendorListingRequest;
+  const limited = await enforceRateLimit(request, "vendor-listing:create", {
+    limit: 20,
+    windowSeconds: 60 * 60,
+  });
+  if (limited) return limited;
+
+  const { token, userId, email } = await getSessionFromRequest(request);
+  if (!userId || !email) {
+    return unauthorized("Sign in with a vendor account before submitting a listing.");
+  }
+
+  const parsedBody = await readJsonObject<VendorListingRequest>(request, 96 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
   const price = Number(body.price);
   const maxGuests = body.maxGuests ? Number(body.maxGuests) : null;
   const minimumNoticeHours = body.minimumNoticeHours
@@ -147,7 +165,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const { token, userId, email } = await getSessionFromRequest(request);
   let vendorId = body.vendorId || null;
 
   if (vendorId && userId) {

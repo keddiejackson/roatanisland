@@ -34,6 +34,7 @@ import {
 } from "@/lib/guest-account-actions";
 import { supabase } from "@/lib/supabase";
 import { displayNameFromProfile, profileInitials } from "@/lib/user-profile";
+import { safeInternalReturnPath } from "@/lib/sign-in-destinations";
 
 type Booking = {
   id: string;
@@ -176,9 +177,9 @@ export default function AccountPage() {
 
   useEffect(() => {
     async function loadAccount() {
-      const requestedMode = new URLSearchParams(window.location.search).get(
-        "mode",
-      );
+      const accountParams = new URLSearchParams(window.location.search);
+      const requestedMode = accountParams.get("mode");
+      const requestedNext = accountParams.get("next");
 
       if (requestedMode === "signup") {
         setAuthMode("signup");
@@ -191,6 +192,12 @@ export default function AccountPage() {
         setLoading(false);
         return;
       }
+
+      if (requestedNext && requestedMode !== "reset") {
+        window.location.replace(safeInternalReturnPath(requestedNext));
+        return;
+      }
+
       setEmail(data.user.email);
       setSignedInEmail(data.user.email);
       const { data: sessionData } = await supabase.auth.getSession();
@@ -307,8 +314,8 @@ export default function AccountPage() {
       return;
     }
 
-    router.refresh();
-    window.location.reload();
+    const requestedNext = new URLSearchParams(window.location.search).get("next");
+    window.location.assign(safeInternalReturnPath(requestedNext));
   }
 
   async function signUp(e: React.FormEvent<HTMLFormElement>) {
@@ -316,11 +323,21 @@ export default function AccountPage() {
     setAuthLoading(true);
     setAuthMessage("");
 
+    const accountParams = new URLSearchParams(window.location.search);
+    const requestedNext = accountParams.get("next");
+    const confirmationUrl = new URL("/account", window.location.origin);
+    if (requestedNext) {
+      confirmationUrl.searchParams.set(
+        "next",
+        safeInternalReturnPath(requestedNext),
+      );
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/account`,
+        emailRedirectTo: confirmationUrl.toString(),
       },
     });
 
@@ -333,8 +350,7 @@ export default function AccountPage() {
     }
 
     if (data.session) {
-      router.refresh();
-      window.location.reload();
+      window.location.assign(safeInternalReturnPath(requestedNext));
       return;
     }
 

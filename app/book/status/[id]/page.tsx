@@ -1,6 +1,13 @@
 import Link from "next/link";
+import BookingAccessGate from "@/app/book/BookingAccessGate";
+import BookingChangeRequestForm from "@/app/book/status/[id]/BookingChangeRequestForm";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
+import {
+  createBookingAccessToken,
+  withBookingAccess,
+} from "@/lib/booking-access";
+import { authorizeBookingPage } from "@/lib/booking-access-server";
 import {
   bookingNextAction,
   bookingStatusSteps,
@@ -49,10 +56,13 @@ type Listing = {
 
 export default async function BookingStatusPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ access?: string; quote?: string }>;
 }) {
   const { id } = await params;
+  const accessParams = await searchParams;
   const { data } = await supabaseServer
     .from("bookings")
     .select("*")
@@ -103,6 +113,26 @@ export default async function BookingStatusPage({
       </main>
     );
   }
+
+  const canAccess = await authorizeBookingPage({
+    booking,
+    accessToken: accessParams.access,
+    quoteToken: accessParams.quote,
+  });
+
+  if (!canAccess) {
+    return (
+      <BookingAccessGate
+        bookingId={id}
+        returnPath={`/book/status/${id}`}
+      />
+    );
+  }
+
+  const secureAccessToken = createBookingAccessToken({
+    id: booking.id,
+    email: booking.email,
+  });
 
   const steps = bookingStatusSteps(booking.status);
   const nextAction = bookingNextAction({
@@ -190,7 +220,10 @@ export default async function BookingStatusPage({
               Open guest chat
             </Link>
             <Link
-              href={`/book/trip/${booking.id}`}
+              href={withBookingAccess(
+                `/book/trip/${booking.id}`,
+                secureAccessToken,
+              )}
               className="rounded-xl bg-[#071F2F] px-5 py-3 text-sm font-black text-white"
             >
               Luxury trip packet
@@ -292,6 +325,15 @@ export default async function BookingStatusPage({
             </div>
           </div>
 
+          <BookingChangeRequestForm
+            bookingId={booking.id}
+            accessToken={secureAccessToken}
+            quoteToken={accessParams.quote}
+            currentDate={booking.tour_date}
+            currentTime={booking.tour_time}
+            currentGuests={booking.guests}
+          />
+
           <div className="mt-8 rounded-2xl border border-[#D6B56D]/20 bg-[#FFF8E8] p-5">
             <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#9C7A2F]">
               Booking timeline
@@ -361,19 +403,28 @@ export default async function BookingStatusPage({
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
-                href={`/book/invoice/${booking.id}`}
+                href={withBookingAccess(
+                  `/book/invoice/${booking.id}`,
+                  secureAccessToken,
+                )}
                 className="rounded-xl bg-white px-4 py-2 text-sm font-black text-[#0B3C5D]"
               >
                 Printable invoice
               </Link>
               <Link
-                href={`/book/receipt/${booking.id}`}
+                href={withBookingAccess(
+                  `/book/receipt/${booking.id}`,
+                  secureAccessToken,
+                )}
                 className="rounded-xl bg-white px-4 py-2 text-sm font-black text-[#0B3C5D]"
               >
                 Printable receipt
               </Link>
               <Link
-                href={`/book/trip/${booking.id}`}
+                href={withBookingAccess(
+                  `/book/trip/${booking.id}`,
+                  secureAccessToken,
+                )}
                 className="rounded-xl bg-[#0B3C5D] px-4 py-2 text-sm font-black text-white"
               >
                 Trip packet

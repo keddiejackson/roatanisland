@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { logAppError } from "@/lib/error-log";
+import {
+  enforceRateLimit,
+  getRequestUser,
+  getVendorMembership,
+  forbidden,
+  unauthorized,
+} from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 const bucketName = "listing-images";
 const maxFileSize = 5 * 1024 * 1024;
+const maxFiles = 12;
 const allowedTypes = new Set([
   "image/jpeg",
   "image/png",
@@ -20,14 +28,41 @@ function cleanFileName(name: string) {
 }
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit(request, "upload:listing-image", {
+    limit: 36,
+    windowSeconds: 60 * 60,
+  });
+  if (limited) return limited;
+
+  const user = await getRequestUser(request);
+  if (!user) return unauthorized();
+
   const formData = await request.formData();
-  const images = formData.getAll("image");
+  const images = formData.getAll("image").slice(0, maxFiles);
   const image = images[0];
-  const vendorId = String(formData.get("vendorId") || "pending");
+  const vendorId = String(formData.get("vendorId") || "").trim();
+
+  if (!vendorId || vendorId === "pending") {
+    return NextResponse.json(
+      { error: "Finish creating the vendor account before uploading listing media." },
+      { status: 400 },
+    );
+  }
+
+  if (!(await getVendorMembership(user, vendorId))) {
+    return forbidden("This media library is not linked to your vendor account.");
+  }
 
   if (!(image instanceof File)) {
     return NextResponse.json(
       { error: "Please choose an image file." },
+      { status: 400 },
+    );
+  }
+
+  if (formData.getAll("image").length > maxFiles) {
+    return NextResponse.json(
+      { error: `Upload no more than ${maxFiles} images at a time.` },
       { status: 400 },
     );
   }

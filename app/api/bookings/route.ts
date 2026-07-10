@@ -10,7 +10,16 @@ import {
   shouldAutoConfirmBooking,
 } from "@/lib/booking-availability";
 import { formatBookingCents } from "@/lib/booking-flow";
+import {
+  createBookingAccessToken,
+  withBookingAccess,
+} from "@/lib/booking-access";
 import { logAppError } from "@/lib/error-log";
+import {
+  enforceRateLimit,
+  isValidEmail,
+  readJsonObject,
+} from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingRequest = {
@@ -23,12 +32,43 @@ type BookingRequest = {
   listingId?: string | null;
   promoCode?: string;
   selectedAddonIds?: string[];
+  requestId?: string;
 };
 
+type CreatedBooking = {
+  id: string;
+  email: string;
+  full_name: string;
+  tour_date: string;
+  tour_time: string;
+  guests: number;
+  guest_message: string | null;
+  listing_id: string | null;
+  status: string;
+};
+
+function getBaseUrl(request: Request) {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    `${request.headers.get("x-forwarded-proto") || "https"}://${request.headers.get(
+      "host",
+    )}`
+  );
+}
+
 export async function POST(request: Request) {
-  const body = (await request.json()) as BookingRequest;
+  const rateLimited = await enforceRateLimit(request, "booking:create", {
+    limit: 8,
+    windowSeconds: 10 * 60,
+  });
+  if (rateLimited) return rateLimited;
+
+  const parsedBody = await readJsonObject<BookingRequest>(request, 32 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
   const guests = Number(body.guests);
   const guestMessage = body.guestMessage?.trim().slice(0, 1000) || null;
+  const requestKey = body.requestId?.trim().slice(0, 120) || crypto.randomUUID();
   let bookingStatus = "new";
   let estimatedBookingValueCents: number | null = null;
   let estimatedCommissionCents: number | null = null;
@@ -38,7 +78,7 @@ export async function POST(request: Request) {
 
   if (
     !body.fullName ||
-    !body.email ||
+    !isValidEmail(body.email) ||
     !body.tourDate ||
     !body.tourTime ||
     !Number.isFinite(guests) ||
@@ -46,6 +86,18 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json(
       { error: "Please complete every required booking field." },
+      { status: 400 },
+    );
+  }
+
+  if (
+    body.fullName.trim().length > 160 ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(body.tourDate) ||
+    body.tourTime.trim().length > 120 ||
+    new Date(`${body.tourDate}T23:59:59Z`).getTime() < Date.now()
+  ) {
+    return NextResponse.json(
+      { error: "Please check the traveler name, date, and time." },
       { status: 400 },
     );
   }
@@ -201,29 +253,24 @@ export async function POST(request: Request) {
     }
   }
 
-  const { data: booking, error } = await supabaseServer
-    .from("bookings")
-    .insert([
-      {
-        full_name: body.fullName,
-        email: body.email,
-        tour_date: body.tourDate,
-        tour_time: body.tourTime,
-        guests,
-        status: bookingStatus,
-        guest_message: guestMessage,
-        listing_id: body.listingId || null,
-        booking_value_cents: estimatedBookingValueCents,
-        commission_rate: commissionRate,
-        commission_amount_cents: estimatedCommissionCents,
-        promo_code: body.promoCode?.trim().toUpperCase() || null,
-        discount_amount_cents: discountAmountCents,
-        selected_addons: selectedAddons,
-      },
-    ])
-    .select(
-      "id, full_name, email, tour_date, tour_time, guests, guest_message, listing_id, status",
-    )
+  const { data: bookingData, error } = await supabaseServer
+    .rpc("create_booking_request", {
+      p_request_key: requestKey,
+      p_full_name: body.fullName.trim().slice(0, 160),
+      p_email: body.email.trim().toLowerCase().slice(0, 254),
+      p_tour_date: body.tourDate,
+      p_tour_time: body.tourTime.trim().slice(0, 120),
+      p_guests: guests,
+      p_guest_message: guestMessage,
+      p_listing_id: body.listingId || null,
+      p_status: bookingStatus,
+      p_booking_value_cents: estimatedBookingValueCents,
+      p_commission_rate: commissionRate,
+      p_commission_amount_cents: estimatedCommissionCents,
+      p_promo_code: body.promoCode?.trim().toUpperCase() || null,
+      p_discount_amount_cents: discountAmountCents,
+      p_selected_addons: selectedAddons,
+    })
     .single();
 
   if (error) {
@@ -236,8 +283,28 @@ export async function POST(request: Request) {
         email: body.email,
       },
     });
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const status = /available|enough space/i.test(error.message) ? 409 : 500;
+    return NextResponse.json({ error: error.message }, { status });
   }
+
+  if (!bookingData) {
+    return NextResponse.json(
+      { error: "The booking request could not be created." },
+      { status: 500 },
+    );
+  }
+
+  const booking = bookingData as CreatedBooking;
+
+  const bookingAccessToken = createBookingAccessToken({
+    id: booking.id,
+    email: booking.email,
+  });
+  const statusPath = withBookingAccess(
+    `/book/status/${booking.id}`,
+    bookingAccessToken,
+  );
+  const statusUrl = new URL(statusPath, getBaseUrl(request)).toString();
 
   await supabaseServer.from("booking_events").insert([
     {
@@ -321,6 +388,28 @@ export async function POST(request: Request) {
     ].join("\n"),
   });
 
+  await sendEmailNotification({
+    to: booking.email,
+    subject: `We received your Roatan request: ${listingTitle}`,
+    html: `
+      <p>Hi ${escapeHtml(booking.full_name)},</p>
+      <p>Your request for <strong>${escapeHtml(listingTitle)}</strong> is safely in the operator queue.</p>
+      <p><strong>Date:</strong> ${escapeHtml(booking.tour_date)}<br />
+      <strong>Time:</strong> ${escapeHtml(booking.tour_time)}<br />
+      <strong>Guests:</strong> ${escapeHtml(booking.guests)}</p>
+      <p><a href="${escapeHtml(statusUrl)}" style="display:inline-block;background:#00a8a8;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Open secure trip status</a></p>
+      <p style="color:#64748b;font-size:14px">Keep this private link. It gives access to this booking without requiring a password.</p>
+    `,
+    text: [
+      `Hi ${booking.full_name},`,
+      `We received your request for ${listingTitle}.`,
+      `Date: ${booking.tour_date}`,
+      `Time: ${booking.tour_time}`,
+      `Guests: ${booking.guests}`,
+      `Secure trip status: ${statusUrl}`,
+    ].join("\n"),
+  });
+
   await supabaseServer.from("analytics_events").insert([
     {
       event_type: "booking_request",
@@ -395,5 +484,9 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ bookingId: booking.id });
+  return NextResponse.json({
+    bookingId: booking.id,
+    bookingAccessToken,
+    statusUrl,
+  });
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import SiteLogo from "@/app/SiteLogo";
 import {
   getGuestMenuGroupLabel,
@@ -40,12 +40,23 @@ function groupItems(group: GuestMenuItem["group"]) {
   return guestMenuItems.filter((item) => item.group === group);
 }
 
+function CloseIcon() {
+  return (
+    <span aria-hidden="true" className="relative block size-5">
+      <span className="absolute left-0 top-1/2 h-0.5 w-5 -translate-y-1/2 rotate-45 rounded-full bg-current" />
+      <span className="absolute left-0 top-1/2 h-0.5 w-5 -translate-y-1/2 -rotate-45 rounded-full bg-current" />
+    </span>
+  );
+}
+
 export default function GuestMobilePlatform() {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
   const [savedItems, setSavedItems] = useState<TripBoardListingItem[]>([]);
   const [savedPlanCount, setSavedPlanCount] = useState(0);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const planButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!isGuestSurface(pathname)) return;
@@ -73,6 +84,39 @@ export default function GuestMobilePlatform() {
     };
   }, [pathname]);
 
+  useEffect(() => {
+    if (!menuOpen && !planOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLButtonElement>(
+          menuOpen ? "#guest-menu-panel button" : "#guest-plan-panel button",
+        )
+        ?.focus();
+    });
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (menuOpen) {
+        setMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+      if (planOpen) {
+        setPlanOpen(false);
+        planButtonRef.current?.focus();
+      }
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      window.removeEventListener("keydown", closeOnEscape);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [menuOpen, planOpen]);
+
   const tripHref = useMemo(() => {
     const ids = savedItems.map((item) => item.id).filter(Boolean);
     return ids.length > 0
@@ -89,10 +133,13 @@ export default function GuestMobilePlatform() {
   return (
     <>
       <button
+        ref={menuButtonRef}
         type="button"
         onClick={() => setMenuOpen(true)}
         className="fixed right-4 top-[calc(0.85rem+env(safe-area-inset-top))] z-[70] grid h-12 w-12 place-items-center rounded-2xl bg-white/92 text-[#071F2F] shadow-2xl shadow-[#071F2F]/15 ring-1 ring-[#071F2F]/10 backdrop-blur sm:hidden"
         aria-label="Open menu"
+        aria-expanded={menuOpen}
+        aria-controls="guest-menu-panel"
       >
         <span className="grid gap-1.5">
           <span className="h-0.5 w-6 rounded-full bg-current" />
@@ -107,7 +154,8 @@ export default function GuestMobilePlatform() {
       >
         <Link
           href="/tours"
-          className="rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
+          aria-current={pathname === "/tours" ? "page" : undefined}
+          className={`rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50 ${pathname === "/tours" ? "bg-white/12" : ""}`}
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
             Browse
@@ -116,7 +164,8 @@ export default function GuestMobilePlatform() {
         </Link>
         <Link
           href="/map"
-          className="rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
+          aria-current={pathname === "/map" ? "page" : undefined}
+          className={`rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50 ${pathname === "/map" ? "bg-white/12" : ""}`}
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
             Island
@@ -124,10 +173,13 @@ export default function GuestMobilePlatform() {
           <span className="mt-0.5 block">Map</span>
         </Link>
         <button
+          ref={planButtonRef}
           type="button"
           onClick={() => setPlanOpen(true)}
           className="rounded-[1rem] bg-white px-2 py-2.5 text-[#071F2F] shadow-lg shadow-black/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
           aria-label="Open Saved Plan"
+          aria-expanded={planOpen}
+          aria-controls="guest-plan-panel"
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#9C7A2F]">
             Saved
@@ -142,7 +194,8 @@ export default function GuestMobilePlatform() {
         </button>
         <Link
           href="/concierge"
-          className="rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
+          aria-current={pathname === "/concierge" ? "page" : undefined}
+          className={`rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50 ${pathname === "/concierge" ? "bg-white/12" : ""}`}
         >
           <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
             Roa
@@ -153,7 +206,13 @@ export default function GuestMobilePlatform() {
 
       {menuOpen ? (
         <div className="fixed inset-0 z-[90] bg-[#071F2F]/45 backdrop-blur-sm sm:hidden">
-          <aside className="ml-auto flex h-full w-full max-w-[420px] flex-col bg-[#FBF8EF] text-[#071F2F] shadow-2xl">
+          <aside
+            id="guest-menu-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Guest navigation"
+            className="ml-auto flex h-full w-full max-w-[420px] flex-col bg-[#FBF8EF] text-[#071F2F] shadow-2xl"
+          >
             <div className="flex items-center justify-between border-b border-[#D6B56D]/25 px-5 py-4">
               <button
                 type="button"
@@ -161,7 +220,7 @@ export default function GuestMobilePlatform() {
                 className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-2xl font-black shadow ring-1 ring-[#071F2F]/10"
                 aria-label="Close menu"
               >
-                x
+                <CloseIcon />
               </button>
               <SiteLogo variant="dark" compact />
             </div>
@@ -205,7 +264,13 @@ export default function GuestMobilePlatform() {
 
       {planOpen ? (
         <div className="fixed inset-0 z-[88] bg-[#071F2F]/45 backdrop-blur-sm sm:hidden">
-          <aside className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-hidden rounded-t-[2rem] bg-[#FBF8EF] text-[#071F2F] shadow-2xl">
+          <aside
+            id="guest-plan-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Saved trip plan"
+            className="absolute inset-x-0 bottom-0 max-h-[86vh] overflow-hidden rounded-t-[2rem] bg-[#FBF8EF] text-[#071F2F] shadow-2xl"
+          >
             <div className="flex items-start justify-between gap-4 border-b border-[#D6B56D]/25 px-5 py-5">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-[#00A8A8]">
@@ -219,7 +284,7 @@ export default function GuestMobilePlatform() {
                 className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white text-2xl font-black shadow ring-1 ring-[#071F2F]/10"
                 aria-label="Close saved plan"
               >
-                x
+                <CloseIcon />
               </button>
             </div>
 

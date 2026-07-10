@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   bookingConversionChecklist,
   composeBookingGuestMessage,
@@ -158,6 +158,8 @@ export default function BookingForm({
   const [depositLoading, setDepositLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [bookingId, setBookingId] = useState<string | null>(null);
+  const [bookingAccessToken, setBookingAccessToken] = useState("");
+  const requestId = useRef(crypto.randomUUID());
   const [listing, setListing] = useState<ListingSummary | null>(null);
   const [addons, setAddons] = useState<Addon[]>([]);
   const [selectedAddonIds, setSelectedAddonIds] = useState<string[]>([]);
@@ -497,6 +499,7 @@ export default function BookingForm({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          requestId: requestId.current,
           fullName,
           email,
           tourDate,
@@ -520,6 +523,7 @@ export default function BookingForm({
       }
 
       setBookingId(result.bookingId || null);
+      setBookingAccessToken(result.bookingAccessToken || "");
       setSubmitted(true);
       localStorage.removeItem(BOOKING_DRAFT_KEY);
     } catch (err) {
@@ -542,7 +546,11 @@ export default function BookingForm({
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ bookingId, paymentType }),
+      body: JSON.stringify({
+        bookingId,
+        paymentType,
+        bookingAccessToken,
+      }),
     });
 
     const result = await response.json();
@@ -919,7 +927,11 @@ export default function BookingForm({
             {successNextSteps.map((step) => (
               <Link
                 key={step.label}
-                href={step.href}
+                href={
+                  bookingAccessToken && step.href.startsWith("/book/")
+                    ? `${step.href}${step.href.includes("?") ? "&" : "?"}access=${encodeURIComponent(bookingAccessToken)}`
+                    : step.href
+                }
                 className="rounded-xl bg-white/85 p-4 text-green-950 shadow-sm transition hover:bg-white"
               >
                 <p className="text-sm font-black">{step.label}</p>
@@ -952,7 +964,15 @@ export default function BookingForm({
               </button>
             ) : null}
             <Link
-              href={bookingId ? `/book/status/${bookingId}` : "/"}
+              href={
+                bookingId
+                  ? `/book/status/${bookingId}${
+                      bookingAccessToken
+                        ? `?access=${encodeURIComponent(bookingAccessToken)}`
+                        : ""
+                    }`
+                  : "/"
+              }
               className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
             >
               View booking status

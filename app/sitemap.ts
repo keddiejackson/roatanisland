@@ -18,44 +18,27 @@ type VendorSitemapRow = {
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
-  const staticRoutes: MetadataRoute.Sitemap = [
-    {
-      url: siteUrl,
+  const publicRoutes = [
+    ["", "weekly", 1],
+    ["/tours", "daily", 0.92],
+    ["/map", "daily", 0.9],
+    ["/hotels", "daily", 0.84],
+    ["/transport", "daily", 0.84],
+    ["/concierge", "weekly", 0.82],
+    ["/community", "daily", 0.76],
+    ["/vendors", "weekly", 0.72],
+    ["/guides", "weekly", 0.75],
+    ["/support", "monthly", 0.58],
+    ["/vendor/signup", "monthly", 0.5],
+  ] as const;
+  const staticRoutes: MetadataRoute.Sitemap = publicRoutes.map(
+    ([path, changeFrequency, priority]) => ({
+      url: `${siteUrl}${path}`,
       lastModified: now,
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: `${siteUrl}/signin`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.4,
-    },
-    {
-      url: `${siteUrl}/support`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/guides`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.75,
-    },
-    {
-      url: `${siteUrl}/vendor/signup`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.5,
-    },
-    {
-      url: `${siteUrl}/vendor/login`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.3,
-    },
-  ];
+      changeFrequency,
+      priority,
+    }),
+  );
 
   const { data: listingsData } = await supabaseServer
     .from("listings")

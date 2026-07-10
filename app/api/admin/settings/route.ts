@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { logActivity } from "@/lib/activity-log";
 import {
   draftSiteSettingsKey,
@@ -62,6 +63,10 @@ export async function PATCH(request: Request) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (action === "publish") {
+    revalidateTag("site-branding", { expire: 0 });
   }
 
   await logActivity({

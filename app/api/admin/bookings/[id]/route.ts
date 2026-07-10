@@ -13,6 +13,10 @@ import {
   buildPaymentRequestEmail,
   getBookingMoneySnapshot,
 } from "@/lib/booking-money-command";
+import {
+  createBookingAccessToken,
+  withBookingAccess,
+} from "@/lib/booking-access";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -103,15 +107,6 @@ export async function PATCH(
   const { id } = await context.params;
   const body = (await request.json()) as BookingUpdateRequest;
   const nextStatus = body.status || "new";
-  const paymentRequestUrl =
-    body.paymentLinkUrl || `${getBaseUrl(request)}/book/status/${id}`;
-  const paymentRequestUpdate = body.sendPaymentRequest
-    ? {
-        payment_requested_at: new Date().toISOString(),
-        payment_last_sent_at: new Date().toISOString(),
-        payment_link_url: paymentRequestUrl,
-      }
-    : {};
   const moneyUpdate = buildBookingMoneyUpdate(
     body as unknown as Record<string, unknown>,
   );
@@ -123,9 +118,25 @@ export async function PATCH(
 
   const { data: currentBooking } = await supabaseServer
     .from("bookings")
-    .select("status, commission_status")
+    .select("status, commission_status, email")
     .eq("id", id)
     .maybeSingle();
+
+  const secureStatusPath = currentBooking?.email
+    ? withBookingAccess(
+        `/book/status/${id}`,
+        createBookingAccessToken({ id, email: currentBooking.email }),
+      )
+    : "/account";
+  const paymentRequestUrl =
+    body.paymentLinkUrl || new URL(secureStatusPath, getBaseUrl(request)).toString();
+  const paymentRequestUpdate = body.sendPaymentRequest
+    ? {
+        payment_requested_at: new Date().toISOString(),
+        payment_last_sent_at: new Date().toISOString(),
+        payment_link_url: paymentRequestUrl,
+      }
+    : {};
 
   const { data: booking, error } = await supabaseServer
     .from("bookings")

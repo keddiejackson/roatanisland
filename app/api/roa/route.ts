@@ -14,6 +14,7 @@ import {
   type RoaChatMessage,
   type RoaTravelerContext,
 } from "@/lib/roa-concierge";
+import { enforceRateLimit, readJsonObject } from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type RoaRequestBody = {
@@ -39,7 +40,15 @@ function getGeminiModelName() {
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as RoaRequestBody;
+  const limited = await enforceRateLimit(request, "roa:chat", {
+    limit: 24,
+    windowSeconds: 15 * 60,
+  });
+  if (limited) return limited;
+
+  const parsedBody = await readJsonObject<RoaRequestBody>(request, 64 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
   const messages = normalizeRoaMessages(body.messages || []);
   const latestMessage =
     [...messages].reverse().find((message) => message.role === "user")

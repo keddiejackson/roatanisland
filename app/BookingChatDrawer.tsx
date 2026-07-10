@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import {
@@ -116,12 +117,14 @@ function MessageAvatar({ message }: { message: BookingMessageLike }) {
   );
 
   return (
-    <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[11px] font-black text-[#0B3C5D] shadow-sm ring-1 ring-[#0B3C5D]/10">
+    <span className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[11px] font-black text-[#0B3C5D] shadow-sm ring-1 ring-[#0B3C5D]/10">
       {message.sender_profile_image_url ? (
-        <img
+        <Image
           src={message.sender_profile_image_url}
           alt=""
-          className="size-full object-cover"
+          fill
+          sizes="32px"
+          className="object-cover"
         />
       ) : (
         initials
@@ -418,7 +421,7 @@ export default function BookingChatDrawer({
       <motion.button
         type="button"
         onClick={() => changeOpen(true)}
-        className="fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 right-3 z-40 rounded-2xl bg-[#071F2F] px-4 py-3 text-left font-bold text-white shadow-2xl shadow-[#071F2F]/25 ring-1 ring-white/10 transition hover:-translate-y-1 sm:left-auto sm:right-5 sm:w-[min(12.5rem,calc(100vw-1.5rem))] sm:max-w-[calc(100vw-2rem)] sm:px-5 sm:py-4"
+        className="fixed bottom-[calc(5.75rem+env(safe-area-inset-bottom))] right-3 z-40 w-auto max-w-[11rem] rounded-full bg-[#071F2F] px-4 py-3 text-left font-bold text-white shadow-2xl shadow-[#071F2F]/25 ring-1 ring-white/10 transition hover:-translate-y-1 sm:bottom-[calc(1rem+env(safe-area-inset-bottom))] sm:right-5 sm:w-[min(12.5rem,calc(100vw-1.5rem))] sm:max-w-[calc(100vw-2rem)] sm:rounded-2xl sm:px-5 sm:py-4"
         aria-label="Open booking messages"
         initial={reduceMotion ? undefined : { opacity: 0, y: 12 }}
         animate={reduceMotion ? undefined : { opacity: 1, y: 0 }}
@@ -482,12 +485,14 @@ export default function BookingChatDrawer({
                         href={accountPath}
                         className="mobile-chat-profile mt-2 hidden max-w-full items-center gap-2 rounded-xl bg-white/10 px-2.5 py-2 text-left ring-1 ring-white/10 transition hover:bg-white/15 sm:inline-flex"
                       >
-                        <span className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
+                        <span className="relative grid size-8 shrink-0 place-items-center overflow-hidden rounded-full bg-white text-[10px] font-black text-[#0B3C5D]">
                           {viewerProfile.profileImageUrl ? (
-                            <img
+                            <Image
                               src={viewerProfile.profileImageUrl}
                               alt=""
-                              className="size-full object-cover"
+                              fill
+                              sizes="32px"
+                              className="object-cover"
                             />
                           ) : (
                             profileInitials(

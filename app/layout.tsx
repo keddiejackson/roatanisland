@@ -12,21 +12,38 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_SITE_URL || "https://www.roatanisland.life",
   ),
-  title: "RoatanIsland.life",
-  description: "Discover and book tours, stays, and transport in Roatan.",
+  applicationName: "Roatan Island Life",
+  title: {
+    default: "Roatan Island Life | Curated island planning",
+    template: "%s | Roatan Island Life",
+  },
+  description:
+    "Plan Roatan with curated local experiences, precise map context, trusted operators, and help from Roa, your island concierge.",
+  keywords: [
+    "Roatan tours",
+    "Roatan map",
+    "Roatan hotels",
+    "Roatan transportation",
+    "Roatan cruise excursions",
+    "Roatan concierge",
+  ],
+  category: "travel",
+  alternates: { canonical: "/" },
   verification: {
     google: "rvSAtX1sV6nfPG1RCaF8euFpTRUtZ3NqRwmqE_J5C4o",
   },
   openGraph: {
-    title: "RoatanIsland.life",
-    description: "Discover and book tours, stays, and transport in Roatan.",
+    title: "Roatan Island Life",
+    description:
+      "Curated local experiences, precise map planning, and trusted Roatan concierge support.",
     siteName: "RoatanIsland.life",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "RoatanIsland.life",
-    description: "Discover and book tours, stays, and transport in Roatan.",
+    title: "Roatan Island Life",
+    description:
+      "Curated local experiences, precise map planning, and trusted Roatan concierge support.",
   },
 };
 
@@ -37,11 +54,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
+      <body className="flex min-h-dvh flex-col">
         <SiteBrandingProvider>
+          <a className="skip-link" href="#main-content">
+            Skip to content
+          </a>
           <AnalyticsTracker />
           <SessionIdleTimeout />
-          {children}
+          <div id="main-content" tabIndex={-1} className="min-w-0 flex-1">
+            {children}
+          </div>
           <GuestMobilePlatform />
           <GlobalBookingChat />
           <GlobalRoaButton />

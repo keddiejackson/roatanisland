@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import CategoryPage from "@/app/category-page";
 
 export const metadata: Metadata = {
-  title: "Roatan Tours | RoatanIsland.life",
+  title: "Roatan Tours",
   description: "Browse Roatan tours, excursions, snorkeling, cruises, and island experiences.",
 };
 

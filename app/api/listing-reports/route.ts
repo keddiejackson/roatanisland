@@ -1,15 +1,24 @@
 import { NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity-log";
+import { enforceRateLimit, readJsonObject } from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as {
+  const limited = await enforceRateLimit(request, "listing-report:create", {
+    limit: 5,
+    windowSeconds: 24 * 60 * 60,
+  });
+  if (limited) return limited;
+
+  const parsedBody = await readJsonObject<{
     listingId?: string;
     reporterName?: string;
     reporterEmail?: string;
     reason?: string;
     details?: string;
-  };
+  }>(request, 16 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
   if (!body.listingId || !body.reason?.trim()) {
     return NextResponse.json({ error: "Choose a reason." }, { status: 400 });
   }

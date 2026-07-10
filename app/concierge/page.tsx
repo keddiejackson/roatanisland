@@ -6,7 +6,7 @@ import type { ConciergeListing } from "@/lib/guest-concierge";
 import { supabaseServer } from "@/lib/supabase-server";
 
 export const metadata = {
-  title: "Roa AI Concierge | RoatanIsland.life",
+  title: "Roa AI Concierge",
   description:
     "Meet Roa, your personal Roatan concierge for trip planning, cruise timing, airport pickup, local recommendations, and concierge requests.",
 };

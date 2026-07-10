@@ -25,7 +25,11 @@ export default function QuoteActions({
     const response = await fetch("/api/payments/deposit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId: nextBookingId, paymentType: "deposit" }),
+      body: JSON.stringify({
+        bookingId: nextBookingId,
+        paymentType: "deposit",
+        quoteToken: token,
+      }),
     });
     const result = await response.json();
 
@@ -102,7 +106,7 @@ export default function QuoteActions({
         </p>
         {currentBookingId ? (
           <Link
-            href={`/book/status/${currentBookingId}`}
+            href={`/book/status/${currentBookingId}?quote=${encodeURIComponent(token)}`}
             className="mt-4 inline-block rounded-xl bg-green-700 px-5 py-3 font-bold text-white"
           >
             View booking status
@@ -161,7 +165,7 @@ export default function QuoteActions({
           {message}
           {currentBookingId ? (
             <Link
-              href={`/book/status/${currentBookingId}`}
+              href={`/book/status/${currentBookingId}?quote=${encodeURIComponent(token)}`}
               className="ml-2 underline"
             >
               View booking status

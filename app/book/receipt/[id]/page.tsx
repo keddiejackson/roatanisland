@@ -1,6 +1,12 @@
 import Link from "next/link";
+import BookingAccessGate from "@/app/book/BookingAccessGate";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
+import {
+  createBookingAccessToken,
+  withBookingAccess,
+} from "@/lib/booking-access";
+import { authorizeBookingPage } from "@/lib/booking-access-server";
 import {
   buildMoneyDocument,
   formatMoneyCents,
@@ -62,10 +68,13 @@ async function loadBookingDocument(id: string) {
 
 export default async function BookingReceiptPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ access?: string; quote?: string }>;
 }) {
   const { id } = await params;
+  const accessParams = await searchParams;
   const { booking, listingTitle } = await loadBookingDocument(id);
 
   if (!booking) {
@@ -86,6 +95,20 @@ export default async function BookingReceiptPage({
     );
   }
 
+  const canAccess = await authorizeBookingPage({
+    booking: { ...booking, email: booking.email || "" },
+    accessToken: accessParams.access,
+    quoteToken: accessParams.quote,
+  });
+  if (!canAccess) {
+    return <BookingAccessGate bookingId={id} returnPath={`/book/receipt/${id}`} />;
+  }
+
+  const secureAccessToken = createBookingAccessToken({
+    id: booking.id,
+    email: booking.email || "",
+  });
+
   const document = buildMoneyDocument(booking, "receipt", listingTitle);
   const snapshot = getBookingMoneySnapshot(booking);
 
@@ -95,7 +118,10 @@ export default async function BookingReceiptPage({
         <div className="mb-8 flex items-center justify-between gap-4 print:hidden">
           <SiteLogo />
           <Link
-            href={`/book/status/${booking.id}`}
+            href={withBookingAccess(
+              `/book/status/${booking.id}`,
+              secureAccessToken,
+            )}
             className="rounded-xl bg-white px-4 py-2 text-sm font-black text-[#0B3C5D] shadow"
           >
             Booking status

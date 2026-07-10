@@ -1,6 +1,12 @@
 import Link from "next/link";
+import BookingAccessGate from "@/app/book/BookingAccessGate";
 import SiteFooter from "@/app/SiteFooter";
 import SiteLogo from "@/app/SiteLogo";
+import {
+  createBookingAccessToken,
+  withBookingAccess,
+} from "@/lib/booking-access";
+import { authorizeBookingPage } from "@/lib/booking-access-server";
 import { buildTripPacket } from "@/lib/trip-packet";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -53,10 +59,13 @@ async function loadTripPacket(id: string) {
 
 export default async function TripPacketPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ access?: string; quote?: string }>;
 }) {
   const { id } = await params;
+  const accessParams = await searchParams;
   const { booking, listingTitle } = await loadTripPacket(id);
 
   if (!booking) {
@@ -80,7 +89,24 @@ export default async function TripPacketPage({
     );
   }
 
-  const statusUrl = `/book/status/${booking.id}`;
+  const canAccess = await authorizeBookingPage({
+    booking: { ...booking, email: booking.email || "" },
+    accessToken: accessParams.access,
+    quoteToken: accessParams.quote,
+  });
+  if (!canAccess) {
+    return <BookingAccessGate bookingId={id} returnPath={`/book/trip/${id}`} />;
+  }
+
+  const secureAccessToken = createBookingAccessToken({
+    id: booking.id,
+    email: booking.email || "",
+  });
+
+  const statusUrl = withBookingAccess(
+    `/book/status/${booking.id}`,
+    secureAccessToken,
+  );
   const packet = buildTripPacket({
     booking,
     listingTitle,

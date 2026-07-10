@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
+import {
+  createBookingAccessToken,
+  withBookingAccess,
+} from "@/lib/booking-access";
+import { authorizeBookingRequest } from "@/lib/booking-access-server";
 import { logAppError } from "@/lib/error-log";
+import { enforceRateLimit, readJsonObject } from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type DepositRequest = {
   bookingId?: string;
   paymentType?: "deposit" | "full";
+  bookingAccessToken?: string;
+  quoteToken?: string;
 };
 
 function getBaseUrl(request: Request) {
@@ -17,11 +25,19 @@ function getBaseUrl(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = await enforceRateLimit(request, "payment:checkout", {
+    limit: 12,
+    windowSeconds: 15 * 60,
+  });
+  if (rateLimited) return rateLimited;
+
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   let depositAmountCents = Number(
     process.env.STRIPE_DEPOSIT_AMOUNT_CENTS || "5000",
   );
-  const body = (await request.json()) as DepositRequest;
+  const parsedBody = await readJsonObject<DepositRequest>(request, 8 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
 
   const { data: settingsData } = await supabaseServer
     .from("site_settings")
@@ -52,7 +68,9 @@ export async function POST(request: Request) {
 
   const { data: booking, error: bookingError } = await supabaseServer
     .from("bookings")
-    .select("id, full_name, email, listing_id, booking_value_cents")
+    .select(
+      "id, full_name, email, listing_id, status, booking_value_cents, amount_paid_cents, balance_due_cents, payment_link_url, deposit_status, deposit_amount_cents",
+    )
     .eq("id", body.bookingId)
     .single();
 
@@ -70,6 +88,27 @@ export async function POST(request: Request) {
     );
   }
 
+  const authorized = await authorizeBookingRequest({
+    request,
+    booking,
+    accessToken: body.bookingAccessToken,
+    quoteToken: body.quoteToken,
+  });
+
+  if (!authorized) {
+    return NextResponse.json(
+      { error: "Use the secure booking link or sign in before opening checkout." },
+      { status: 403 },
+    );
+  }
+
+  if (booking.status === "cancelled") {
+    return NextResponse.json(
+      { error: "Cancelled bookings cannot accept a payment." },
+      { status: 409 },
+    );
+  }
+
   let listingTitle = "Roatan booking deposit";
   let checkoutAmountCents = depositAmountCents;
   let paymentLabel = "deposit";
@@ -79,11 +118,28 @@ export async function POST(request: Request) {
     .eq("booking_id", booking.id)
     .maybeSingle();
 
+  const outstandingBalance = Math.max(
+    0,
+    booking.balance_due_cents ??
+      (booking.booking_value_cents || 0) - (booking.amount_paid_cents || 0),
+  );
+
   if (body.paymentType === "full" && booking.booking_value_cents) {
-    checkoutAmountCents = booking.booking_value_cents;
+    checkoutAmountCents = outstandingBalance || booking.booking_value_cents;
     paymentLabel = "full payment";
   } else if (conciergeQuote?.deposit_amount_cents) {
     checkoutAmountCents = conciergeQuote.deposit_amount_cents;
+  }
+
+  if (outstandingBalance > 0) {
+    checkoutAmountCents = Math.min(checkoutAmountCents, outstandingBalance);
+  }
+
+  if (!Number.isInteger(checkoutAmountCents) || checkoutAmountCents < 50) {
+    return NextResponse.json(
+      { error: "This booking does not currently have a payable balance." },
+      { status: 409 },
+    );
   }
 
   if (booking.listing_id) {
@@ -103,17 +159,27 @@ export async function POST(request: Request) {
   }
 
   const baseUrl = getBaseUrl(request);
+  const secureAccessToken = createBookingAccessToken({
+    id: booking.id,
+    email: booking.email,
+  });
+  const secureStatusPath = withBookingAccess(
+    `/book/status/${booking.id}`,
+    secureAccessToken,
+  );
   const params = new URLSearchParams();
   params.append("mode", "payment");
   params.append("submit_type", "book");
   params.append("customer_email", booking.email);
   params.append(
     "success_url",
-    `${baseUrl}/book/success?booking=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
+    `${baseUrl}/book/success?booking=${booking.id}&access=${encodeURIComponent(
+      secureAccessToken,
+    )}&session_id={CHECKOUT_SESSION_ID}`,
   );
   params.append(
     "cancel_url",
-    `${baseUrl}/book${booking.listing_id ? `?listing=${booking.listing_id}` : ""}`,
+    new URL(secureStatusPath, baseUrl).toString(),
   );
   params.append("client_reference_id", booking.id);
   params.append("line_items[0][quantity]", "1");
@@ -127,6 +193,8 @@ export async function POST(request: Request) {
     listingTitle,
   );
   params.append("metadata[booking_id]", booking.id);
+  params.append("metadata[payment_type]", body.paymentType || "deposit");
+  params.append("metadata[amount_cents]", String(checkoutAmountCents));
   params.append("payment_intent_data[metadata][booking_id]", booking.id);
 
   const stripeResponse = await fetch("https://api.stripe.com/v1/checkout/sessions", {
@@ -134,6 +202,7 @@ export async function POST(request: Request) {
     headers: {
       Authorization: `Bearer ${stripeSecretKey}`,
       "Content-Type": "application/x-www-form-urlencoded",
+      "Idempotency-Key": `booking-${booking.id}-${body.paymentType || "deposit"}-${checkoutAmountCents}-${booking.amount_paid_cents || 0}`,
     },
     body: params,
   });
@@ -163,12 +232,6 @@ export async function POST(request: Request) {
         body.paymentType === "full" ? "full_checkout_started" : "checkout_started",
       deposit_amount_cents: checkoutAmountCents,
       stripe_checkout_session_id: checkoutSession.id,
-    })
-    .eq("id", booking.id);
-
-  await supabaseServer
-    .from("bookings")
-    .update({
       payment_schedule_type:
         body.paymentType === "full" ? "full_payment" : "deposit_only",
       payment_requested_at: new Date().toISOString(),
@@ -176,8 +239,9 @@ export async function POST(request: Request) {
       payment_link_url: checkoutSession.url,
       balance_due_cents:
         body.paymentType === "full"
-          ? booking.booking_value_cents || checkoutAmountCents
-          : Math.max(0, (booking.booking_value_cents || 0) - checkoutAmountCents),
+          ? outstandingBalance || checkoutAmountCents
+          : outstandingBalance ||
+            Math.max(0, (booking.booking_value_cents || 0) - checkoutAmountCents),
     })
     .eq("id", booking.id);
 
@@ -191,5 +255,8 @@ export async function POST(request: Request) {
       .eq("id", conciergeQuote.id);
   }
 
-  return NextResponse.json({ url: checkoutSession.url });
+  return NextResponse.json({
+    url: checkoutSession.url,
+    bookingAccessToken: secureAccessToken,
+  });
 }

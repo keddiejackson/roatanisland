@@ -2,11 +2,14 @@
   "name": "roatanisland",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test lib/*.test.mjs",
+    "check": "npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.102.1",

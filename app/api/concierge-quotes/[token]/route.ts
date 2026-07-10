@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity-log";
+import { enforceRateLimit, readJsonObject } from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type QuoteActionRequest = {
@@ -56,8 +57,16 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ token: string }> },
 ) {
+  const limited = await enforceRateLimit(request, "quote:update", {
+    limit: 12,
+    windowSeconds: 15 * 60,
+  });
+  if (limited) return limited;
+
   const { token } = await context.params;
-  const body = (await request.json()) as QuoteActionRequest;
+  const parsedBody = await readJsonObject<QuoteActionRequest>(request, 16 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
 
   const { data: quote, error: quoteError } = await supabaseServer
     .from("concierge_quotes")

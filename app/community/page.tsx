@@ -4,7 +4,7 @@ import SiteLogo from "@/app/SiteLogo";
 import CommunityForum from "@/app/community/CommunityForum";
 
 export const metadata = {
-  title: "The Roatan Circle | RoatanIsland.life",
+  title: "The Roatan Circle",
   description:
     "Ask Roatan travelers, locals, operators, and Roa for island-specific advice on cruise timing, beaches, stays, transfers, and private days.",
 };

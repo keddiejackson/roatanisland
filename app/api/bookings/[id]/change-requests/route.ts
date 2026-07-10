@@ -9,6 +9,12 @@ import {
   sendEmailNotification,
 } from "@/lib/notifications";
 import { logActivity } from "@/lib/activity-log";
+import { authorizeBookingPage } from "@/lib/booking-access-server";
+import {
+  enforceRateLimit,
+  getRequestUser,
+  readJsonObject,
+} from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type ChangeRequestCreateBody = {
@@ -29,24 +35,12 @@ type BookingSnapshot = {
   listing_id: string | null;
 };
 
-async function getUser(request: Request) {
-  const token = request.headers
-    .get("authorization")
-    ?.replace(/^Bearer\s+/i, "");
-
-  if (!token) return null;
-
-  const { data } = await supabaseServer.auth.getUser(token);
-  return data.user ? { id: data.user.id, email: data.user.email || null } : null;
-}
-
-async function getGuestBooking(request: Request, bookingId: string) {
-  const user = await getUser(request);
-
-  if (!user?.email) {
-    return { error: "Unauthorized", status: 401 as const };
-  }
-
+async function getGuestBooking(
+  request: Request,
+  bookingId: string,
+  accessToken?: string | null,
+  quoteToken?: string | null,
+) {
   const { data: booking } = await supabaseServer
     .from("bookings")
     .select("id, full_name, email, tour_date, tour_time, guests, listing_id")
@@ -54,7 +48,26 @@ async function getGuestBooking(request: Request, bookingId: string) {
     .maybeSingle();
   const bookingRow = booking as BookingSnapshot | null;
 
-  if (!bookingRow || bookingRow.email.toLowerCase() !== user.email.toLowerCase()) {
+  if (!bookingRow) {
+    return { error: "Booking not found.", status: 404 as const };
+  }
+
+  if (
+    await authorizeBookingPage({
+      booking: bookingRow,
+      accessToken,
+      quoteToken,
+    })
+  ) {
+    return {
+      user: { email: bookingRow.email.toLowerCase() },
+      booking: bookingRow,
+    };
+  }
+
+  const user = await getRequestUser(request);
+  if (!user) return { error: "Unauthorized", status: 401 as const };
+  if (bookingRow.email.toLowerCase() !== user.email) {
     return { error: "Booking not found.", status: 404 as const };
   }
 
@@ -100,8 +113,20 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const limited = await enforceRateLimit(request, "booking-change:list", {
+    limit: 40,
+    windowSeconds: 15 * 60,
+  });
+  if (limited) return limited;
+
   const { id } = await context.params;
-  const access = await getGuestBooking(request, id);
+  const url = new URL(request.url);
+  const access = await getGuestBooking(
+    request,
+    id,
+    url.searchParams.get("access"),
+    url.searchParams.get("quote"),
+  );
 
   if ("error" in access) {
     return NextResponse.json({ error: access.error }, { status: access.status });
@@ -124,18 +149,48 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
+  const limited = await enforceRateLimit(request, "booking-change:create", {
+    limit: 8,
+    windowSeconds: 60 * 60,
+  });
+  if (limited) return limited;
+
   const { id } = await context.params;
-  const access = await getGuestBooking(request, id);
+  const url = new URL(request.url);
+  const access = await getGuestBooking(
+    request,
+    id,
+    url.searchParams.get("access"),
+    url.searchParams.get("quote"),
+  );
 
   if ("error" in access) {
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const body = (await request.json()) as ChangeRequestCreateBody;
+  const parsedBody = await readJsonObject<ChangeRequestCreateBody>(request, 16 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
+  const requestedGuests =
+    typeof body.requestedGuests === "number" ? body.requestedGuests : null;
+
+  if (
+    (body.requestedTourDate && !/^\d{4}-\d{2}-\d{2}$/.test(body.requestedTourDate)) ||
+    (requestedGuests !== null &&
+      (!Number.isInteger(requestedGuests) || requestedGuests < 1 || requestedGuests > 100)) ||
+    (body.requestedTourTime?.length || 0) > 120 ||
+    (body.requestedPickupNote?.length || 0) > 500 ||
+    (body.reason?.length || 0) > 1000
+  ) {
+    return NextResponse.json(
+      { error: "Please check the requested date, time, guests, and notes." },
+      { status: 400 },
+    );
+  }
   const hasChange =
     Boolean(body.requestedTourDate) ||
     Boolean(body.requestedTourTime) ||
-    typeof body.requestedGuests === "number" ||
+    requestedGuests !== null ||
     Boolean(body.requestedPickupNote?.trim());
 
   if (!hasChange) {
@@ -155,8 +210,7 @@ export async function POST(
         status: "pending",
         requested_tour_date: body.requestedTourDate || null,
         requested_tour_time: body.requestedTourTime || null,
-        requested_guests:
-          typeof body.requestedGuests === "number" ? body.requestedGuests : null,
+        requested_guests: requestedGuests,
         requested_pickup_note: body.requestedPickupNote?.trim() || null,
         reason: body.reason?.trim() || null,
       },
@@ -254,4 +308,3 @@ export async function POST(
 
   return NextResponse.json({ changeRequest });
 }
-

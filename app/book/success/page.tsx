@@ -12,9 +12,9 @@ import { supabaseServer } from "@/lib/supabase-server";
 export default async function BookingPaymentSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ booking?: string }>;
+  searchParams: Promise<{ booking?: string; access?: string }>;
 }) {
-  const { booking } = await searchParams;
+  const { booking, access } = await searchParams;
   const successNextSteps = getBookingSuccessNextSteps({
     bookingId: booking,
     depositsEnabled: process.env.NEXT_PUBLIC_STRIPE_DEPOSITS_ENABLED === "true",
@@ -76,7 +76,13 @@ export default async function BookingPaymentSuccessPage({
             ) : null}
             <div className="mt-6 flex flex-wrap gap-3">
               <Link
-                href={booking ? `/book/status/${booking}` : "/"}
+                href={
+                  booking
+                    ? `/book/status/${booking}${
+                        access ? `?access=${encodeURIComponent(access)}` : ""
+                      }`
+                    : "/"
+                }
                 className="brand-button-primary"
               >
                 <span className="sm:hidden">

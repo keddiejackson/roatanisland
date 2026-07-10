@@ -51,3 +51,22 @@ export function getPrimarySignInDestination(role: SignInRole) {
     signInDestinations[0]
   );
 }
+
+export function safeInternalReturnPath(
+  value: string | null | undefined,
+  fallback = "/account",
+) {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return fallback;
+  }
+
+  try {
+    const base = "https://www.roatanisland.life";
+    const parsed = new URL(value, base);
+    return parsed.origin === base
+      ? `${parsed.pathname}${parsed.search}${parsed.hash}`
+      : fallback;
+  } catch {
+    return fallback;
+  }
+}

@@ -542,6 +542,41 @@ export default function AdminBookingsPage() {
     );
   }
 
+  async function sendSecurePaymentRequest(booking: BookingWithListingName) {
+    let paymentLinkUrl = booking.payment_link_url || "";
+
+    if (!paymentLinkUrl) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        alert("Please sign in again before sending a payment request.");
+        return;
+      }
+
+      const response = await fetch(`/api/bookings/${booking.id}/access`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const result = (await response.json()) as {
+        accessToken?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !result.accessToken) {
+        alert(result.error || "Unable to create the secure guest link.");
+        return;
+      }
+
+      paymentLinkUrl = `${window.location.origin}/book/status/${booking.id}?access=${encodeURIComponent(
+        result.accessToken,
+      )}`;
+    }
+
+    await saveMoneyCommand(booking, {
+      sendPaymentRequest: true,
+      paymentLinkUrl,
+    });
+  }
+
   async function updateChangeRequest(
     bookingId: string,
     changeRequestId: string,
@@ -1195,14 +1230,7 @@ export default function AdminBookingsPage() {
                             />
                             <button
                               type="button"
-                              onClick={() =>
-                                saveMoneyCommand(booking, {
-                                  sendPaymentRequest: true,
-                                  paymentLinkUrl:
-                                    booking.payment_link_url ||
-                                    `${window.location.origin}/book/status/${booking.id}`,
-                                })
-                              }
+                              onClick={() => sendSecurePaymentRequest(booking)}
                               disabled={savingBookingId === booking.id}
                               className="mt-3 min-h-11 w-full rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
                             >
@@ -1864,14 +1892,7 @@ export default function AdminBookingsPage() {
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() =>
-                                    saveMoneyCommand(booking, {
-                                      sendPaymentRequest: true,
-                                      paymentLinkUrl:
-                                        booking.payment_link_url ||
-                                        `${window.location.origin}/book/status/${booking.id}`,
-                                    })
-                                  }
+                                  onClick={() => sendSecurePaymentRequest(booking)}
                                   disabled={savingBookingId === booking.id}
                                   className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
                                 >

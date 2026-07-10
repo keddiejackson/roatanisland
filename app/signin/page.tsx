@@ -5,7 +5,7 @@ import SiteLogo from "@/app/SiteLogo";
 import { signInDestinations } from "@/lib/sign-in-destinations";
 
 export const metadata = {
-  title: "Sign in | Roatan Island Life",
+  title: "Sign in",
   description:
     "Sign in as a guest, vendor, or admin on Roatan Island Life.",
 };

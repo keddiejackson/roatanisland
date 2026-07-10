@@ -5,7 +5,7 @@ import SiteLogo from "@/app/SiteLogo";
 import { roatanGuides } from "@/lib/roatan-guides";
 
 export const metadata: Metadata = {
-  title: "Roatan Travel Guides | RoatanIsland.life",
+  title: "Roatan Travel Guides",
   description:
     "Concierge-style Roatan guides for cruise days, private boat days, airport pickup, family planning, and beach routes.",
 };

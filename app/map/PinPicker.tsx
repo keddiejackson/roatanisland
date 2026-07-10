@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
+import { useMemo, useRef, useState, type PointerEvent } from "react";
 import { roatanCenter } from "@/lib/map";
 
 type PinPickerProps = {
@@ -9,7 +9,7 @@ type PinPickerProps = {
   onChange: (coords: { latitude: string; longitude: string }) => void;
 };
 
-const zoomLevels = [11, 12, 13, 14, 15, 16, 17, 18];
+const zoomLevels = [11, 12, 13, 14, 15, 16, 17, 18, 19];
 const minZoom = zoomLevels[0];
 const maxZoom = zoomLevels[zoomLevels.length - 1];
 
@@ -89,6 +89,16 @@ export default function PinPicker({
     latitude: number;
     longitude: number;
   } | null>(null);
+  const pointersRef = useRef(new Map<number, { x: number; y: number }>());
+  const dragRef = useRef<{
+    x: number;
+    y: number;
+    centerWorld: { x: number; y: number };
+    zoom: number;
+    moved: boolean;
+  } | null>(null);
+  const pinchRef = useRef<{ distance: number; zoom: number } | null>(null);
+  const hadPinchRef = useRef(false);
   const centerLatitude = manualCenter?.latitude ?? currentLatitude;
   const centerLongitude = manualCenter?.longitude ?? currentLongitude;
 
@@ -107,7 +117,7 @@ export default function PinPicker({
     });
   }
 
-  function handleMapClick(event: MouseEvent<HTMLDivElement>) {
+  function setPinFromPointer(event: PointerEvent<HTMLDivElement>) {
     const rect = event.currentTarget.getBoundingClientRect();
     const x = centerWorld.x + event.clientX - rect.left - rect.width / 2;
     const y = centerWorld.y + event.clientY - rect.top - rect.height / 2;
@@ -118,15 +128,120 @@ export default function PinPicker({
     <div className="overflow-hidden rounded-2xl border border-[#00A8A8]/20 bg-white shadow-sm">
       <div
         role="application"
-        aria-label="Precision map pin picker"
-        onClick={handleMapClick}
+        aria-label="Precision map pin picker. Drag to pan, pinch or use the controls to zoom, and tap to place the pin."
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "+" || event.key === "=") {
+            event.preventDefault();
+            setZoom((currentZoom) => nextZoomLevel(currentZoom, 1));
+          } else if (event.key === "-") {
+            event.preventDefault();
+            setZoom((currentZoom) => nextZoomLevel(currentZoom, -1));
+          } else if (event.key.startsWith("Arrow")) {
+            event.preventDefault();
+            const deltaX =
+              event.key === "ArrowLeft" ? -80 : event.key === "ArrowRight" ? 80 : 0;
+            const deltaY =
+              event.key === "ArrowUp" ? -80 : event.key === "ArrowDown" ? 80 : 0;
+            setManualCenter(
+              worldToLatLon(centerWorld.x + deltaX, centerWorld.y + deltaY, zoom),
+            );
+          }
+        }}
         onWheel={(event) => {
           event.preventDefault();
           setZoom((currentZoom) =>
             nextZoomLevel(currentZoom, event.deltaY < 0 ? 1 : -1),
           );
         }}
-        className="relative h-72 w-full cursor-crosshair overflow-hidden bg-[#98D1CA] text-left shadow-inner"
+        onPointerDown={(event) => {
+          event.currentTarget.setPointerCapture(event.pointerId);
+          pointersRef.current.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY,
+          });
+          const points = [...pointersRef.current.values()];
+
+          if (points.length === 1) {
+            hadPinchRef.current = false;
+            dragRef.current = {
+              x: event.clientX,
+              y: event.clientY,
+              centerWorld,
+              zoom,
+              moved: false,
+            };
+            pinchRef.current = null;
+          } else if (points.length === 2) {
+            hadPinchRef.current = true;
+            pinchRef.current = {
+              distance: Math.hypot(
+                points[1].x - points[0].x,
+                points[1].y - points[0].y,
+              ),
+              zoom,
+            };
+            dragRef.current = null;
+          }
+        }}
+        onPointerMove={(event) => {
+          if (!pointersRef.current.has(event.pointerId)) return;
+          pointersRef.current.set(event.pointerId, {
+            x: event.clientX,
+            y: event.clientY,
+          });
+          const points = [...pointersRef.current.values()];
+
+          if (points.length === 2 && pinchRef.current) {
+            const distance = Math.hypot(
+              points[1].x - points[0].x,
+              points[1].y - points[0].y,
+            );
+            const zoomDelta = Math.round(
+              Math.log2(distance / Math.max(pinchRef.current.distance, 1)),
+            );
+            setZoom(
+              Math.min(
+                Math.max(pinchRef.current.zoom + zoomDelta, minZoom),
+                maxZoom,
+              ),
+            );
+            return;
+          }
+
+          if (!dragRef.current || points.length !== 1) return;
+          const deltaX = event.clientX - dragRef.current.x;
+          const deltaY = event.clientY - dragRef.current.y;
+          if (Math.hypot(deltaX, deltaY) > 4) {
+            dragRef.current.moved = true;
+          }
+          setManualCenter(
+            worldToLatLon(
+              dragRef.current.centerWorld.x - deltaX,
+              dragRef.current.centerWorld.y - deltaY,
+              dragRef.current.zoom,
+            ),
+          );
+        }}
+        onPointerUp={(event) => {
+          const shouldPlacePin =
+            pointersRef.current.size === 1 &&
+            !dragRef.current?.moved &&
+            !hadPinchRef.current;
+          pointersRef.current.delete(event.pointerId);
+
+          if (shouldPlacePin) setPinFromPointer(event);
+          if (pointersRef.current.size === 0) hadPinchRef.current = false;
+          dragRef.current = null;
+          pinchRef.current = null;
+        }}
+        onPointerCancel={(event) => {
+          pointersRef.current.delete(event.pointerId);
+          if (pointersRef.current.size === 0) hadPinchRef.current = false;
+          dragRef.current = null;
+          pinchRef.current = null;
+        }}
+        className="relative h-72 w-full cursor-crosshair touch-none overflow-hidden bg-[#98D1CA] text-left shadow-inner"
       >
         {tiles.map((tile) => (
           <span

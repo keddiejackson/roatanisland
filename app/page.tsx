@@ -431,6 +431,11 @@ export default function Home() {
   ).length;
   const activeAreaCount = Math.max(locations.length - 1, 0);
   const lowInventory = showcaseListings.length < 3;
+  const mapPreviewImageUrl =
+    homepageControls.listingFallbackImageUrl === homepageControls.heroImageUrl &&
+    homepageControls.listingFallbackImageUrl.startsWith("/")
+      ? `${homepageControls.listingFallbackImageUrl}?surface=map-preview`
+      : homepageControls.listingFallbackImageUrl;
 
   function clearMarketplaceFilters() {
     setSearch(homeListingFilterDefaults.search);
@@ -494,7 +499,8 @@ export default function Home() {
           src={homepageControls.heroImageUrl}
           alt="Roatan coastline"
           fill
-          priority
+          loading="eager"
+          fetchPriority="high"
           sizes="100vw"
           unoptimized
           className="object-cover"
@@ -1137,7 +1143,7 @@ export default function Home() {
               </div>
               <div className="relative min-h-[21rem] overflow-hidden border-t border-white/10 sm:min-h-[25rem] lg:border-l lg:border-t-0">
                 <Image
-                  src={homepageControls.listingFallbackImageUrl}
+                  src={mapPreviewImageUrl}
                   alt="Roatan map planning preview"
                   fill
                   sizes="(min-width: 1024px) 50vw, 100vw"

@@ -8,7 +8,7 @@ import {
 } from "@/lib/platform-v2";
 
 export const metadata = {
-  title: "Support Center | RoatanIsland.life",
+  title: "Support Center",
   description:
     "Get help with bookings, pickup timing, cancellation questions, weather concerns, vendor support, and Roatan trip issues.",
 };

@@ -19,12 +19,12 @@ export async function generateMetadata({
 
   if (!guide) {
     return {
-      title: "Roatan guide not found | RoatanIsland.life",
+      title: "Roatan guide not found",
     };
   }
 
   return {
-    title: `${guide.title} | RoatanIsland.life`,
+    title: guide.title,
     description: guide.summary,
   };
 }

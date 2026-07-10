@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { logActivity } from "@/lib/activity-log";
 import { logAppError } from "@/lib/error-log";
+import {
+  enforceRateLimit,
+  getRequestUser,
+  readJsonObject,
+  unauthorized,
+} from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type ReviewRequest = {
@@ -12,23 +18,37 @@ type ReviewRequest = {
   photoUrls?: unknown;
 };
 
-function cleanPhotoUrls(values: unknown) {
+function cleanPhotoUrls(values: unknown, listingId: string) {
   if (!Array.isArray(values)) {
     return [];
   }
 
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const expectedPrefix = `${supabaseUrl}/storage/v1/object/public/listing-images/review-photos/${listingId}/`;
+
   return values
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
-    .filter(Boolean)
+    .filter((value) => Boolean(value) && value.startsWith(expectedPrefix))
     .slice(0, 6);
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as ReviewRequest;
+  const limited = await enforceRateLimit(request, "review:create", {
+    limit: 4,
+    windowSeconds: 24 * 60 * 60,
+  });
+  if (limited) return limited;
+
+  const user = await getRequestUser(request);
+  if (!user) return unauthorized("Sign in before reviewing an experience.");
+
+  const parsedBody = await readJsonObject<ReviewRequest>(request, 24 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
   const rating = Number(body.rating);
   const reviewerName = body.reviewerName?.trim().slice(0, 120);
-  const reviewerEmail = body.reviewerEmail?.trim().slice(0, 160) || null;
+  const reviewerEmail = user.email;
   const comment = body.comment?.trim().slice(0, 1500);
 
   if (
@@ -55,6 +75,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Listing not found." }, { status: 404 });
   }
 
+  const { data: completedBooking } = await supabaseServer
+    .from("bookings")
+    .select("id")
+    .eq("listing_id", body.listingId)
+    .eq("email", user.email)
+    .eq("status", "completed")
+    .limit(1)
+    .maybeSingle();
+
+  if (!completedBooking) {
+    return NextResponse.json(
+      { error: "Reviews open after a completed booking for this experience." },
+      { status: 403 },
+    );
+  }
+
   const { data: review, error } = await supabaseServer
     .from("listing_reviews")
     .insert([
@@ -64,7 +100,7 @@ export async function POST(request: Request) {
         reviewer_email: reviewerEmail,
         rating,
         comment,
-        photo_urls: cleanPhotoUrls(body.photoUrls),
+        photo_urls: cleanPhotoUrls(body.photoUrls, body.listingId),
         is_approved: false,
       },
     ])
