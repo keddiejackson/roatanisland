@@ -35,7 +35,7 @@ export default function GuestDesktopNav({
     : "rounded-xl bg-white px-4 py-2 text-[#0B3C5D] shadow transition hover:bg-[#EEF7F6]";
   const primaryClass = isLight
     ? "rounded-full bg-white px-4 py-2 text-[#071F2F] shadow-lg shadow-black/10 transition hover:bg-[#EEF7F6]"
-    : "rounded-xl bg-[#00A8A8] px-4 py-2 text-white shadow transition hover:bg-[#078E8E]";
+    : "rounded-xl bg-[#00A8A8] px-4 py-2 text-[#071F2F] shadow transition hover:bg-[#078E8E]";
   const menuClass = isLight
     ? "absolute right-0 z-50 mt-2 grid min-w-56 gap-1 rounded-2xl border border-white/20 bg-[#071F2F] p-2 text-white shadow-2xl shadow-black/20"
     : "absolute right-0 z-50 mt-2 grid min-w-56 gap-1 rounded-2xl border border-[#071F2F]/10 bg-white p-2 text-[#071F2F] shadow-2xl shadow-[#071F2F]/15";

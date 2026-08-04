@@ -135,7 +135,7 @@ export default function AdminVendorDocumentsPage() {
                 <article key={document.id} className="rounded-xl border border-gray-200 p-5">
                   <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
                     <div>
-                      <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#00A8A8]">
+                      <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[#007B7B]">
                         {document.status}
                       </p>
                       <h2 className="mt-2 text-xl font-bold text-[#0B3C5D]">

@@ -53,7 +53,7 @@ export default async function ConciergePage() {
                     key={item}
                     className="rounded-xl bg-white/10 px-4 py-3 text-sm font-bold ring-1 ring-white/15"
                   >
-                    <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00A8A8] text-xs text-white">
+                    <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#00A8A8] text-xs text-[#071F2F]">
                       {index + 1}
                     </span>
                     {item}

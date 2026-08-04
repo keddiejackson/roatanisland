@@ -3,8 +3,14 @@ import Link from "next/link";
 import { connection } from "next/server";
 import EmptyState from "@/app/EmptyState";
 import GuestDesktopNav from "@/app/GuestDesktopNav";
+import JsonLd from "@/app/JsonLd";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
+import {
+  defaultHomepageControls,
+  normalizeHomepageControls,
+  publishedSiteSettingsKey,
+} from "@/lib/homepage-settings";
 import { getPremiumListingCardPolish } from "@/lib/marketplace-upgrade";
 import { supabaseServer } from "@/lib/supabase-server";
 
@@ -23,24 +29,29 @@ const categoryPageCopy: Record<
   {
     browseTitle: string;
     emptyTitle: string;
-    heroImage: string;
   }
 > = {
   Hotels: {
     browseTitle: "Hotels & stays",
     emptyTitle: "Hotels & stays are opening soon.",
-    heroImage: "/images/hotels-hero.jpg",
   },
   Tours: {
     browseTitle: "Tours & experiences",
     emptyTitle: "Tours & experiences are opening soon.",
-    heroImage: "/images/tours-hero.jpg",
   },
   Transport: {
     browseTitle: "Transportation options",
     emptyTitle: "Transportation options are opening soon.",
-    heroImage: "/images/transport-hero.jpg",
   },
+};
+
+const categoryHeroImageField: Record<
+  string,
+  "hotelsImageUrl" | "toursImageUrl" | "transportImageUrl"
+> = {
+  Hotels: "hotelsImageUrl",
+  Tours: "toursImageUrl",
+  Transport: "transportImageUrl",
 };
 
 export default async function CategoryPage({
@@ -65,11 +76,39 @@ export default async function CategoryPage({
   const pageCopy = categoryPageCopy[category] || {
     browseTitle: `${category} options`,
     emptyTitle: `${category} options are opening soon.`,
-    heroImage: "/images/roatan.jpeg",
   };
+
+  const { data: siteSettingsData } = await supabaseServer
+    .from("site_settings")
+    .select("value")
+    .eq("key", publishedSiteSettingsKey)
+    .maybeSingle();
+  const homepageControls =
+    siteSettingsData?.value && typeof siteSettingsData.value === "object"
+      ? normalizeHomepageControls(siteSettingsData.value)
+      : defaultHomepageControls;
+  const heroImageField = categoryHeroImageField[category];
+  const heroImage = heroImageField
+    ? homepageControls[heroImageField]
+    : defaultHomepageControls.heroImageUrl;
 
   return (
     <main className="brand-page min-h-screen">
+      {listings.length > 0 ? (
+        <JsonLd
+          data={{
+            "@context": "https://schema.org",
+            "@type": "ItemList",
+            name: `${pageCopy.browseTitle} in Roatán`,
+            itemListElement: listings.map((listing, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              url: `https://www.roatanisland.life/listings/${listing.id}`,
+              name: listing.title,
+            })),
+          }}
+        />
+      ) : null}
       <section className="px-4 py-6 text-white sm:px-6 sm:py-10">
         <div className="mx-auto max-w-7xl">
           <header className="grid gap-4 sm:flex sm:flex-wrap sm:items-center sm:justify-between">
@@ -78,8 +117,8 @@ export default async function CategoryPage({
           </header>
           <div className="brand-hero-panel relative mt-6 overflow-hidden px-5 py-10 sm:mt-8 sm:px-10 sm:py-16">
             <Image
-              src={pageCopy.heroImage}
-              alt=""
+              src={heroImage}
+              alt={`${category} in Roatan`}
               fill
               priority
               sizes="100vw"

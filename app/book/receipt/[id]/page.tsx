@@ -129,7 +129,7 @@ export default async function BookingReceiptPage({
         </div>
 
         <section className="brand-auth-card p-5 shadow sm:p-8 print:shadow-none">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
             Printable receipt
           </p>
           <div className="mt-3 flex flex-col justify-between gap-4 sm:flex-row">

@@ -106,7 +106,7 @@ function threadBadgeClass(summary?: BookingThreadSummary) {
   }
 
   if (summary.needsResponse) {
-    return "bg-[#00A8A8] text-white";
+    return "bg-[#00A8A8] text-[#071F2F]";
   }
 
   return "bg-[#EEF7F6] text-[#0B3C5D]";
@@ -741,7 +741,7 @@ export default function AccountPage() {
           <section className="mt-6 rounded-[1.5rem] border border-white/70 bg-white p-4 shadow-xl shadow-[#0B3C5D]/5 sm:p-6">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                   Next up
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-[#0B3C5D] sm:mt-3 sm:text-3xl">
@@ -792,7 +792,7 @@ export default function AccountPage() {
                       setSelectedBookingId(latestBooking.id);
                       setChatOpen(true);
                     }}
-                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-white"
+                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-[#071F2F]"
                   >
                     Open messages
                   </button>
@@ -813,7 +813,7 @@ export default function AccountPage() {
                 <>
                   <Link
                     href="/map"
-                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-white"
+                    className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-[#071F2F]"
                   >
                     Open the map
                   </Link>
@@ -836,7 +836,7 @@ export default function AccountPage() {
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+                <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
                   Profile and settings
                 </p>
                 <h2 className="mt-1 text-2xl font-black text-[#0B3C5D]">
@@ -865,7 +865,7 @@ export default function AccountPage() {
                   )}
                 </div>
                 <div className="md:hidden">
-                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
                     Profile
                   </p>
                   <h2 className="text-xl font-black text-[#0B3C5D]">
@@ -875,7 +875,7 @@ export default function AccountPage() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="sm:col-span-2 hidden md:block">
-                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
                     Profile
                   </p>
                   <h2 className="mt-1 text-2xl font-black text-[#0B3C5D]">
@@ -920,7 +920,7 @@ export default function AccountPage() {
               <button
                 type="submit"
                 disabled={profileSaving}
-                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white disabled:opacity-50"
+                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-[#071F2F] disabled:opacity-50"
               >
                 {profileSaving ? "Saving..." : "Save profile"}
               </button>
@@ -935,7 +935,7 @@ export default function AccountPage() {
           >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                   Your plans
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-[#0B3C5D] sm:text-3xl">
@@ -948,7 +948,7 @@ export default function AccountPage() {
               </div>
               <Link
                 href="/map"
-                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-white"
+                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-center text-sm font-black text-[#071F2F]"
               >
                 Open map
               </Link>
@@ -1135,7 +1135,7 @@ export default function AccountPage() {
                           setSelectedBookingId(latestBooking.id);
                           setChatOpen(true);
                         }}
-                        className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-white"
+                        className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-[#071F2F]"
                       >
                         Open messages
                       </button>
@@ -1202,7 +1202,7 @@ export default function AccountPage() {
                             setSelectedBookingId(booking.id);
                             setChatOpen(true);
                           }}
-                          className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-bold text-white"
+                          className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-bold text-[#071F2F]"
                         >
                           Open messages
                         </button>
@@ -1230,7 +1230,7 @@ export default function AccountPage() {
         {(!hasSignedIn || isUpdatingPassword) ? (
           <section className="mt-6 rounded-[1.5rem] bg-white p-6 shadow-xl shadow-[#0B3C5D]/5 sm:p-8">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Sign in
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
@@ -1344,7 +1344,7 @@ export default function AccountPage() {
               ) : null}
               <button
                 disabled={authLoading}
-                className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white disabled:opacity-50"
+                className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F] disabled:opacity-50"
               >
                 {getGuestAuthSubmitLabel(authMode, authLoading)}
               </button>

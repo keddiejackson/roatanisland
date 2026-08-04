@@ -319,7 +319,7 @@ export default function AdminMapCleanupPage() {
             <div className="mb-5 rounded-2xl border border-[#D6B56D]/25 bg-white p-4">
               <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                 <div>
-                  <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+                  <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#007B7B]">
                     Priority queue
                   </p>
                   <h2 className="mt-1 text-2xl font-bold text-[#0B3C5D]">
@@ -429,7 +429,7 @@ export default function AdminMapCleanupPage() {
                             </div>
                           )}
                         </div>
-                        <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
+                        <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[#007B7B]">
                           {listing.category || "Listing"}
                         </p>
                         <h2 className="mt-1 text-xl font-bold text-[#0B3C5D]">
@@ -539,7 +539,7 @@ export default function AdminMapCleanupPage() {
                             type="button"
                             onClick={() => savePin(listing)}
                             disabled={busy}
-                            className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                            className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-semibold text-[#071F2F] disabled:opacity-60"
                           >
                             Save pin
                           </button>

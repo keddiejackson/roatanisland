@@ -60,7 +60,7 @@ export default function BookingAccessGate({
   return (
     <main className="brand-page min-h-screen px-4 py-8 text-[#17324D] sm:px-6 sm:py-12">
       <section className="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-xl ring-1 ring-[#071F2F]/10 sm:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
           Private trip access
         </p>
         <h1 className="mt-3 text-3xl font-black text-[#071F2F]">

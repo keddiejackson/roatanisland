@@ -31,6 +31,7 @@ type VendorListingRequest = {
   tourTimes?: string[];
   blockedDates?: unknown;
   availabilityNote?: string;
+  cancellationPolicy?: string;
   maxGuests?: number | string;
   minimumNoticeHours?: number | string;
   bookingCutoffHours?: number | string;
@@ -251,6 +252,7 @@ export async function POST(request: Request) {
         tour_times: cleanTourTimes(body.tourTimes),
         blocked_dates: cleanTextList(body.blockedDates, 60),
         availability_note: body.availabilityNote?.trim() || null,
+        cancellation_policy: body.cancellationPolicy?.trim() || null,
         max_guests: maxGuests,
         minimum_notice_hours: minimumNoticeHours,
         booking_cutoff_hours: bookingCutoffHours,

@@ -6,7 +6,7 @@ export default function RootError({ reset }: { reset: () => void }) {
   return (
     <main className="brand-page grid min-h-dvh place-items-center px-4 py-10 text-[#17324D]">
       <section className="w-full max-w-xl rounded-3xl bg-white p-6 shadow-xl ring-1 ring-[#071F2F]/10 sm:p-8">
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
           Connection interrupted
         </p>
         <h1 className="mt-3 text-3xl font-black text-[#071F2F]">

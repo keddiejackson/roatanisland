@@ -45,7 +45,7 @@ export default async function BookingPaymentSuccessPage({
         </div>
         <section className="grid gap-6 overflow-hidden rounded-[2rem] bg-white p-6 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 lg:grid-cols-[1fr_0.72fr] lg:p-8">
           <div>
-            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
               <span className="sm:hidden">
                 {mobileControls.mobileBookingSuccessEyebrow}
               </span>

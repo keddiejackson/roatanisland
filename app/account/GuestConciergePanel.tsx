@@ -94,7 +94,7 @@ export default function GuestConciergePanel({
   return (
     <section className="mt-6 grid gap-6 lg:grid-cols-[0.82fr_1.18fr]">
       <div className="brand-auth-card p-5 shadow sm:p-6">
-        <p className="text-sm font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+        <p className="text-sm font-black uppercase tracking-[0.16em] text-[#007B7B]">
           Concierge profile
         </p>
         <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -175,7 +175,7 @@ export default function GuestConciergePanel({
           </div>
           <Link
             href="/concierge"
-            className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-bold text-white"
+            className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-bold text-[#071F2F]"
           >
             Build new plan
           </Link>

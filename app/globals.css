@@ -104,6 +104,11 @@ select {
   font-family: var(--font-brand-ui);
 }
 
+.leaflet-roatan-map:focus-visible {
+  outline: 3px solid rgba(0, 168, 168, 0.55);
+  outline-offset: -3px;
+}
+
 .leaflet-roatan-map .leaflet-control-attribution {
   border-radius: 999px 0 0 0;
   background: rgba(255, 253, 247, 0.9);
@@ -142,7 +147,7 @@ select {
 .leaflet-roatan-pin--selected {
   border-color: var(--brand-gold);
   background: var(--brand-teal);
-  color: white;
+  color: var(--brand-navy);
 }
 
 .leaflet-roatan-pin--hovered {
@@ -249,7 +254,7 @@ select {
   }
 
   .brand-eyebrow {
-    color: var(--brand-teal);
+    color: #007b7b;
     font-size: 0.76rem;
     font-weight: 900;
     letter-spacing: 0.2em;
@@ -337,7 +342,7 @@ select {
 
   .brand-button-primary {
     background: var(--brand-teal);
-    color: white;
+    color: var(--brand-navy);
     box-shadow: 0 12px 26px rgba(0, 168, 168, 0.22);
   }
 

@@ -39,6 +39,7 @@ export default function AddListingPage() {
     "10:30 AM\n4:30 PM Sunset Cruise",
   );
   const [availabilityNote, setAvailabilityNote] = useState("");
+  const [cancellationPolicy, setCancellationPolicy] = useState("");
   const [maxGuests, setMaxGuests] = useState("");
   const [minimumNoticeHours, setMinimumNoticeHours] = useState("");
   const [imageUrl, setImageUrl] = useState("");
@@ -150,6 +151,7 @@ export default function AddListingPage() {
           .map((date) => date.trim())
           .filter(Boolean),
         availabilityNote,
+        cancellationPolicy,
         maxGuests,
         minimumNoticeHours,
       }),
@@ -235,7 +237,7 @@ export default function AddListingPage() {
         </section>
 
         <div className="brand-auth-card p-5 shadow sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
             Vendor onboarding
           </p>
           <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
@@ -261,7 +263,7 @@ export default function AddListingPage() {
               </p>
               <Link
                 href="/"
-                className="mt-5 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                className="mt-5 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
               >
                 Back to Home
               </Link>
@@ -490,6 +492,23 @@ export default function AddListingPage() {
                     />
                   </div>
 
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block font-medium">
+                      Cancellation Policy
+                    </label>
+                    <textarea
+                      value={cancellationPolicy}
+                      onChange={(e) => setCancellationPolicy(e.target.value)}
+                      rows={3}
+                      placeholder="e.g. Full refund up to 48 hours before the tour. Inside 48 hours, the deposit is non-refundable."
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none"
+                    />
+                    <p className="mt-2 text-sm text-gray-500">
+                      Shown to guests on this listing. Leave blank to use the
+                      default marketplace policy instead.
+                    </p>
+                  </div>
+
                   <div>
                     <label className="mb-2 block font-medium">
                       Max Guests Per Tour
@@ -585,7 +604,7 @@ export default function AddListingPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-[#00A8A8] px-6 py-4 text-lg font-semibold text-white disabled:opacity-50"
+                className="w-full rounded-xl bg-[#00A8A8] px-6 py-4 text-lg font-semibold text-[#071F2F] disabled:opacity-50"
               >
                 {loading ? "Submitting..." : "Submit Listing for Review"}
               </button>

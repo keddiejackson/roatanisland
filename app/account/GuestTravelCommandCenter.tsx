@@ -351,7 +351,7 @@ export default function GuestTravelCommandCenter({
       <div className="bg-[#071F2F] p-6 text-white">
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.16em] text-[#007B7B]">
             Guest command center
           </p>
           <h2 className="mt-2 text-3xl font-black">
@@ -440,7 +440,7 @@ export default function GuestTravelCommandCenter({
                   <span
                     className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black ${
                       item.done
-                        ? "bg-[#00A8A8] text-white"
+                        ? "bg-[#00A8A8] text-[#071F2F]"
                         : "bg-[#FFF3D2] text-[#7A5A00]"
                     }`}
                   >
@@ -473,7 +473,7 @@ export default function GuestTravelCommandCenter({
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               <Link
                 href={mapHref}
-                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-white"
+                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-[#071F2F]"
               >
                 Open trip map
               </Link>
@@ -599,7 +599,7 @@ export default function GuestTravelCommandCenter({
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
                 href={mapHref}
-                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-white"
+                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-[#071F2F]"
               >
                 Open trip map
               </Link>

@@ -259,7 +259,7 @@ export default function PinPicker({
             left: `calc(50% + ${markerWorld.x - centerWorld.x}px)`,
             top: `calc(50% + ${markerWorld.y - centerWorld.y}px)`,
           }}
-          className="absolute z-10 -translate-x-1/2 -translate-y-full rounded-full bg-[#00A8A8] px-3 py-2 text-xs font-bold text-white shadow-lg ring-4 ring-white/80"
+          className="absolute z-10 -translate-x-1/2 -translate-y-full rounded-full bg-[#00A8A8] px-3 py-2 text-xs font-bold text-[#071F2F] shadow-lg ring-4 ring-white/80"
         >
           Pin
         </span>

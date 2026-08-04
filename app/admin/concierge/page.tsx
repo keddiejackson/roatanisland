@@ -571,7 +571,7 @@ export default function AdminConciergePage() {
         <section className="brand-auth-card p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#00A8A8]">
+              <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#007B7B]">
                 Lead pipeline
               </p>
               <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
@@ -711,7 +711,7 @@ export default function AdminConciergePage() {
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
                           {roaLead ? (
-                            <span className="rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-black uppercase text-white">
+                            <span className="rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-black uppercase text-[#071F2F]">
                               Roa AI plan
                             </span>
                           ) : null}
@@ -963,7 +963,7 @@ export default function AdminConciergePage() {
                           type="button"
                           onClick={() => saveLead(lead)}
                           disabled={savingId === lead.id}
-                          className="mt-4 w-full rounded-xl bg-[#00A8A8] px-5 py-3 font-bold text-white disabled:opacity-50"
+                          className="mt-4 w-full rounded-xl bg-[#00A8A8] px-5 py-3 font-bold text-[#071F2F] disabled:opacity-50"
                         >
                           {savingId === lead.id ? "Saving..." : "Save lead"}
                         </button>
@@ -1267,7 +1267,7 @@ export default function AdminConciergePage() {
                                         disabled={
                                           savingAssignmentId === assignment.id
                                         }
-                                        className="rounded-lg bg-[#00A8A8] px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
+                                        className="rounded-lg bg-[#00A8A8] px-3 py-2 text-sm font-bold text-[#071F2F] disabled:opacity-50"
                                       >
                                         {savingAssignmentId === assignment.id
                                           ? "Saving..."
@@ -1330,7 +1330,7 @@ export default function AdminConciergePage() {
                                   {latestQuote.booking_id ? (
                                     <Link
                                       href={`/book/status/${latestQuote.booking_id}`}
-                                      className="rounded-lg bg-[#00A8A8] px-3 py-2 text-center text-sm font-bold text-white"
+                                      className="rounded-lg bg-[#00A8A8] px-3 py-2 text-center text-sm font-bold text-[#071F2F]"
                                     >
                                       Booking status
                                     </Link>

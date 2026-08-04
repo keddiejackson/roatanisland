@@ -1255,7 +1255,7 @@ export default function AdminListingsPage() {
                         type="button"
                         onClick={() => saveListing(listing.id)}
                         disabled={savingListingId === listing.id}
-                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#00A8A8] px-5 py-3 text-center font-semibold text-white disabled:opacity-50 lg:w-auto"
+                        className="inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-[#00A8A8] px-5 py-3 text-center font-semibold text-[#071F2F] disabled:opacity-50 lg:w-auto"
                       >
                         {savingListingId === listing.id
                           ? "Saving..."

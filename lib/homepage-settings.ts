@@ -44,6 +44,9 @@ export type HomepageControls = {
   heroImageUrl: string;
   listingFallbackImageUrl: string;
   finalCtaImageUrl: string;
+  toursImageUrl: string;
+  hotelsImageUrl: string;
+  transportImageUrl: string;
   heroEyebrow: string;
   homepageHeadline: string;
   homepageSubhead: string;
@@ -95,6 +98,9 @@ export const defaultHomepageControls: HomepageControls = {
   heroImageUrl: "/images/roatan.jpeg",
   listingFallbackImageUrl: "/images/roatan.jpeg",
   finalCtaImageUrl: "",
+  toursImageUrl: "/images/tours-hero.jpg",
+  hotelsImageUrl: "/images/hotels-hero.jpg",
+  transportImageUrl: "/images/transport-hero.jpg",
   heroEyebrow: "Private Roatan days",
   homepageHeadline: "The island, arranged beautifully.",
   homepageSubhead:
@@ -287,6 +293,18 @@ export function normalizeHomepageControls(value: unknown): HomepageControls {
       settings.finalCtaImageUrl,
       defaultHomepageControls.finalCtaImageUrl,
       true,
+    ),
+    toursImageUrl: cleanHomepageUrl(
+      settings.toursImageUrl,
+      defaultHomepageControls.toursImageUrl,
+    ),
+    hotelsImageUrl: cleanHomepageUrl(
+      settings.hotelsImageUrl,
+      defaultHomepageControls.hotelsImageUrl,
+    ),
+    transportImageUrl: cleanHomepageUrl(
+      settings.transportImageUrl,
+      defaultHomepageControls.transportImageUrl,
     ),
     heroEyebrow: cleanHomepageText(
       settings.heroEyebrow,

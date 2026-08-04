@@ -174,7 +174,7 @@ export default function SupportRequestForm() {
       <button
         type="submit"
         disabled={loading}
-        className="rounded-xl bg-[#00A8A8] px-5 py-4 text-sm font-black text-white disabled:opacity-60"
+        className="rounded-xl bg-[#00A8A8] px-5 py-4 text-sm font-black text-[#071F2F] disabled:opacity-60"
       >
         {loading ? "Sending..." : "Send support request"}
       </button>

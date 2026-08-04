@@ -156,7 +156,7 @@ export default function AdminPromosPage() {
             <input type="number" value={form.discountPercent} onChange={(e) => setForm({ ...form, discountPercent: e.target.value, discountAmountCents: "" })} placeholder="% off" className="rounded-xl border border-gray-300 px-4 py-3" />
             <input type="number" value={form.discountAmountCents} onChange={(e) => setForm({ ...form, discountAmountCents: e.target.value, discountPercent: "" })} placeholder="Cents off" className="rounded-xl border border-gray-300 px-4 py-3" />
             <input type="date" value={form.expiresAt} onChange={(e) => setForm({ ...form, expiresAt: e.target.value })} className="rounded-xl border border-gray-300 px-4 py-3" />
-            <button className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white md:col-span-5">Add Promo</button>
+            <button className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F] md:col-span-5">Add Promo</button>
           </form>
           <div className="mt-8 grid gap-3">
             {promos.map((promo) => (

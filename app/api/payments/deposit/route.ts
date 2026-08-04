@@ -109,6 +109,23 @@ export async function POST(request: Request) {
     );
   }
 
+  const bookingHasPricedValue =
+    Number.isFinite(booking.booking_value_cents) &&
+    (booking.booking_value_cents || 0) > 0;
+  const alreadyFullyPaid =
+    booking.deposit_status === "paid" ||
+    booking.deposit_status === "waived" ||
+    (bookingHasPricedValue &&
+      booking.balance_due_cents != null &&
+      booking.balance_due_cents <= 0);
+
+  if (alreadyFullyPaid) {
+    return NextResponse.json(
+      { error: "This booking is already paid in full." },
+      { status: 409 },
+    );
+  }
+
   let listingTitle = "Roatan booking deposit";
   let checkoutAmountCents = depositAmountCents;
   let paymentLabel = "deposit";
@@ -125,7 +142,8 @@ export async function POST(request: Request) {
   );
 
   if (body.paymentType === "full" && booking.booking_value_cents) {
-    checkoutAmountCents = outstandingBalance || booking.booking_value_cents;
+    checkoutAmountCents =
+      outstandingBalance > 0 ? outstandingBalance : booking.booking_value_cents;
     paymentLabel = "full payment";
   } else if (conciergeQuote?.deposit_amount_cents) {
     checkoutAmountCents = conciergeQuote.deposit_amount_cents;

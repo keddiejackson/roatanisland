@@ -184,8 +184,11 @@ export default function VendorSignupPage() {
 
           <form onSubmit={handleSignup} className="mt-8 grid gap-5 md:grid-cols-2">
             <div className="md:col-span-2">
-              <label className="mb-2 block font-medium">Business Name</label>
+              <label htmlFor="vendor-business-name" className="mb-2 block font-medium">
+                Business Name
+              </label>
               <input
+                id="vendor-business-name"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
                 className="brand-input"
@@ -194,8 +197,11 @@ export default function VendorSignupPage() {
             </div>
 
             <div>
-              <label className="mb-2 block font-medium">Contact Name</label>
+              <label htmlFor="vendor-contact-name" className="mb-2 block font-medium">
+                Contact Name
+              </label>
               <input
+                id="vendor-contact-name"
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
                 className="brand-input"
@@ -203,8 +209,11 @@ export default function VendorSignupPage() {
             </div>
 
             <div>
-              <label className="mb-2 block font-medium">Phone</label>
+              <label htmlFor="vendor-phone" className="mb-2 block font-medium">
+                Phone
+              </label>
               <input
+                id="vendor-phone"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="brand-input"
@@ -212,8 +221,11 @@ export default function VendorSignupPage() {
             </div>
 
             <div>
-              <label className="mb-2 block font-medium">Email</label>
+              <label htmlFor="vendor-email" className="mb-2 block font-medium">
+                Email
+              </label>
               <input
+                id="vendor-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -223,8 +235,11 @@ export default function VendorSignupPage() {
             </div>
 
             <div>
-              <label className="mb-2 block font-medium">Password</label>
+              <label htmlFor="vendor-password" className="mb-2 block font-medium">
+                Password
+              </label>
               <input
+                id="vendor-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -235,8 +250,11 @@ export default function VendorSignupPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="mb-2 block font-medium">Website</label>
+              <label htmlFor="vendor-website" className="mb-2 block font-medium">
+                Website
+              </label>
               <input
+                id="vendor-website"
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 className="brand-input"

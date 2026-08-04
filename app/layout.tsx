@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import AnalyticsTracker from "./AnalyticsTracker";
 import GlobalBookingChat from "./GlobalBookingChat";
@@ -46,6 +46,14 @@ export const metadata: Metadata = {
   verification: {
     google: "rvSAtX1sV6nfPG1RCaF8euFpTRUtZ3NqRwmqE_J5C4o",
   },
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Roatan Life",
+  },
   openGraph: {
     title: "Roatan Island Life",
     description:
@@ -59,6 +67,10 @@ export const metadata: Metadata = {
     description:
       "Curated local experiences, precise map planning, and trusted Roatan concierge support.",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#071f2f",
 };
 
 export default function RootLayout({

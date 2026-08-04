@@ -139,7 +139,7 @@ export default function ListingConversionTools({
     <section className="rounded-lg border border-[#00A8A8]/20 bg-white p-6 shadow-sm">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
             Trip shortlist
           </p>
           <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">

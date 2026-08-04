@@ -132,7 +132,7 @@ export default function BookingConversationPanel({
     <section className="rounded-2xl border border-[#D6B56D]/20 bg-white p-5 shadow-sm">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#007B7B]">
             Booking conversation
           </p>
           <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">{title}</h3>
@@ -239,7 +239,7 @@ export default function BookingConversationPanel({
               <button
                 type="submit"
                 disabled={sending || !draft.trim()}
-                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
+                className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-bold text-[#071F2F] disabled:opacity-50"
               >
                 {sending ? "Sending..." : "Send message"}
               </button>

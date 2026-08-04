@@ -214,7 +214,7 @@ export default function AdminMediaPage() {
         <section className="brand-auth-card min-w-0 p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Brand kit
               </p>
               <h1 className="mt-2 text-3xl font-black text-[#0B3C5D]">

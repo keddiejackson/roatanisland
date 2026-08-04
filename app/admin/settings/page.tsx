@@ -162,6 +162,9 @@ const homepageImageFields = [
   { field: "heroImageUrl", label: "Hero Background Image" },
   { field: "listingFallbackImageUrl", label: "Listing Fallback Image" },
   { field: "finalCtaImageUrl", label: "Final CTA Background Image" },
+  { field: "toursImageUrl", label: "Tours Category Photo" },
+  { field: "hotelsImageUrl", label: "Hotels Category Photo" },
+  { field: "transportImageUrl", label: "Transportation Category Photo" },
 ] as const;
 
 type HomepageImageUploadTarget = (typeof homepageImageFields)[number]["field"];
@@ -815,7 +818,7 @@ export default function AdminSettingsPage() {
               type="button"
               onClick={() => persistSettings("publish")}
               disabled={saving}
-              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-[#071F2F] disabled:opacity-50"
             >
               Publish Live
             </button>
@@ -908,7 +911,7 @@ export default function AdminSettingsPage() {
                     </div>
 
                     <div className="grid gap-3 rounded-2xl border border-[#D6B56D]/20 bg-[#FFF9EC] p-4">
-                      <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                      <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                         Different Logos By Location
                       </p>
                       <p className="text-sm text-gray-600">
@@ -962,7 +965,7 @@ export default function AdminSettingsPage() {
 
                   <div className="grid gap-4 rounded-2xl border border-[#D6B56D]/20 bg-white p-5">
                     <div>
-                      <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                      <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                         Presets
                       </p>
                       <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -989,7 +992,7 @@ export default function AdminSettingsPage() {
                             onClick={() => applyLogoShape(shape)}
                             className={`rounded-xl border px-4 py-3 text-sm font-bold ${
                               settings.logoShape === shape
-                                ? "border-[#00A8A8] bg-[#00A8A8] text-white"
+                                ? "border-[#00A8A8] bg-[#00A8A8] text-[#071F2F]"
                                 : "border-[#D6B56D]/35 bg-white text-[#0B3C5D]"
                             }`}
                           >
@@ -1115,7 +1118,7 @@ export default function AdminSettingsPage() {
                   </div>
 
                   <div className="grid gap-4 rounded-2xl border border-[#D6B56D]/20 bg-white p-5">
-                    <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                    <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                       Fine Tune
                     </p>
                     <div className="grid gap-4 md:grid-cols-2">
@@ -1185,7 +1188,7 @@ export default function AdminSettingsPage() {
                     </div>
                   </div>
                   <div className="mt-4 rounded-2xl border border-[#D6B56D]/25 bg-[#FFF9EC] p-4">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                       Browser Tab
                     </p>
                     <div className="mt-3 flex items-center gap-3 rounded-xl border border-[#D6B56D]/25 bg-white px-3 py-2">
@@ -1352,7 +1355,7 @@ export default function AdminSettingsPage() {
                       {settings.homepageSubhead}
                     </p>
                     <div className="mt-5 flex flex-wrap gap-2 text-xs font-black">
-                      <span className="rounded-full bg-[#00A8A8] px-3 py-2 text-white">
+                      <span className="rounded-full bg-[#00A8A8] px-3 py-2 text-[#071F2F]">
                         {settings.primaryCtaLabel}
                       </span>
                       <span className="rounded-full border border-white/25 bg-white/10 px-3 py-2">
@@ -2008,7 +2011,7 @@ export default function AdminSettingsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
+              className="rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-[#071F2F] disabled:opacity-50"
             >
               {saving ? "Saving..." : "Publish Live"}
             </button>

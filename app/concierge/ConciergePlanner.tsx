@@ -250,7 +250,7 @@ export default function ConciergePlanner({
   return (
     <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
       <section className="rounded-[1.75rem] bg-white p-6 shadow-xl shadow-[#071F2F]/8">
-        <p className="text-sm font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+        <p className="text-sm font-black uppercase tracking-[0.16em] text-[#007B7B]">
           Luxury Concierge Trip Builder
         </p>
         <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
@@ -464,7 +464,7 @@ export default function ConciergePlanner({
                         href={`/book?listing=${stop.listingId}&date=${encodeURIComponent(
                           date,
                         )}&guests=${encodeURIComponent(guests)}`}
-                        className="rounded-lg bg-[#00A8A8] px-3 py-2 text-xs font-bold text-white"
+                        className="rounded-lg bg-[#00A8A8] px-3 py-2 text-xs font-bold text-[#071F2F]"
                       >
                         Book stop
                       </Link>
@@ -479,7 +479,7 @@ export default function ConciergePlanner({
         <div className="mt-6 rounded-[1.5rem] bg-[#F7F3EA] p-5">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
                 Admin-ready lead
               </p>
               <p className="mt-1 font-bold text-[#0B3C5D]">
@@ -544,7 +544,7 @@ export default function ConciergePlanner({
               type="button"
               onClick={requestHelp}
               disabled={sending}
-              className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+              className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-bold text-[#071F2F] disabled:opacity-50"
             >
               {sending ? "Sending..." : "Ask Roa to help"}
             </button>

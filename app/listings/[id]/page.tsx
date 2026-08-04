@@ -7,6 +7,7 @@ import ListingConversionTools, {
   type ListingShortlistItem,
 } from "@/app/listings/[id]/ListingConversionTools";
 import ListingGallery from "@/app/listings/[id]/ListingGallery";
+import JsonLd from "@/app/JsonLd";
 import ReviewForm from "@/app/listings/[id]/ReviewForm";
 import ReportListingForm from "@/app/listings/[id]/ReportListingForm";
 import {
@@ -51,6 +52,7 @@ type Listing = {
   tour_times: string[] | null;
   blocked_dates: string[] | null;
   availability_note: string | null;
+  cancellation_policy: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
   booking_cutoff_hours: number | null;
@@ -187,7 +189,7 @@ export default async function ListingPage({
           </h1>
           <Link
             href="/"
-            className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+            className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
           >
             Back to listings
           </Link>
@@ -313,6 +315,45 @@ export default async function ListingPage({
 
   return (
     <main className="min-h-screen bg-[#F8F3EA] pb-28 text-[#17324D] lg:pb-0">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "TouristTrip",
+          name: listing.title,
+          description: listing.description || undefined,
+          image: listing.image_url || undefined,
+          url: `https://www.roatanisland.life/listings/${listing.id}`,
+          touristType: listing.category || undefined,
+          ...(listing.location
+            ? {
+                itinerary: {
+                  "@type": "Place",
+                  name: listing.location,
+                },
+              }
+            : {}),
+          ...(listing.price
+            ? {
+                offers: {
+                  "@type": "Offer",
+                  price: listing.price,
+                  priceCurrency: "USD",
+                  availability: "https://schema.org/InStock",
+                  url: `https://www.roatanisland.life/listings/${listing.id}`,
+                },
+              }
+            : {}),
+          ...(listing.rating && listing.reviews_count
+            ? {
+                aggregateRating: {
+                  "@type": "AggregateRating",
+                  ratingValue: listing.rating,
+                  reviewCount: listing.reviews_count,
+                },
+              }
+            : {}),
+        }}
+      />
       <section className="relative min-h-[680px] overflow-hidden sm:min-h-[760px]">
         {listing.image_url ? (
           <Image
@@ -327,7 +368,7 @@ export default async function ListingPage({
         ) : (
           <div className="absolute inset-0 bg-[#D8EFEC]" />
         )}
-        <div className="absolute inset-0 bg-[#061D2C]/42" />
+        <div className="absolute inset-0 bg-[#061D2C]/65" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_24%,rgba(8,170,168,0.24),transparent_32%),linear-gradient(90deg,rgba(6,29,44,0.94)_0%,rgba(6,29,44,0.55)_48%,rgba(6,29,44,0.16)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-80 bg-[linear-gradient(180deg,rgba(248,243,234,0)_0%,#F8F3EA_92%)]" />
 
@@ -422,7 +463,7 @@ export default async function ListingPage({
           <section className="rounded-[1.75rem] border border-white/70 bg-white p-6 shadow-2xl shadow-[#071F2F]/10 sm:p-8">
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.22em] text-[#00A8A8]">
+                <p className="text-sm font-black uppercase tracking-[0.22em] text-[#007B7B]">
                   Experience overview
                 </p>
                 <h2 className="mt-2 text-4xl font-black text-[#0B3C5D] sm:text-5xl">
@@ -436,7 +477,7 @@ export default async function ListingPage({
               </div>
               <Link
                 href={`/book?listing=${listing.id}`}
-                className="rounded-full bg-[#00A8A8] px-5 py-3 text-center font-bold text-white transition hover:bg-[#078F8F]"
+                className="rounded-full bg-[#00A8A8] px-5 py-3 text-center font-bold text-[#071F2F] transition hover:bg-[#078F8F]"
               >
                 <span className="sm:hidden">
                   {mobileControls.mobileListingStickyCtaLabel}
@@ -491,7 +532,7 @@ export default async function ListingPage({
                 </p>
               </div>
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#00A8A8]">
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#007B7B]">
                   Guest protection signals
                 </p>
                 <p className="mt-3 text-base leading-7 text-gray-600">
@@ -537,7 +578,7 @@ export default async function ListingPage({
           <section className="rounded-[1.75rem] border border-[#00A8A8]/15 bg-white p-6 shadow-xl shadow-[#071F2F]/8 sm:p-8">
             <div className="grid gap-6 lg:grid-cols-[0.86fr_1fr] lg:items-start">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#00A8A8]">
+                <p className="text-sm font-black uppercase tracking-[0.2em] text-[#007B7B]">
                   Private planning profile
                 </p>
                 <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
@@ -598,7 +639,7 @@ export default async function ListingPage({
           <section className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-[#00A8A8]/20 sm:p-8">
             <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-start">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
                   Trust this experience
                 </p>
                 <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
@@ -731,7 +772,7 @@ export default async function ListingPage({
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
                     Local operator
                   </p>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -753,7 +794,7 @@ export default async function ListingPage({
               <div className="mt-5 flex flex-wrap gap-3">
                 <Link
                   href={`/vendors/${vendor.id}`}
-                  className="rounded-lg bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                  className="rounded-lg bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
                 >
                   View vendor profile
                 </Link>
@@ -800,9 +841,30 @@ export default async function ListingPage({
             </div>
           </section>
 
+          <section className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
+              Cancellation policy
+            </p>
+            <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
+              {listing.cancellation_policy
+                ? "This operator's cancellation terms"
+                : "Marketplace cancellation policy"}
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              {listing.cancellation_policy ||
+                "This operator hasn't set a custom cancellation policy for this listing. The general RoatanIsland.life policy applies: refund eligibility and timing are handled case by case with the operator, and any approved refund is processed manually rather than automatically."}
+            </p>
+            <Link
+              href="/cancellation-policy"
+              className="mt-4 inline-flex text-sm font-black text-[#007B7B]"
+            >
+              Read the full marketplace cancellation policy &rarr;
+            </Link>
+          </section>
+
           {nearbyListings.length > 0 ? (
             <section className="rounded-[1.75rem] bg-white p-6 shadow-sm ring-1 ring-gray-200 sm:p-8">
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Related island experiences
               </p>
               <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
@@ -828,7 +890,7 @@ export default async function ListingPage({
                       ) : null}
                     </div>
                     <div className="p-4">
-                      <p className="text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
+                      <p className="text-xs font-bold uppercase tracking-wide text-[#007B7B]">
                         {nearby.category || "Experience"}
                       </p>
                       <h3 className="mt-1 font-bold text-[#0B3C5D]">
@@ -904,7 +966,7 @@ export default async function ListingPage({
           >
             <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
               <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
                   Guest reviews
                 </p>
                 <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -996,7 +1058,7 @@ export default async function ListingPage({
             </div>
             <Link
               href={`/book?listing=${listing.id}`}
-              className="mt-6 block w-full rounded-full bg-[#00A8A8] px-6 py-4 text-center text-lg font-bold text-white transition hover:bg-[#078F8F]"
+              className="mt-6 block w-full rounded-full bg-[#00A8A8] px-6 py-4 text-center text-lg font-bold text-[#071F2F] transition hover:bg-[#078F8F]"
             >
               {mobileControls.mobileListingStickyCtaLabel}
             </Link>
@@ -1170,7 +1232,7 @@ export default async function ListingPage({
           </Link>
           <Link
             href={`/book?listing=${listing.id}`}
-            className="shrink-0 rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
+            className="shrink-0 rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-[#071F2F] shadow-lg shadow-[#00A8A8]/20"
           >
             {mobileControls.mobileListingStickyCtaLabel}
           </Link>

@@ -93,7 +93,7 @@ function bubbleClass(
 
   const isMine = message.sender_role === viewerRole;
   return isMine
-    ? "bg-[#00A8A8] text-white"
+    ? "bg-[#00A8A8] text-[#071F2F]"
     : "bg-white text-[#17324D]";
 }
 
@@ -735,7 +735,7 @@ export default function BookingChatDrawer({
                   disabled={
                     sending || !draft.trim() || !selectedThread || !viewerProfile
                   }
-                  className="mt-2 w-full rounded-xl bg-[#00A8A8] px-5 py-2.5 text-sm font-black text-white transition hover:bg-[#008F8F] disabled:opacity-50 sm:py-3"
+                  className="mt-2 w-full rounded-xl bg-[#00A8A8] px-5 py-2.5 text-sm font-black text-[#071F2F] transition hover:bg-[#008F8F] disabled:opacity-50 sm:py-3"
                 >
                   {sending ? "Sending..." : "Send message"}
                 </button>

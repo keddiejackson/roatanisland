@@ -310,7 +310,7 @@ export default function AdminDashboardPage() {
             </div>
             <Link
               href="/admin/bookings"
-              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
             >
               Manage bookings
             </Link>
@@ -539,7 +539,7 @@ export default function AdminDashboardPage() {
                   <div className="rounded-2xl bg-white p-5 text-[#17324D]">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#007B7B]">
                           Vendor leaderboard
                         </p>
                         <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
@@ -660,7 +660,7 @@ export default function AdminDashboardPage() {
               <section className="mt-4 rounded-2xl border border-[#00A8A8]/20 bg-white p-5">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                   <div>
-                    <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#00A8A8]">
+                    <p className="text-sm font-bold uppercase tracking-[0.14em] text-[#007B7B]">
                       Operating digest
                     </p>
                     <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -672,7 +672,7 @@ export default function AdminDashboardPage() {
                   </div>
                   <Link
                     href={summary.commandDigest.topAction.href}
-                    className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-white"
+                    className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-black text-[#071F2F]"
                   >
                     Open top action
                   </Link>
@@ -732,7 +732,7 @@ export default function AdminDashboardPage() {
                   <div className="rounded-2xl bg-white p-5 text-[#17324D]">
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                       <div>
-                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                        <p className="text-sm font-black uppercase tracking-[0.14em] text-[#007B7B]">
                           Quality control queue
                         </p>
                         <h3 className="mt-1 text-xl font-black text-[#0B3C5D]">
@@ -799,7 +799,7 @@ export default function AdminDashboardPage() {
                     </div>
 
                     <div className="rounded-2xl bg-white p-5 text-[#17324D]">
-                      <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                      <p className="text-sm font-black uppercase tracking-[0.14em] text-[#007B7B]">
                         Growth layer
                       </p>
                       <div className="mt-4 grid gap-3">

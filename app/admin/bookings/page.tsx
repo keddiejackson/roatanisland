@@ -1232,7 +1232,7 @@ export default function AdminBookingsPage() {
                               type="button"
                               onClick={() => sendSecurePaymentRequest(booking)}
                               disabled={savingBookingId === booking.id}
-                              className="mt-3 min-h-11 w-full rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                              className="mt-3 min-h-11 w-full rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-black text-[#071F2F] disabled:opacity-50"
                             >
                               Send payment request
                             </button>
@@ -1894,7 +1894,7 @@ export default function AdminBookingsPage() {
                                   type="button"
                                   onClick={() => sendSecurePaymentRequest(booking)}
                                   disabled={savingBookingId === booking.id}
-                                  className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                                  className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-black text-[#071F2F] disabled:opacity-50"
                                 >
                                   Send payment request
                                 </button>

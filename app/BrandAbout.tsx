@@ -39,7 +39,7 @@ export default function BrandAbout({
     <section className="bg-[#F7F3EA] px-5 pb-16 sm:px-6">
       <div className="mx-auto grid max-w-7xl gap-8 border-y border-[#D6B56D]/25 py-14 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <div>
-          <p className="text-sm font-bold uppercase text-[#00A8A8]">
+          <p className="text-sm font-bold uppercase text-[#007B7B]">
             {eyebrow}
           </p>
           <h2 className="mt-3 text-3xl font-black text-[#0B3C5D] sm:text-5xl">

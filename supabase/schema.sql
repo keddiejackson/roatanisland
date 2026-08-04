@@ -646,6 +646,9 @@ add column if not exists latitude numeric;
 alter table public.listings
 add column if not exists longitude numeric;
 
+alter table public.listings
+add column if not exists cancellation_policy text;
+
 alter table public.bookings
 add column if not exists status text not null default 'new'
 check (status in ('new', 'confirmed', 'completed', 'cancelled'));

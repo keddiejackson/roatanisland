@@ -625,7 +625,7 @@ export default function CommunityForum() {
         <div className="overflow-hidden rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8 ring-1 ring-[#071F2F]/6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#007B7B]">
                 Circle pulse
               </p>
               <h2 className="mt-2 text-3xl font-black leading-tight text-[#071F2F]">
@@ -811,7 +811,7 @@ export default function CommunityForum() {
           <button
             type="button"
             onClick={createThread}
-            className="mt-4 w-full rounded-2xl bg-[#00A8A8] px-5 py-4 text-sm font-black text-white shadow-xl shadow-[#00A8A8]/20"
+            className="mt-4 w-full rounded-2xl bg-[#00A8A8] px-5 py-4 text-sm font-black text-[#071F2F] shadow-xl shadow-[#00A8A8]/20"
           >
             Post to The Roatan Circle
           </button>
@@ -833,7 +833,7 @@ export default function CommunityForum() {
         <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8 ring-1 ring-[#071F2F]/6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-[#007B7B]">
                 Verification
               </p>
               <h2 className="mt-2 text-2xl font-black text-[#071F2F]">
@@ -962,7 +962,7 @@ export default function CommunityForum() {
               <button
                 type="button"
                 onClick={submitVerificationRequest}
-                className="rounded-2xl bg-[#00A8A8] px-5 py-4 text-sm font-black text-white shadow-xl shadow-[#00A8A8]/20"
+                className="rounded-2xl bg-[#00A8A8] px-5 py-4 text-sm font-black text-[#071F2F] shadow-xl shadow-[#00A8A8]/20"
               >
                 Request verification
               </button>
@@ -1014,7 +1014,7 @@ export default function CommunityForum() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
                       {thread.category}
                     </p>
                     <h2 className="mt-2 text-xl font-black">{thread.title}</h2>
@@ -1103,7 +1103,7 @@ export default function CommunityForum() {
                     href={`/concierge?prompt=${encodeURIComponent(
                       buildCommunityRoaPrompt(activeThread),
                     )}`}
-                    className="rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white"
+                    className="rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-[#071F2F]"
                   >
                     Ask Roa
                   </Link>
@@ -1128,7 +1128,7 @@ export default function CommunityForum() {
               </p>
 
               <div className="rounded-3xl border border-[#00A8A8]/20 bg-[#EEF7F6] p-5">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                   Roa summary
                 </p>
                 <p className="mt-3 text-sm font-bold leading-6 text-[#0B3C5D]">

@@ -37,7 +37,7 @@ export default function GuestMasterpiecePanel({
     <section className="mt-6 overflow-hidden rounded-2xl bg-white shadow">
       <div className="grid gap-0 lg:grid-cols-[1fr_280px]">
         <div className="p-6">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
             Guest masterpiece view
           </p>
           <h2 className="mt-2 text-3xl font-black leading-tight text-[#0B3C5D]">
@@ -68,7 +68,7 @@ export default function GuestMasterpiecePanel({
                   ? "bg-[#D6B56D] text-[#071F2F]"
                   : plan.nextAction.tone === "navy"
                     ? "bg-[#071F2F] text-white"
-                    : "bg-[#00A8A8] text-white"
+                    : "bg-[#00A8A8] text-[#071F2F]"
               }`}
             >
               {plan.nextAction.label}

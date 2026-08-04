@@ -190,7 +190,7 @@ export default function AdminRemindersPage() {
         <AdminNav />
 
         <section className="brand-auth-card p-5 shadow sm:p-8">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
             Reminder Center
           </p>
           <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
@@ -252,7 +252,7 @@ export default function AdminRemindersPage() {
           <section className="mt-8">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
                   Send queue
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -292,7 +292,7 @@ export default function AdminRemindersPage() {
                       <button
                         onClick={() => sendNow(candidate)}
                         disabled={saving === candidate.id}
-                        className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-black text-white disabled:opacity-50"
+                        className="rounded-lg bg-[#00A8A8] px-4 py-2 text-sm font-black text-[#071F2F] disabled:opacity-50"
                       >
                         Send now
                       </button>
@@ -309,7 +309,7 @@ export default function AdminRemindersPage() {
           </section>
 
           <section className="mt-10">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
               Reminder settings
             </p>
             <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -379,7 +379,7 @@ export default function AdminRemindersPage() {
           </section>
 
           <section className="mt-10">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
               Reminder history
             </p>
             <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">

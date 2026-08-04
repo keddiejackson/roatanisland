@@ -1552,6 +1552,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 key={mode.id}
                 type="button"
                 onClick={() => applyMapConciergeMode(mode)}
+                aria-pressed={activeModeId === mode.id}
                 className={`rounded-xl px-3 py-3 text-left text-sm font-black transition ${
                   activeModeId === mode.id
                     ? "bg-[#071F2F] text-white shadow-lg shadow-[#071F2F]/15"
@@ -1571,6 +1572,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 key={mode.id}
                 type="button"
                 onClick={() => applyMapConciergeMode(mode)}
+                aria-pressed={activeModeId === mode.id}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-black transition ${
                   activeModeId === mode.id
                     ? "bg-[#071F2F] text-white shadow-lg shadow-[#071F2F]/15"
@@ -1641,6 +1643,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 key={collection.id}
                 type="button"
                 onClick={() => applyCollection(collection)}
+                aria-pressed={activeCollectionId === collection.id}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold transition ${
                   activeCollectionId === collection.id
                     ? "bg-[#071F2F] text-[#FFF6DA] ring-1 ring-[#D6B56D]/70"
@@ -1670,14 +1673,24 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                       setSearch(e.target.value);
                     }}
                     placeholder="Search map"
+                    role="combobox"
+                    aria-expanded={suggestions.length > 0}
+                    aria-controls="map-search-suggestions"
+                    aria-autocomplete="list"
                     className="min-h-12 w-full rounded-xl border border-[#D6B56D]/35 bg-white px-4 outline-none focus:border-[#00A8A8]"
                   />
                   {suggestions.length > 0 ? (
-                    <div className="absolute left-0 right-0 top-14 z-40 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5">
+                    <div
+                      id="map-search-suggestions"
+                      role="listbox"
+                      className="absolute left-0 right-0 top-14 z-40 rounded-xl bg-white p-2 shadow-xl ring-1 ring-black/5"
+                    >
                       {suggestions.map((suggestion) => (
                         <button
                           key={suggestion}
                           type="button"
+                          role="option"
+                          aria-selected={search === suggestion}
                           onClick={() => {
                             setSearch(suggestion);
                             if (areaButtons.includes(suggestion)) {
@@ -2083,7 +2096,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 </div>
               )}
             </div>
-            <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
+            <p className="mt-4 text-xs font-bold uppercase tracking-wide text-[#007B7B]">
               {selectedPin.category || "Listing"}
             </p>
             <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -2217,7 +2230,7 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
               </button>
               <Link
                 href={`/listings/${selectedPin.id}`}
-                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-semibold text-white"
+                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-center text-sm font-semibold text-[#071F2F]"
               >
                 View listing
               </Link>

@@ -39,9 +39,22 @@ export default function SiteFooter() {
           ))}
         </div>
       </div>
-      <div className="mx-auto mt-8 flex max-w-7xl flex-col gap-3 border-t border-white/10 pt-6 text-xs font-semibold uppercase tracking-[0.16em] text-white/45 sm:flex-row sm:flex-wrap sm:justify-between">
-        <span>Roatan Island Life</span>
-        <span>Built for travelers and local operators</span>
+      <div className="mx-auto mt-8 flex max-w-7xl flex-col gap-4 border-t border-white/10 pt-6 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/45 sm:flex-row sm:flex-wrap sm:gap-6">
+          <span>Roatan Island Life</span>
+          <span>Built for travelers and local operators</span>
+        </div>
+        <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs font-semibold text-white/55">
+          <Link href="/terms" className="hover:text-white">
+            Terms of Service
+          </Link>
+          <Link href="/privacy" className="hover:text-white">
+            Privacy Policy
+          </Link>
+          <Link href="/cancellation-policy" className="hover:text-white">
+            Cancellation Policy
+          </Link>
+        </div>
       </div>
     </footer>
   );

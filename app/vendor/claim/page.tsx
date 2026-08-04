@@ -135,7 +135,7 @@ function VendorClaimContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50"
+                className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-[#071F2F] disabled:opacity-50"
               >
                 {loading ? "Claiming..." : "Claim Profile"}
               </button>

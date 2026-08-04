@@ -109,10 +109,43 @@ export default function GuestMobilePlatform() {
       }
     }
 
+    function trapTabFocus(event: KeyboardEvent) {
+      if (event.key !== "Tab") return;
+
+      const panel = document.querySelector<HTMLElement>(
+        menuOpen ? "#guest-menu-panel" : "#guest-plan-panel",
+      );
+      if (!panel) return;
+
+      const focusable = Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      );
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey && active === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (!panel.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
     window.addEventListener("keydown", closeOnEscape);
+    window.addEventListener("keydown", trapTabFocus);
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", closeOnEscape);
+      window.removeEventListener("keydown", trapTabFocus);
       document.body.style.overflow = previousOverflow;
     };
   }, [menuOpen, planOpen]);
@@ -224,7 +257,7 @@ export default function GuestMobilePlatform() {
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#007B7B]">
                 Roatan Island Life
               </p>
               <h2 className="mt-3 text-4xl font-black leading-none">
@@ -271,7 +304,7 @@ export default function GuestMobilePlatform() {
           >
             <div className="flex items-start justify-between gap-4 border-b border-[#D6B56D]/25 px-5 py-5">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#00A8A8]">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-[#007B7B]">
                   Trip cart
                 </p>
                 <h2 className="mt-1 text-3xl font-black">My saved plan</h2>
@@ -332,7 +365,7 @@ export default function GuestMobilePlatform() {
                 <Link
                   href="/concierge"
                   onClick={() => setPlanOpen(false)}
-                  className="rounded-2xl bg-[#00A8A8] px-5 py-4 text-center text-sm font-black text-white"
+                  className="rounded-2xl bg-[#00A8A8] px-5 py-4 text-center text-sm font-black text-[#071F2F]"
                 >
                   Ask Roa to improve it
                 </Link>

@@ -40,7 +40,7 @@ export default function VendorProCommandCenter({
     <section className="mt-6 overflow-hidden rounded-2xl bg-white shadow">
       <div className="grid gap-0 lg:grid-cols-[1fr_240px]">
         <div className="p-6">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
             Operator Pro board
           </p>
           <h2 className="mt-2 text-3xl font-black text-[#0B3C5D]">
@@ -62,7 +62,7 @@ export default function VendorProCommandCenter({
       </div>
 
       <div className="border-t border-gray-100 p-5">
-        <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+        <p className="mb-3 text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
           What guests notice first
         </p>
         <div className="grid gap-3 lg:grid-cols-5">

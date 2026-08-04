@@ -17,6 +17,7 @@ import {
   createBookingAccessToken,
   withBookingAccess,
 } from "@/lib/booking-access";
+import { readJsonObject } from "@/lib/server-security";
 import { supabaseServer } from "@/lib/supabase-server";
 
 type BookingStatus = "new" | "confirmed" | "completed" | "cancelled";
@@ -69,7 +70,7 @@ function statusSubject(status: BookingStatus, listingTitle: string) {
   return `Your ${listingTitle} booking request was ${readableStatus}`;
 }
 
-function statusMessage(status: BookingStatus) {
+function statusMessage(status: BookingStatus, refundPending: boolean) {
   if (status === "confirmed") {
     return "Your booking request has been confirmed.";
   }
@@ -79,7 +80,9 @@ function statusMessage(status: BookingStatus) {
   }
 
   if (status === "cancelled") {
-    return "Your booking request has been cancelled.";
+    return refundPending
+      ? "Your booking request has been cancelled. A refund for your payment is now pending review."
+      : "Your booking request has been cancelled.";
   }
 
   return "Your booking request has been updated.";
@@ -105,22 +108,50 @@ export async function PATCH(
   }
 
   const { id } = await context.params;
-  const body = (await request.json()) as BookingUpdateRequest;
-  const nextStatus = body.status || "new";
+  const parsedBody = await readJsonObject<BookingUpdateRequest>(request, 32 * 1024);
+  if (!parsedBody.ok) return parsedBody.response;
+  const body = parsedBody.data;
+
+  const { data: currentBooking } = await supabaseServer
+    .from("bookings")
+    .select("status, commission_status, email, amount_paid_cents, refund_status")
+    .eq("id", id)
+    .maybeSingle();
+
+  const nextStatus = body.status || currentBooking?.status || "new";
   const moneyUpdate = buildBookingMoneyUpdate(
     body as unknown as Record<string, unknown>,
   );
+
+  if (
+    typeof moneyUpdate.refund_amount_cents === "number" &&
+    moneyUpdate.refund_amount_cents > (currentBooking?.amount_paid_cents || 0)
+  ) {
+    return NextResponse.json(
+      {
+        error: `Refund amount can't exceed the ${(
+          (currentBooking?.amount_paid_cents || 0) / 100
+        ).toFixed(2)} actually collected for this booking.`,
+      },
+      { status: 400 },
+    );
+  }
+
   const payoutUpdate =
     body.commissionStatus ||
     "payoutNote" in body ||
     "payoutScheduledFor" in body ||
     "vendorPrivatePayoutNote" in body;
 
-  const { data: currentBooking } = await supabaseServer
-    .from("bookings")
-    .select("status, commission_status, email")
-    .eq("id", id)
-    .maybeSingle();
+  const cancellingPaidBookingWithNoRefundDecision =
+    nextStatus === "cancelled" &&
+    currentBooking?.status !== "cancelled" &&
+    (currentBooking?.amount_paid_cents || 0) > 0 &&
+    !("refundStatus" in body) &&
+    (currentBooking?.refund_status === "none" || !currentBooking?.refund_status);
+  const refundFlagUpdate = cancellingPaidBookingWithNoRefundDecision
+    ? { refund_status: "pending" }
+    : {};
 
   const secureStatusPath = currentBooking?.email
     ? withBookingAccess(
@@ -156,6 +187,7 @@ export async function PATCH(
         : {}),
       ...moneyUpdate,
       ...paymentRequestUpdate,
+      ...refundFlagUpdate,
     })
     .eq("id", id)
     .select(
@@ -244,7 +276,7 @@ export async function PATCH(
       to: booking.email,
       subject: statusSubject(nextStatus, listingTitle),
       html: `
-        <h2>${escapeHtml(statusMessage(nextStatus))}</h2>
+        <h2>${escapeHtml(statusMessage(nextStatus, cancellingPaidBookingWithNoRefundDecision))}</h2>
         <p><strong>Listing:</strong> ${escapeHtml(listingTitle)}</p>
         <p><strong>Name:</strong> ${escapeHtml(booking.full_name)}</p>
         <p><strong>Date:</strong> ${escapeHtml(booking.tour_date)}</p>
@@ -257,7 +289,7 @@ export async function PATCH(
         }
       `,
       text: [
-        statusMessage(nextStatus),
+        statusMessage(nextStatus, cancellingPaidBookingWithNoRefundDecision),
         `Listing: ${listingTitle}`,
         `Name: ${booking.full_name}`,
         `Date: ${booking.tour_date}`,

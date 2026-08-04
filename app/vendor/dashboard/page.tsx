@@ -90,6 +90,7 @@ type ListingRow = {
   tour_times: string[] | null;
   blocked_dates: string[] | null;
   availability_note: string | null;
+  cancellation_policy: string | null;
   max_guests: number | null;
   minimum_notice_hours: number | null;
   booking_cutoff_hours: number | null;
@@ -298,6 +299,7 @@ export default function VendorDashboardPage() {
   const [blockedDateQuickPicks, setBlockedDateQuickPicks] = useState<Record<string, string>>({});
   const [calendarMonths, setCalendarMonths] = useState<Record<string, string>>({});
   const [availabilityNotes, setAvailabilityNotes] = useState<Record<string, string>>({});
+  const [cancellationPolicies, setCancellationPolicies] = useState<Record<string, string>>({});
   const [maxGuestsByListing, setMaxGuestsByListing] = useState<Record<string, string>>({});
   const [noticeHoursByListing, setNoticeHoursByListing] = useState<Record<string, string>>({});
   const [bookingCutoffByListing, setBookingCutoffByListing] = useState<Record<string, string>>({});
@@ -354,7 +356,7 @@ export default function VendorDashboardPage() {
       });
 
       const listingSelectWithAvailability =
-        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, approval_status, approval_note, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date, latitude, longitude";
+        "id, title, description, category, location, price, image_url, gallery_image_urls, is_active, approval_status, approval_note, tour_times, blocked_dates, availability_note, cancellation_policy, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date, latitude, longitude";
       const listingResult = await supabase
         .from("listings")
         .select(listingSelectWithAvailability)
@@ -383,6 +385,7 @@ export default function VendorDashboardPage() {
         gallery_image_urls: listing.gallery_image_urls || [],
         blocked_dates: listing.blocked_dates || [],
         availability_note: listing.availability_note || null,
+        cancellation_policy: listing.cancellation_policy || null,
         max_guests: listing.max_guests ?? null,
         minimum_notice_hours: listing.minimum_notice_hours ?? null,
         booking_cutoff_hours: listing.booking_cutoff_hours ?? null,
@@ -436,6 +439,14 @@ export default function VendorDashboardPage() {
           rows.map((listing) => [
             listing.id,
             listing.availability_note || "",
+          ]),
+        ),
+      );
+      setCancellationPolicies(
+        Object.fromEntries(
+          rows.map((listing) => [
+            listing.id,
+            listing.cancellation_policy || "",
           ]),
         ),
       );
@@ -745,6 +756,13 @@ export default function VendorDashboardPage() {
     }));
   }
 
+  function updateCancellationPolicy(listingId: string, value: string) {
+    setCancellationPolicies((currentPolicies) => ({
+      ...currentPolicies,
+      [listingId]: value,
+    }));
+  }
+
   function updateMaxGuests(listingId: string, value: string) {
     setMaxGuestsByListing((currentValues) => ({
       ...currentValues,
@@ -893,6 +911,7 @@ export default function VendorDashboardPage() {
         tourTimes: times,
         blockedDates: unavailableDates,
         availabilityNote: availabilityNotes[listingId] || "",
+        cancellationPolicy: cancellationPolicies[listingId] || "",
         maxGuests: maxGuestsByListing[listingId] || "",
         minimumNoticeHours: noticeHoursByListing[listingId] || "",
         bookingCutoffHours: bookingCutoffByListing[listingId] || "",
@@ -929,6 +948,7 @@ export default function VendorDashboardPage() {
               tour_times: result.listing.tour_times,
               blocked_dates: result.listing.blocked_dates || [],
               availability_note: result.listing.availability_note || null,
+              cancellation_policy: result.listing.cancellation_policy || null,
               max_guests: result.listing.max_guests,
               minimum_notice_hours: result.listing.minimum_notice_hours,
               booking_cutoff_hours: result.listing.booking_cutoff_hours,
@@ -970,6 +990,10 @@ export default function VendorDashboardPage() {
     setAvailabilityNotes((currentNotes) => ({
       ...currentNotes,
       [listingId]: result.listing.availability_note || "",
+    }));
+    setCancellationPolicies((currentPolicies) => ({
+      ...currentPolicies,
+      [listingId]: result.listing.cancellation_policy || "",
     }));
     setMaxGuestsByListing((currentValues) => ({
       ...currentValues,
@@ -1341,7 +1365,7 @@ export default function VendorDashboardPage() {
             </Link>
             <Link
               href="/vendor/add-listing"
-              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#071F2F]"
             >
               Add Listing
             </Link>
@@ -1387,7 +1411,7 @@ export default function VendorDashboardPage() {
             <div className="flex flex-wrap gap-2">
               <Link
                 href="/vendor/add-listing"
-                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-bold text-white"
+                className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-bold text-[#071F2F]"
               >
                 Add Listing
               </Link>
@@ -1431,7 +1455,7 @@ export default function VendorDashboardPage() {
             },
           ].map((item) => (
             <div key={item.label} className="rounded-xl bg-white p-5 shadow-sm">
-              <p className="text-sm font-bold text-[#00A8A8]">{item.label}</p>
+              <p className="text-sm font-bold text-[#007B7B]">{item.label}</p>
               <p className="mt-2 text-3xl font-black text-[#0B3C5D]">
                 {item.value}
               </p>
@@ -1501,7 +1525,7 @@ export default function VendorDashboardPage() {
         <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#007B7B]">
                 Payout tracker
               </p>
               <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -1705,7 +1729,7 @@ export default function VendorDashboardPage() {
         <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#007B7B]">
                 Today{"'"}s focus
               </p>
               <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -1749,7 +1773,7 @@ export default function VendorDashboardPage() {
         <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#007B7B]">
                 Growth checklist
               </p>
               <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -1803,7 +1827,7 @@ export default function VendorDashboardPage() {
         <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#007B7B]">
                 Profile checklist
               </p>
               <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -1958,7 +1982,7 @@ export default function VendorDashboardPage() {
             <button
               type="submit"
               disabled={savingProfile}
-              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F] disabled:opacity-50 md:col-span-2"
             >
               {savingProfile ? "Saving profile..." : "Save Profile"}
             </button>
@@ -1991,7 +2015,7 @@ export default function VendorDashboardPage() {
             <button
               type="submit"
               disabled={uploadingDocument}
-              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white disabled:opacity-50"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F] disabled:opacity-50"
             >
               {uploadingDocument ? "Uploading..." : "Upload"}
             </button>
@@ -2040,7 +2064,7 @@ export default function VendorDashboardPage() {
         <section id="vendor-calendar" className="mt-8 scroll-mt-24 brand-auth-card p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#007B7B]">
                 Booking controls
               </p>
               <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -2966,7 +2990,7 @@ export default function VendorDashboardPage() {
               </p>
               <Link
                 href="/vendor/add-listing"
-                className="mt-4 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                className="mt-4 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
               >
                 Add a listing
               </Link>
@@ -3386,6 +3410,25 @@ export default function VendorDashboardPage() {
                       </div>
                       <div className="mt-4">
                         <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
+                          Cancellation policy
+                        </label>
+                        <textarea
+                          value={cancellationPolicies[listing.id] || ""}
+                          onChange={(e) =>
+                            updateCancellationPolicy(listing.id, e.target.value)
+                          }
+                          rows={3}
+                          placeholder="e.g. Full refund up to 48 hours before the tour. Inside 48 hours, the deposit is non-refundable."
+                          className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm outline-none"
+                        />
+                        <p className="mt-2 text-sm text-gray-500">
+                          Shown to guests on this listing and linked from the
+                          site&apos;s Cancellation Policy page. Leave blank to
+                          show the default marketplace policy instead.
+                        </p>
+                      </div>
+                      <div className="mt-4">
+                        <label className="mb-2 block text-sm font-semibold text-[#0B3C5D]">
                           Blocked Dates
                         </label>
                         <textarea
@@ -3714,7 +3757,7 @@ export default function VendorDashboardPage() {
                       <button
                         onClick={() => saveListingTimes(listing.id)}
                         disabled={savingListingId === listing.id}
-                        className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                        className="rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#071F2F] disabled:opacity-50"
                       >
                         {savingListingId === listing.id
                           ? "Saving..."

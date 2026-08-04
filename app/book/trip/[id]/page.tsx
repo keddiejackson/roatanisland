@@ -79,7 +79,7 @@ export default async function TripPacketPage({
             </h1>
             <Link
               href="/account"
-              className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-black text-white"
+              className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-black text-[#071F2F]"
             >
               Open account
             </Link>
@@ -181,7 +181,7 @@ export default async function TripPacketPage({
         </section>
 
         <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
-          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
             Day-of command sheet
           </p>
           <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -212,7 +212,7 @@ export default async function TripPacketPage({
         <section className="mt-6 brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
                 Quick actions
               </p>
               <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -226,7 +226,7 @@ export default async function TripPacketPage({
                   href={action.href}
                   className={`rounded-xl px-4 py-2 text-sm font-black ${
                     action.label === "Open chat"
-                      ? "bg-[#00A8A8] text-white"
+                      ? "bg-[#00A8A8] text-[#071F2F]"
                       : "bg-[#EEF7F6] text-[#0B3C5D]"
                   }`}
                 >
@@ -239,7 +239,7 @@ export default async function TripPacketPage({
 
         <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
           <div className="brand-auth-card p-5 shadow sm:p-6">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
               Next steps
             </p>
             <div className="mt-4 grid gap-3">
@@ -254,7 +254,7 @@ export default async function TripPacketPage({
             </div>
           </div>
           <div className="brand-auth-card p-5 shadow sm:p-6">
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
               What to bring
             </p>
             <div className="mt-4 grid gap-2">
@@ -273,7 +273,7 @@ export default async function TripPacketPage({
         <section className="mt-6 grid gap-4 md:grid-cols-2">
           {packet.notes.map((note) => (
             <div key={note.label} className="brand-auth-card p-5 shadow sm:p-6">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
                 {note.label}
               </p>
               <p className="mt-3 whitespace-pre-line leading-7 text-gray-700">

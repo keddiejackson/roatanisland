@@ -14,6 +14,7 @@ type VendorListingUpdateRequest = {
   tourTimes?: unknown;
   blockedDates?: unknown;
   availabilityNote?: string;
+  cancellationPolicy?: string;
   maxGuests?: number | string;
   minimumNoticeHours?: number | string;
   bookingCutoffHours?: number | string;
@@ -166,6 +167,7 @@ export async function PATCH(
       tour_times: cleanTourTimes(body.tourTimes),
       blocked_dates: cleanTextList(body.blockedDates, 60),
       availability_note: body.availabilityNote?.trim() || null,
+      cancellation_policy: body.cancellationPolicy?.trim() || null,
       max_guests: maxGuests,
       minimum_notice_hours: minimumNoticeHours,
       booking_cutoff_hours: bookingCutoffHours,
@@ -183,7 +185,7 @@ export async function PATCH(
     })
     .eq("id", id)
     .select(
-      "id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, blocked_dates, availability_note, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date, latitude, longitude, is_active, approval_status, approval_note",
+      "id, title, description, price, location, image_url, gallery_image_urls, category, tour_times, blocked_dates, availability_note, cancellation_policy, max_guests, minimum_notice_hours, booking_cutoff_hours, auto_confirm_bookings, private_booking_mode, available_weekdays, season_start_date, season_end_date, latitude, longitude, is_active, approval_status, approval_note",
     )
     .single();
 

@@ -99,7 +99,7 @@ export default function AdminNav() {
       <div className="mb-6 sm:hidden">
         <div className="flex items-center justify-between gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-[#071F2F]/10">
           <div className="min-w-0">
-            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+            <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#007B7B]">
               Admin workspace
             </p>
             <p className="truncate text-sm font-black text-[#071F2F]">
@@ -157,7 +157,7 @@ export default function AdminNav() {
           >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                   Operations
                 </p>
                 <h2 className="mt-1 text-3xl font-black text-[#071F2F]">All admin tools</h2>

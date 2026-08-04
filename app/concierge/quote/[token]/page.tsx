@@ -90,7 +90,7 @@ export default async function ConciergeQuotePage({
             </p>
             <Link
               href="/concierge"
-              className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-bold text-white"
+              className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-bold text-[#071F2F]"
             >
               Request a new plan
             </Link>
@@ -122,7 +122,7 @@ export default async function ConciergeQuotePage({
         <section className="rounded-3xl bg-white p-8 shadow">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Private concierge quote
               </p>
               <h1 className="mt-2 text-3xl font-black text-[#0B3C5D] sm:text-5xl">
@@ -207,7 +207,7 @@ export default async function ConciergeQuotePage({
             </div>
 
             <aside className="rounded-3xl bg-[#F7F3EA] p-6">
-              <p className="text-sm font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+              <p className="text-sm font-black uppercase tracking-[0.16em] text-[#007B7B]">
                 Your total
               </p>
               <p className="mt-2 text-4xl font-black text-[#0B3C5D]">

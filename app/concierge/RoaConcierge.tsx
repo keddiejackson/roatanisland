@@ -525,7 +525,7 @@ export default function RoaConcierge({
 
           {messages.length <= 1 && !brainPlan ? (
             <div className="border-b border-[#E8DDC6] bg-white p-4">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Start with your arrival
               </p>
               <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -559,7 +559,7 @@ export default function RoaConcierge({
                 <div
                   className={`max-w-[90%] rounded-[1.35rem] px-4 py-3 text-sm leading-6 shadow-sm sm:max-w-[76%] ${
                     message.role === "user"
-                      ? "bg-[#00A8A8] text-white"
+                      ? "bg-[#00A8A8] text-[#071F2F]"
                       : "bg-white text-[#17324D]"
                   }`}
                 >
@@ -614,7 +614,7 @@ export default function RoaConcierge({
                 type="button"
                 onClick={() => sendMessage()}
                 disabled={sending || !input.trim()}
-                className="rounded-2xl bg-[#00A8A8] px-6 py-4 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20 disabled:opacity-50"
+                className="rounded-2xl bg-[#00A8A8] px-6 py-4 text-sm font-black text-[#071F2F] shadow-lg shadow-[#00A8A8]/20 disabled:opacity-50"
               >
                 Send
               </button>
@@ -627,7 +627,7 @@ export default function RoaConcierge({
         <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Roa Trip Desk
               </p>
               <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -676,7 +676,7 @@ export default function RoaConcierge({
                     step.state === "active"
                       ? "bg-[#D6B56D] text-[#071F2F]"
                       : step.state === "complete"
-                        ? "bg-[#00A8A8] text-white"
+                        ? "bg-[#00A8A8] text-[#071F2F]"
                         : "bg-white text-gray-400"
                   }`}
                 >
@@ -804,7 +804,7 @@ export default function RoaConcierge({
           <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                   Roa Brain
                 </p>
                 <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -917,7 +917,7 @@ export default function RoaConcierge({
         <div className="rounded-[1.75rem] bg-white p-5 shadow-xl shadow-[#071F2F]/8">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Roa matches
               </p>
               <h3 className="mt-2 text-2xl font-black text-[#0B3C5D]">
@@ -940,7 +940,7 @@ export default function RoaConcierge({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                    <p className="text-[0.68rem] font-black uppercase tracking-[0.14em] text-[#007B7B]">
                       {listing.location || listing.category || "Roatan"}
                     </p>
                     <h4 className="mt-1 font-black text-[#0B3C5D]">
@@ -963,7 +963,7 @@ export default function RoaConcierge({
                   </Link>
                   <Link
                     href={`/book?listing=${listing.id}`}
-                    className="rounded-lg bg-[#00A8A8] px-3 py-2 text-xs font-black text-white"
+                    className="rounded-lg bg-[#00A8A8] px-3 py-2 text-xs font-black text-[#071F2F]"
                   >
                     Request
                   </Link>

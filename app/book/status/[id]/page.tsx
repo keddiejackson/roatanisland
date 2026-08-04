@@ -103,7 +103,7 @@ export default async function BookingStatusPage({
             </p>
             <Link
               href="/"
-              className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+              className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
             >
               Back to Home
             </Link>
@@ -188,7 +188,7 @@ export default async function BookingStatusPage({
           </Link>
         </div>
         <section className="rounded-[2rem] bg-white p-6 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
             Private trip lounge
           </p>
           <div className="mt-2 flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
@@ -215,7 +215,7 @@ export default async function BookingStatusPage({
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
               href="/account#guest-plans"
-              className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-[#071F2F]"
             >
               Open guest chat
             </Link>
@@ -264,7 +264,7 @@ export default async function BookingStatusPage({
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {confidenceSnapshot.signals.map((signal) => (
                 <div key={signal.label} className="rounded-xl bg-white p-4">
-                  <p className="text-xs font-black uppercase tracking-[0.12em] text-[#00A8A8]">
+                  <p className="text-xs font-black uppercase tracking-[0.12em] text-[#007B7B]">
                     {signal.label}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-gray-600">
@@ -433,7 +433,7 @@ export default async function BookingStatusPage({
           </div>
 
           <div className="mt-8 rounded-2xl border border-gray-200 bg-white p-5">
-            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+            <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
               Itinerary essentials
             </p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -481,7 +481,7 @@ export default async function BookingStatusPage({
               ) : null}
               {booking.guest_message ? (
                 <div className="rounded-xl border border-gray-200 bg-white p-4">
-                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#00A8A8]">
+                  <p className="text-sm font-bold uppercase tracking-[0.16em] text-[#007B7B]">
                     Your notes
                   </p>
                   <p className="mt-3 whitespace-pre-line text-sm leading-6 text-gray-700">
@@ -515,7 +515,7 @@ export default async function BookingStatusPage({
               <div className="flex flex-wrap gap-2">
                 <Link
                   href="/account#guest-plans"
-                  className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-white"
+                  className="rounded-xl bg-[#00A8A8] px-5 py-3 text-sm font-black text-[#071F2F]"
                 >
                   Open guest chat
                 </Link>
@@ -532,7 +532,7 @@ export default async function BookingStatusPage({
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/"
-              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
             >
               Back to Home
             </Link>

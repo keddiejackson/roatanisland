@@ -114,7 +114,7 @@ export default function ReviewForm({ listingId }: { listingId: string }) {
         <button
           type="button"
           onClick={() => setSubmitted(false)}
-          className="mt-4 rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+          className="mt-4 rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
         >
           Add another review
         </button>
@@ -223,7 +223,7 @@ export default function ReviewForm({ listingId }: { listingId: string }) {
       <button
         type="submit"
         disabled={loading}
-        className="rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
+        className="rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-[#071F2F] disabled:opacity-50 md:col-span-2"
       >
         {loading ? "Submitting..." : "Submit Review"}
       </button>

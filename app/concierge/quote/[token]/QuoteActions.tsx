@@ -123,7 +123,7 @@ export default function QuoteActions({
           type="button"
           onClick={approveQuote}
           disabled={Boolean(busy)}
-          className="rounded-xl bg-[#00A8A8] px-5 py-4 font-black text-white disabled:opacity-50"
+          className="rounded-xl bg-[#00A8A8] px-5 py-4 font-black text-[#071F2F] disabled:opacity-50"
         >
           {busy === "approve" || busy === "pay"
             ? "Opening deposit..."

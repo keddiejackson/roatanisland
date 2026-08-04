@@ -201,7 +201,7 @@ export default function AdminListingReviewPage() {
                         <button
                           onClick={() => decideListing(listing, "approved")}
                           disabled={savingListingId === listing.id}
-                          className="flex-1 rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                          className="flex-1 rounded-xl bg-[#00A8A8] px-4 py-2 text-sm font-semibold text-[#071F2F] disabled:opacity-50"
                         >
                           Approve
                         </button>

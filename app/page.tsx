@@ -5,6 +5,7 @@ import { motion, useReducedMotion, type Variants } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import EmptyState from "@/app/EmptyState";
+import JsonLd from "@/app/JsonLd";
 import HomeHeroHeader, {
   type HomeAccountProfile,
 } from "@/app/HomeHeroHeader";
@@ -103,7 +104,7 @@ const discoveryCards = [
     category: "Tours",
     text: "Island days, water time, private guides, and guest-ready tours.",
     cta: "See experiences",
-    image: "/images/tours-hero.jpg",
+    imageField: "toursImageUrl",
   },
   {
     href: "/hotels",
@@ -111,7 +112,7 @@ const discoveryCards = [
     category: "Hotels",
     text: "Stay areas, resort context, and lodging that fits the rest of the day.",
     cta: "See stays",
-    image: "/images/hotels-hero.jpg",
+    imageField: "hotelsImageUrl",
   },
   {
     href: "/transport",
@@ -119,7 +120,7 @@ const discoveryCards = [
     category: "Transport",
     text: "Airport pickup, cruise transfer, drivers, and simple island movement.",
     cta: "See transport",
-    image: "/images/transport-hero.jpg",
+    imageField: "transportImageUrl",
   },
   {
     href: "/map",
@@ -127,9 +128,16 @@ const discoveryCards = [
     category: "Map",
     text: "Plan by beach, port, airport, exact pin, and saved stop.",
     cta: "Open the day map",
-    image: null,
+    imageField: null,
   },
-] as const;
+] as const satisfies ReadonlyArray<{
+  href: string;
+  label: string;
+  category: string;
+  text: string;
+  cta: string;
+  imageField: "toursImageUrl" | "hotelsImageUrl" | "transportImageUrl" | null;
+}>;
 
 const mapAreas = [
   "West Bay",
@@ -496,6 +504,33 @@ export default function Home() {
       variants={reduceMotion ? reducedMotionVariants : pageTransitionVariants}
       className="brand-page min-h-screen overflow-x-hidden"
     >
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "TravelAgency",
+          name: "Roatan Island Life",
+          url: "https://www.roatanisland.life",
+          description:
+            "Curated Roatan experiences, map planning, bookings, trips, and concierge help.",
+          areaServed: {
+            "@type": "Place",
+            name: "Roatán, Honduras",
+          },
+        }}
+      />
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Roatan Island Life",
+          url: "https://www.roatanisland.life",
+          potentialAction: {
+            "@type": "SearchAction",
+            target: "https://www.roatanisland.life/tours?q={search_term_string}",
+            "query-input": "required name=search_term_string",
+          },
+        }}
+      />
       {homepagePreviewingDraft ? (
         <div className="fixed inset-x-0 top-0 z-50 bg-[#D6B56D] px-4 py-2 text-center text-xs font-black uppercase tracking-[0.18em] text-[#061D2C] shadow">
           Draft preview - not live yet
@@ -513,7 +548,7 @@ export default function Home() {
           unoptimized
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-[#061D2C]/48" />
+        <div className="absolute inset-0 bg-[#061D2C]/68" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_28%,rgba(0,168,168,0.26),transparent_28%),linear-gradient(90deg,rgba(6,29,44,0.94)_0%,rgba(6,29,44,0.62)_46%,rgba(6,29,44,0.22)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-80 bg-[linear-gradient(180deg,rgba(247,243,234,0)_0%,#FBF8F1_88%)]" />
 
@@ -722,9 +757,9 @@ export default function Home() {
                 <div key={signal.title} className="flex items-start gap-3 p-3">
                   <span className="mt-1 size-2 shrink-0 rounded-full bg-[#D6B56D]" />
                   <div>
-                    <h3 className="text-sm font-black text-[#0B3C5D]">
+                    <h2 className="text-sm font-black text-[#0B3C5D]">
                       {signal.title}
-                    </h3>
+                    </h2>
                     <p className="mt-1 hidden text-xs leading-5 text-[#5D6F7D] sm:block">
                       {signal.text}
                     </p>
@@ -764,6 +799,9 @@ export default function Home() {
                     card.category === "Map"
                       ? exactPinCount
                       : categoryTotals[card.category] || 0;
+                  const cardImage = card.imageField
+                    ? homepageControls[card.imageField]
+                    : null;
                   return (
                     <Link
                       key={card.href}
@@ -771,9 +809,9 @@ export default function Home() {
                       className="brand-focus-ring group overflow-hidden rounded-[1.25rem] border border-[#EADFCB] bg-white shadow-sm transition hover:-translate-y-1 hover:border-[#D6B56D]/60 hover:shadow-xl"
                     >
                       <div className="relative h-36 overflow-hidden bg-[#071F2F]">
-                        {card.image ? (
+                        {cardImage ? (
                           <Image
-                            src={card.image}
+                            src={cardImage}
                             alt=""
                             fill
                             sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
@@ -943,6 +981,7 @@ export default function Home() {
                         key={preset.id}
                         type="button"
                         onClick={() => applyTravelerPersona(preset.id)}
+                        aria-pressed={selectedPersonaId === preset.id}
                         className={`min-w-44 rounded-2xl border px-4 py-3 text-left text-sm transition ${
                           selectedPersonaId === preset.id
                             ? "border-[#00A8A8] bg-[#071F2F] text-white"
@@ -1283,7 +1322,7 @@ export default function Home() {
                   </div>
                   <div className="mt-6 grid gap-4 lg:grid-cols-[0.85fr_1fr]">
                     <div className="rounded-2xl bg-white p-4 text-[#071F2F]">
-                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-[#007B7B]">
                         Guest asks
                       </p>
                       <p className="mt-3 text-lg font-black leading-7">

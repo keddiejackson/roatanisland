@@ -164,7 +164,7 @@ export default function HomeListingCard({
             </Link>
             <Link
               href={`/book?listing=${listing.id}`}
-              className="brand-focus-ring rounded-xl bg-[#00A8A8] px-3 py-3 text-center text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20"
+              className="brand-focus-ring rounded-xl bg-[#00A8A8] px-3 py-3 text-center text-sm font-black text-[#071F2F] shadow-lg shadow-[#00A8A8]/20"
             >
               Request
             </Link>

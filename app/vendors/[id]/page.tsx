@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import EmptyState from "@/app/EmptyState";
 import GuestDesktopNav from "@/app/GuestDesktopNav";
+import JsonLd from "@/app/JsonLd";
 import SiteLogo from "@/app/SiteLogo";
 import SiteFooter from "@/app/SiteFooter";
 import { supabaseServer } from "@/lib/supabase-server";
@@ -122,7 +123,7 @@ export default async function VendorProfilePage({
           </h1>
           <Link
             href="/"
-            className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+            className="mt-6 inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
           >
             Back to listings
           </Link>
@@ -175,6 +176,27 @@ export default async function VendorProfilePage({
 
   return (
     <main className="brand-page min-h-screen text-[#17324D]">
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          name: vendor.business_name,
+          description: vendor.notes || undefined,
+          image: vendor.profile_image_url || undefined,
+          url: `https://www.roatanisland.life/vendors/${vendor.id}`,
+          ...(vendor.show_website !== false && vendor.website
+            ? { sameAs: vendor.website }
+            : {}),
+          ...(vendor.show_phone !== false && vendor.phone
+            ? { telephone: vendor.phone }
+            : {}),
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: "Roatán",
+            addressCountry: "HN",
+          },
+        }}
+      />
       <section className="bg-[#0B3C5D] px-6 py-10 text-white">
         <div className="mx-auto max-w-7xl">
           <header className="flex flex-wrap items-center justify-between gap-4">
@@ -225,7 +247,7 @@ export default async function VendorProfilePage({
                 {vendor.show_email !== false && vendor.email ? (
                   <a
                     href={`mailto:${vendor.email}`}
-                    className="inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+                    className="inline-block rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
                   >
                     Email Vendor
                   </a>
@@ -240,7 +262,7 @@ export default async function VendorProfilePage({
         <div className="mb-8 rounded-2xl border border-[#D6B56D]/25 bg-white p-6 shadow">
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
                 Profile at a glance
               </p>
               <h2 className="mt-2 text-2xl font-bold text-[#0B3C5D]">
@@ -288,7 +310,7 @@ export default async function VendorProfilePage({
 
         {vendor.show_contact_name !== false && vendor.contact_name ? (
           <div className="mb-8 brand-auth-card p-5 shadow sm:p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
               Contact
             </p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -313,7 +335,7 @@ export default async function VendorProfilePage({
           </div>
         ) : vendor.show_phone !== false && vendor.phone ? (
           <div className="mb-8 brand-auth-card p-5 shadow sm:p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
               Contact
             </p>
             <div className="mt-4">
@@ -330,7 +352,7 @@ export default async function VendorProfilePage({
 
         <div className="mb-8 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#00A8A8]">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-[#007B7B]">
               Active listings
             </p>
             <h2 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
@@ -380,7 +402,7 @@ export default async function VendorProfilePage({
                 </div>
 
                 <div className="p-5">
-                  <p className="text-xs font-bold uppercase tracking-wide text-[#00A8A8]">
+                  <p className="text-xs font-bold uppercase tracking-wide text-[#007B7B]">
                     {listing.category || "Experience"}
                   </p>
                   <h3 className="mt-2 text-lg font-bold text-[#0B3C5D]">

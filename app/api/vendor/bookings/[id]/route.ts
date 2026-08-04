@@ -35,7 +35,7 @@ function statusSubject(status: VendorBookingStatus, listingTitle: string) {
   return `Your ${listingTitle} booking request was ${status}`;
 }
 
-function statusMessage(status: VendorBookingStatus) {
+function statusMessage(status: VendorBookingStatus, refundPending: boolean) {
   if (status === "confirmed") {
     return "Your booking request has been confirmed.";
   }
@@ -44,7 +44,9 @@ function statusMessage(status: VendorBookingStatus) {
     return "The operator suggested another time for your booking request.";
   }
 
-  return "Your booking request has been cancelled.";
+  return refundPending
+    ? "Your booking request has been cancelled. A refund for your payment is now pending review."
+    : "Your booking request has been cancelled.";
 }
 
 export async function PATCH(
@@ -85,7 +87,7 @@ export async function PATCH(
 
   const { data: booking } = await supabaseServer
     .from("bookings")
-    .select("id, listing_id, status")
+    .select("id, listing_id, status, amount_paid_cents, refund_status")
     .eq("id", id)
     .maybeSingle();
 
@@ -107,12 +109,24 @@ export async function PATCH(
   const updateStatus =
     nextStatus === "suggest_time" ? booking.status || "new" : nextStatus;
 
+  const cancellingPaidBookingWithNoRefundDecision =
+    updateStatus === "cancelled" &&
+    booking.status !== "cancelled" &&
+    (booking.amount_paid_cents || 0) > 0 &&
+    (booking.refund_status === "none" || !booking.refund_status);
+
   const { data: updatedBooking, error } = await supabaseServer
     .from("bookings")
-    .update({ status: updateStatus, vendor_note: vendorNote })
+    .update({
+      status: updateStatus,
+      vendor_note: vendorNote,
+      ...(cancellingPaidBookingWithNoRefundDecision
+        ? { refund_status: "pending" }
+        : {}),
+    })
     .eq("id", id)
     .select(
-      "id, full_name, email, tour_date, tour_time, guests, status, vendor_note, listing_id",
+      "id, full_name, email, tour_date, tour_time, guests, status, vendor_note, listing_id, amount_paid_cents, refund_status",
     )
     .single();
 
@@ -151,7 +165,7 @@ export async function PATCH(
     to: updatedBooking.email,
     subject: statusSubject(nextStatus, listing.title),
     html: `
-      <h2>${escapeHtml(statusMessage(nextStatus))}</h2>
+      <h2>${escapeHtml(statusMessage(nextStatus, cancellingPaidBookingWithNoRefundDecision))}</h2>
       <p><strong>Listing:</strong> ${escapeHtml(listing.title)}</p>
       <p><strong>Name:</strong> ${escapeHtml(updatedBooking.full_name)}</p>
       <p><strong>Date:</strong> ${escapeHtml(updatedBooking.tour_date)}</p>
@@ -164,7 +178,7 @@ export async function PATCH(
       }
     `,
     text: [
-      statusMessage(nextStatus),
+      statusMessage(nextStatus, cancellingPaidBookingWithNoRefundDecision),
       `Listing: ${listing.title}`,
       `Name: ${updatedBooking.full_name}`,
       `Date: ${updatedBooking.tour_date}`,

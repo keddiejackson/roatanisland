@@ -591,7 +591,7 @@ export default function BookingForm({
   return (
     <div className="mobile-no-overflow mx-auto grid w-full max-w-7xl gap-8 pb-28 lg:grid-cols-[minmax(0,1fr)_390px] lg:pb-0">
       <section className="mobile-no-overflow rounded-[2rem] bg-white p-5 shadow-2xl shadow-[#071F2F]/10 ring-1 ring-black/5 sm:p-8">
-        <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+        <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
           <span className="sm:hidden">{mobileControls.mobileBookingHeroEyebrow}</span>
           <span className="hidden sm:inline">Private booking request desk</span>
         </p>
@@ -811,7 +811,7 @@ export default function BookingForm({
             key={step.label}
             className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm"
           >
-            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+            <p className="text-xs font-black uppercase tracking-[0.14em] text-[#007B7B]">
               {index + 1}
             </p>
             <p className="mt-1 font-black text-[#0B3C5D]">{step.label}</p>
@@ -973,7 +973,7 @@ export default function BookingForm({
                     }`
                   : "/"
               }
-              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-white"
+              className="rounded-xl bg-[#00A8A8] px-5 py-3 font-semibold text-[#071F2F]"
             >
               View booking status
             </Link>
@@ -1033,7 +1033,7 @@ export default function BookingForm({
             id="booking-guest"
             className="scroll-mt-24 rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2"
           >
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
               Guest details
             </p>
             <p className="mt-1 text-sm leading-6 text-gray-600">
@@ -1070,7 +1070,7 @@ export default function BookingForm({
             id="booking-date"
             className="scroll-mt-24 rounded-2xl bg-[#F8F3EA] p-4 md:col-span-2"
           >
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#00A8A8]">
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-[#007B7B]">
               Date and availability
             </p>
             <p className="mt-1 text-sm leading-6 text-gray-600">
@@ -1120,7 +1120,7 @@ export default function BookingForm({
                   </h3>
                 </div>
                 {listing.auto_confirm_bookings ? (
-                  <span className="rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-black uppercase tracking-wide text-white">
+                  <span className="rounded-full bg-[#00A8A8] px-3 py-1 text-xs font-black uppercase tracking-wide text-[#071F2F]">
                     Auto-confirm eligible
                   </span>
                 ) : null}
@@ -1289,7 +1289,7 @@ export default function BookingForm({
             <div className="md:col-span-2">
               <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-end">
                 <div>
-                  <p className="text-sm font-black uppercase tracking-[0.14em] text-[#00A8A8]">
+                  <p className="text-sm font-black uppercase tracking-[0.14em] text-[#007B7B]">
                     Optional upgrades
                   </p>
                   <p className="mt-1 font-medium text-[#0B3C5D]">
@@ -1352,7 +1352,7 @@ export default function BookingForm({
               loading ||
               Boolean(guestWarning || dateWarning || availabilityBlocksBooking)
             }
-            className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-white disabled:opacity-50 md:col-span-2"
+            className="w-full rounded-xl bg-[#00A8A8] px-6 py-3 font-semibold text-[#071F2F] disabled:opacity-50 md:col-span-2"
           >
             {loading ? "Submitting..." : mobileControls.mobileBookingSubmitLabel}
           </button>
@@ -1458,7 +1458,7 @@ export default function BookingForm({
                 type="submit"
                 form="booking-request-form"
                 disabled={loading}
-                className="shrink-0 rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white shadow-lg shadow-[#00A8A8]/20 disabled:opacity-50"
+                className="shrink-0 rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-[#071F2F] shadow-lg shadow-[#00A8A8]/20 disabled:opacity-50"
               >
                 {mobileControls.mobileBookingSubmitLabel}
               </button>

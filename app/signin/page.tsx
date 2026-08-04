@@ -40,7 +40,7 @@ export default function SignInPage() {
 
           <div className="grid gap-10 py-14 lg:grid-cols-[0.82fr_1fr] lg:items-center">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 Account access
               </p>
               <h1 className="mt-4 text-4xl font-black leading-tight text-[#0B3C5D] sm:text-6xl">

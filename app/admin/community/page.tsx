@@ -382,7 +382,7 @@ export default function AdminCommunityPage() {
         <section className="brand-auth-card p-5 shadow sm:p-8">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+              <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
                 The Roatan Circle
               </p>
               <h1 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
@@ -563,7 +563,7 @@ export default function AdminCommunityPage() {
                           { is_featured: !thread.is_featured },
                         )
                       }
-                      className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white"
+                      className="rounded-xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-[#071F2F]"
                       disabled={savingId === thread.id}
                     >
                       {thread.is_featured ? "Unfeature" : "Feature"}

@@ -226,7 +226,7 @@ export default function CommunityVerificationDesk() {
     <section className="mt-6 rounded-3xl bg-white p-5 shadow ring-1 ring-[#071F2F]/5 sm:p-6">
       <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#00A8A8]">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#007B7B]">
             Verification desk
           </p>
           <h2 className="mt-2 text-3xl font-bold text-[#0B3C5D]">
@@ -352,7 +352,7 @@ export default function CommunityVerificationDesk() {
                       type="button"
                       onClick={() => updateRequest(request, "approved")}
                       disabled={savingId === request.id}
-                      className="rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-white"
+                      className="rounded-2xl bg-[#00A8A8] px-4 py-3 text-sm font-black text-[#071F2F]"
                     >
                       Approve
                     </button>

@@ -156,7 +156,7 @@ export default function AdminListingQualityPage() {
         <section className="brand-auth-card p-5 shadow sm:p-6">
           <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#00A8A8]">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-[#007B7B]">
                 Marketplace polish queue
               </p>
               <h1 className="mt-2 text-4xl font-black">Guest-facing fixes</h1>
