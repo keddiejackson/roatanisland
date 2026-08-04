@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import AnalyticsTracker from "./AnalyticsTracker";
 import GlobalBookingChat from "./GlobalBookingChat";
 import GlobalAccountButton from "./GlobalAccountButton";
@@ -7,6 +8,19 @@ import GuestMobilePlatform from "./GuestMobilePlatform";
 import SessionIdleTimeout from "./SessionIdleTimeout";
 import SiteBrandingProvider from "./SiteBrandingProvider";
 import "./globals.css";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+  axes: ["opsz", "SOFT", "WONK"],
+});
+
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -53,7 +67,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
+    <html
+      lang="en"
+      className={`h-full antialiased ${fraunces.variable} ${plusJakartaSans.variable}`}
+    >
       <body className="flex min-h-dvh flex-col">
         <SiteBrandingProvider>
           <a className="skip-link" href="#main-content">

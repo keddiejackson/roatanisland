@@ -132,25 +132,9 @@ export default function GuestMobilePlatform() {
 
   return (
     <>
-      <button
-        ref={menuButtonRef}
-        type="button"
-        onClick={() => setMenuOpen(true)}
-        className="fixed right-4 top-[calc(0.85rem+env(safe-area-inset-top))] z-[70] grid h-12 w-12 place-items-center rounded-2xl bg-white/92 text-[#071F2F] shadow-2xl shadow-[#071F2F]/15 ring-1 ring-[#071F2F]/10 backdrop-blur sm:hidden"
-        aria-label="Open menu"
-        aria-expanded={menuOpen}
-        aria-controls="guest-menu-panel"
-      >
-        <span className="grid gap-1.5">
-          <span className="h-0.5 w-6 rounded-full bg-current" />
-          <span className="h-0.5 w-6 rounded-full bg-current" />
-          <span className="h-0.5 w-6 rounded-full bg-current" />
-        </span>
-      </button>
-
       <nav
         aria-label="Mobile quick actions"
-        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] grid grid-cols-4 gap-1 rounded-[1.25rem] border border-white/14 bg-[#071F2F]/94 p-1 text-center text-[11px] font-black text-white shadow-2xl shadow-[#071F2F]/24 backdrop-blur-xl sm:hidden"
+        className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-[55] grid grid-cols-5 gap-1 rounded-[1.25rem] border border-white/14 bg-[#071F2F]/94 p-1 text-center text-[11px] font-black text-white shadow-2xl shadow-[#071F2F]/24 backdrop-blur-xl sm:hidden"
       >
         <Link
           href="/tours"
@@ -202,6 +186,20 @@ export default function GuestMobilePlatform() {
           </span>
           <span className="mt-0.5 block">Ask</span>
         </Link>
+        <button
+          ref={menuButtonRef}
+          type="button"
+          onClick={() => setMenuOpen(true)}
+          className="rounded-[1rem] px-2 py-2.5 text-white/86 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-[#00A8A8]/50"
+          aria-label="Open full menu"
+          aria-expanded={menuOpen}
+          aria-controls="guest-menu-panel"
+        >
+          <span className="block text-[10px] uppercase tracking-[0.12em] text-[#D6B56D]">
+            More
+          </span>
+          <span className="mt-0.5 block">Menu</span>
+        </button>
       </nav>
 
       {menuOpen ? (

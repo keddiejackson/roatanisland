@@ -2,10 +2,6 @@
 
 import Link from "next/link";
 import SiteLogo from "@/app/SiteLogo";
-import {
-  defaultMobileSiteControls,
-  type MobileSiteControls,
-} from "@/lib/mobile-site-controls";
 import { profileInitials } from "@/lib/user-profile";
 
 export type HomeAccountProfile = {
@@ -21,7 +17,6 @@ type HomeHeroHeaderProps = {
   accountLoading: boolean;
   signOutLoading: boolean;
   onSignOut: () => void;
-  mobileControls?: MobileSiteControls;
 };
 
 export default function HomeHeroHeader({
@@ -29,7 +24,6 @@ export default function HomeHeroHeader({
   accountLoading,
   signOutLoading,
   onSignOut,
-  mobileControls = defaultMobileSiteControls,
 }: HomeHeroHeaderProps) {
   return (
     <header className="grid items-start gap-3 sm:flex sm:items-center sm:justify-between">
@@ -40,83 +34,6 @@ export default function HomeHeroHeader({
           className="max-w-full [&>span]:max-h-20 [&>span]:max-w-full sm:[&>span]:max-h-24"
         />
       </div>
-
-      <nav aria-label="Mobile main navigation" className="hidden">
-        <div className="mobile-scroll-row flex-wrap overflow-visible rounded-[1.15rem] border border-white/12 bg-white/[0.09] p-1 text-center text-[12px] font-black text-white/90 shadow-xl shadow-black/10 backdrop-blur-xl">
-          {mobileControls.showMobileNavListings ? (
-            <a
-              href="/tours"
-              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
-            >
-              {mobileControls.mobileNavListingsLabel}
-            </a>
-          ) : null}
-          {mobileControls.showMobileNavMap ? (
-            <Link
-              href="/map"
-              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
-            >
-              {mobileControls.mobileNavMapLabel}
-            </Link>
-          ) : null}
-          {mobileControls.showMobileNavConcierge ? (
-            <Link
-              href="/concierge"
-              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
-            >
-              {mobileControls.mobileNavConciergeLabel}
-            </Link>
-          ) : null}
-          {accountLoading ? (
-            <span className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 text-white/50">
-              ...
-            </span>
-          ) : account ? (
-            <details className="group relative flex-1">
-              <summary className="grid cursor-pointer list-none place-items-center rounded-xl px-2 py-2.5 hover:bg-white/10">
-                Account
-              </summary>
-              <div className="absolute right-0 z-50 mt-2 w-48 rounded-2xl border border-white/20 bg-white p-2 text-left text-[#071F2F] shadow-2xl shadow-black/20">
-                <Link
-                  href={account.href}
-                  className="block rounded-xl px-3 py-2 text-sm font-black hover:bg-[#EEF7F6]"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/account"
-                  className="block rounded-xl px-3 py-2 text-sm font-black hover:bg-[#EEF7F6]"
-                >
-                  Messages
-                </Link>
-                <button
-                  type="button"
-                  onClick={onSignOut}
-                  disabled={signOutLoading}
-                  className="mt-1 w-full rounded-xl bg-[#071F2F] px-3 py-2 text-left text-sm font-black text-white disabled:opacity-60"
-                >
-                  {signOutLoading ? "Signing out..." : "Sign out"}
-                </button>
-              </div>
-            </details>
-          ) : mobileControls.showMobileNavSignIn ? (
-            <Link
-              href="/signin"
-              className="flex-1 whitespace-nowrap rounded-xl px-2 py-2.5 hover:bg-white/10"
-            >
-              {mobileControls.mobileNavSignInLabel}
-            </Link>
-          ) : null}
-          {mobileControls.showMobileNavBusiness ? (
-            <Link
-              href="/vendor/signup"
-              className="basis-full rounded-xl bg-white px-3 py-3 text-[#071F2F] shadow-lg shadow-black/10"
-            >
-              {mobileControls.mobileNavBusinessLabel}
-            </Link>
-          ) : null}
-        </div>
-      </nav>
 
       <nav
         aria-label="Desktop main navigation"

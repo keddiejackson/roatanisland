@@ -102,24 +102,32 @@ const discoveryCards = [
     label: "Experiences",
     category: "Tours",
     text: "Island days, water time, private guides, and guest-ready tours.",
+    cta: "See experiences",
+    image: "/images/tours-hero.jpg",
   },
   {
     href: "/hotels",
     label: "Hotels & Stays",
     category: "Hotels",
     text: "Stay areas, resort context, and lodging that fits the rest of the day.",
+    cta: "See stays",
+    image: "/images/hotels-hero.jpg",
   },
   {
     href: "/transport",
     label: "Transportation",
     category: "Transport",
     text: "Airport pickup, cruise transfer, drivers, and simple island movement.",
+    cta: "See transport",
+    image: "/images/transport-hero.jpg",
   },
   {
     href: "/map",
     label: "Roatan Day Map",
     category: "Map",
     text: "Plan by beach, port, airport, exact pin, and saved stop.",
+    cta: "Open the day map",
+    image: null,
   },
 ] as const;
 
@@ -515,7 +523,6 @@ export default function Home() {
             accountLoading={homeAccountLoading}
             signOutLoading={homeSignOutLoading}
             onSignOut={signOutHomeAccount}
-            mobileControls={mobileControls}
           />
 
           <motion.div
@@ -578,12 +585,14 @@ export default function Home() {
 
               <motion.div
                 variants={reduceMotion ? reducedMotionVariants : heroTextVariants}
-                className={`mobile-scroll-row mt-9 text-sm font-bold text-white/88 sm:mt-12 sm:flex-wrap ${
+                className={`mobile-scroll-row mt-9 pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-sm font-bold text-white/88 sm:mt-12 sm:flex-wrap sm:pb-0 ${
                   mobileControls.showMobileHeroPills ? "" : "hidden sm:flex"
                 }`}
               >
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur">
-                  {navListingCount} {homepageControls.heroCountLabel}
+                  {navListingCount > 0
+                    ? `${navListingCount} ${homepageControls.heroCountLabel}`
+                    : "Early access, opening now"}
                 </span>
                 <span className="rounded-full border border-white/15 bg-white/10 px-4 py-2 backdrop-blur">
                   {homepageControls.heroMapLabel}
@@ -759,22 +768,39 @@ export default function Home() {
                     <Link
                       key={card.href}
                       href={card.href}
-                      className="brand-focus-ring group rounded-[1.25rem] border border-[#EADFCB] bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-[#D6B56D]/60 hover:shadow-xl"
+                      className="brand-focus-ring group overflow-hidden rounded-[1.25rem] border border-[#EADFCB] bg-white shadow-sm transition hover:-translate-y-1 hover:border-[#D6B56D]/60 hover:shadow-xl"
                     >
-                      <span className="text-[11px] font-black uppercase tracking-[0.18em] text-[#9C7A2F]">
-                        {count > 0
-                          ? formatCount(count, "live option")
-                          : "Roa can source it"}
-                      </span>
-                      <h3 className="mt-4 text-2xl font-black text-[#0B3C5D]">
-                        {card.label}
-                      </h3>
-                      <p className="mt-3 text-sm leading-6 text-[#5D6F7D]">
-                        {card.text}
-                      </p>
-                      <span className="mt-5 inline-flex text-sm font-black text-[#007B7B]">
-                        Explore this way
-                      </span>
+                      <div className="relative h-36 overflow-hidden bg-[#071F2F]">
+                        {card.image ? (
+                          <Image
+                            src={card.image}
+                            alt=""
+                            fill
+                            sizes="(min-width: 1280px) 25vw, (min-width: 768px) 50vw, 100vw"
+                            className="object-cover transition duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 opacity-80 [background:radial-gradient(circle_at_25%_20%,rgba(0,168,168,0.55),transparent_55%),radial-gradient(circle_at_85%_85%,rgba(214,181,109,0.4),transparent_50%)]" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[#071F2F]/75 via-[#071F2F]/10 to-transparent" />
+                        <span className="absolute left-4 top-4 rounded-full bg-white/92 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-[#9C7A2F] backdrop-blur">
+                          {count > 0
+                            ? formatCount(count, "live option")
+                            : "Roa can source it"}
+                        </span>
+                      </div>
+                      <div className="p-5">
+                        <h3 className="text-2xl font-black text-[#0B3C5D]">
+                          {card.label}
+                        </h3>
+                        <p className="mt-3 text-sm leading-6 text-[#5D6F7D]">
+                          {card.text}
+                        </p>
+                        <span className="mt-5 inline-flex items-center gap-1.5 text-sm font-black text-[#007B7B] transition group-hover:gap-2.5">
+                          {card.cta}
+                          <span aria-hidden="true">&rarr;</span>
+                        </span>
+                      </div>
                     </Link>
                   );
                 })}
@@ -820,7 +846,9 @@ export default function Home() {
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="brand-badge brand-badge-teal">
-                    {featuredHomeListings.length} shown
+                    {featuredHomeListings.length > 0
+                      ? `${featuredHomeListings.length} shown`
+                      : "Pre-launch"}
                   </p>
                   <Link href={mapUrl} className="brand-button-secondary">
                     Open matched map
@@ -1011,8 +1039,9 @@ export default function Home() {
 
                 <div className="mt-4 flex flex-col justify-between gap-3 rounded-[1rem] bg-[#EEF7F6] p-4 sm:flex-row sm:items-center">
                   <p className="text-sm font-bold text-[#0B3C5D]">
-                    {featuredHomeListings.length}{" "}
-                    {mobileControls.mobileListingsResultLabel}
+                    {featuredHomeListings.length > 0
+                      ? `${featuredHomeListings.length} ${mobileControls.mobileListingsResultLabel}`
+                      : "We're lining up Roatan's first listings."}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {hasActiveFilters ? (
@@ -1037,7 +1066,9 @@ export default function Home() {
               {!mobileControls.showMobileHomepageSearch ? (
                 <div className="brand-card p-4 sm:hidden">
                   <p className="text-sm font-black text-[#0B3C5D]">
-                    {featuredHomeListings.length} curated matches ready.
+                    {featuredHomeListings.length > 0
+                      ? `${featuredHomeListings.length} curated matches ready.`
+                      : "Pre-launch: first matches coming soon."}
                   </p>
                   <div className="mt-3 grid gap-2">
                     <Link
@@ -1165,7 +1196,7 @@ export default function Home() {
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
                     <div className="rounded-[1rem] bg-white/95 p-3 text-[#071F2F] shadow-xl shadow-black/10 sm:rounded-[1.1rem] sm:p-4">
                       <p className="text-2xl font-black sm:text-3xl">
-                        {exactPinCount}
+                        {exactPinCount > 0 ? exactPinCount : "Soon"}
                       </p>
                       <p className="mt-1 text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-[#5D6F7D] sm:text-xs">
                         Exact pins
@@ -1173,10 +1204,10 @@ export default function Home() {
                     </div>
                     <div className="rounded-[1rem] bg-white/95 p-3 text-[#071F2F] shadow-xl shadow-black/10 sm:rounded-[1.1rem] sm:p-4">
                       <p className="text-2xl font-black sm:text-3xl">
-                        {activeAreaCount}
+                        {activeAreaCount > 0 ? activeAreaCount : "7"}
                       </p>
                       <p className="mt-1 text-[9px] font-bold uppercase leading-tight tracking-[0.1em] text-[#5D6F7D] sm:text-xs">
-                        Active areas
+                        Areas mapped
                       </p>
                     </div>
                     <div className="rounded-[1rem] bg-white/95 p-3 text-[#071F2F] shadow-xl shadow-black/10 sm:rounded-[1.1rem] sm:p-4">
@@ -1332,13 +1363,14 @@ export default function Home() {
             <div className="mx-auto max-w-7xl rounded-[1.35rem] border border-[#D6B56D]/24 bg-[#FFFDF7] p-5 shadow-sm sm:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <p className="brand-eyebrow-gold">Growing carefully</p>
+                  <p className="brand-eyebrow-gold">Pre-launch</p>
                   <h2 className="mt-2 text-2xl font-black text-[#0B3C5D]">
-                    The marketplace is curated before it gets crowded.
+                    We&rsquo;re building this with Roatan&rsquo;s first operators.
                   </h2>
                   <p className="mt-2 max-w-3xl text-sm leading-6 text-[#5D6F7D]">
-                    If the exact thing is not listed yet, Roa can still help
-                    shape the request and route it toward the right local fit.
+                    The marketplace is opening in stages so every listing gets
+                    real attention. Ask Roa to shape your request now, or
+                    claim a founding spot if you run a Roatan business.
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1346,7 +1378,7 @@ export default function Home() {
                     Ask Roa for a match
                   </Link>
                   <Link href="/vendor/signup" className="brand-button-secondary">
-                    Add a local business
+                    Claim a founding spot
                   </Link>
                 </div>
               </div>

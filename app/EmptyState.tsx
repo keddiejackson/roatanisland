@@ -3,6 +3,7 @@ import Link from "next/link";
 type EmptyStateProps = {
   title: string;
   text: string;
+  eyebrow?: string;
   primaryHref?: string;
   primaryLabel?: string;
   secondaryHref?: string;
@@ -12,6 +13,7 @@ type EmptyStateProps = {
 export default function EmptyState({
   title,
   text,
+  eyebrow = "Pre-launch",
   primaryHref = "/map",
   primaryLabel = "Explore the map",
   secondaryHref = "/vendor/signup",
@@ -20,7 +22,7 @@ export default function EmptyState({
   return (
     <div className="brand-empty-state p-8 text-center">
       <p className="brand-eyebrow">
-        Growing marketplace
+        {eyebrow}
       </p>
       <h2 className="mt-3 text-2xl font-black text-[#0B3C5D]">{title}</h2>
       <p className="brand-subtitle mx-auto mt-2 max-w-xl">{text}</p>

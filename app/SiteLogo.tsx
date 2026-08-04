@@ -27,7 +27,7 @@ export default function SiteLogo({
   href = "/",
   variant = "dark",
   compact = false,
-  priority = false,
+  priority = true,
   className = "",
 }: SiteLogoProps) {
   const branding = useSiteBranding();

@@ -23,19 +23,23 @@ const categoryPageCopy: Record<
   {
     browseTitle: string;
     emptyTitle: string;
+    heroImage: string;
   }
 > = {
   Hotels: {
     browseTitle: "Hotels & stays",
-    emptyTitle: "No active hotels or stays yet.",
+    emptyTitle: "Hotels & stays are opening soon.",
+    heroImage: "/images/hotels-hero.jpg",
   },
   Tours: {
     browseTitle: "Tours & experiences",
-    emptyTitle: "No active tours yet.",
+    emptyTitle: "Tours & experiences are opening soon.",
+    heroImage: "/images/tours-hero.jpg",
   },
   Transport: {
     browseTitle: "Transportation options",
-    emptyTitle: "No active transportation options yet.",
+    emptyTitle: "Transportation options are opening soon.",
+    heroImage: "/images/transport-hero.jpg",
   },
 };
 
@@ -60,7 +64,8 @@ export default async function CategoryPage({
   const listings = (data as Listing[]) || [];
   const pageCopy = categoryPageCopy[category] || {
     browseTitle: `${category} options`,
-    emptyTitle: `No active ${category.toLowerCase()} options yet.`,
+    emptyTitle: `${category} options are opening soon.`,
+    heroImage: "/images/roatan.jpeg",
   };
 
   return (
@@ -71,29 +76,50 @@ export default async function CategoryPage({
             <SiteLogo variant="light" />
             <GuestDesktopNav />
           </header>
-          <div className="brand-hero-panel mt-6 px-5 py-10 sm:mt-8 sm:px-10 sm:py-16">
-            <p className="brand-eyebrow-gold">
-              {category}
-            </p>
-            <h1 className="mt-3 text-3xl font-black leading-tight sm:text-6xl">
-              {title}
-            </h1>
-            <p className="mt-5 max-w-2xl text-base leading-7 text-white/80 sm:text-lg sm:leading-8">
-              {description}
-            </p>
-            <div className="mt-8 grid max-w-3xl gap-3 sm:grid-cols-3">
-              {[
-                "Locally listed",
-                "Map-friendly planning",
-                "Request before confirm",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl bg-white/10 p-4 text-sm font-semibold ring-1 ring-white/15"
-                >
-                  {item}
-                </div>
-              ))}
+          <div className="brand-hero-panel relative mt-6 overflow-hidden px-5 py-10 sm:mt-8 sm:px-10 sm:py-16">
+            <Image
+              src={pageCopy.heroImage}
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="object-cover"
+            />
+            <div className="absolute inset-0 bg-[#061D2C]/72" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,29,44,0.96)_0%,rgba(6,29,44,0.7)_55%,rgba(6,29,44,0.32)_100%)]" />
+            <div className="relative">
+              <p className="motion-rise brand-eyebrow-gold">
+                {category}
+              </p>
+              <h1
+                className="motion-rise mt-3 text-3xl font-black leading-tight sm:text-6xl"
+                style={{ animationDelay: "80ms" }}
+              >
+                {title}
+              </h1>
+              <p
+                className="motion-rise mt-5 max-w-2xl text-base leading-7 text-white/80 sm:text-lg sm:leading-8"
+                style={{ animationDelay: "160ms" }}
+              >
+                {description}
+              </p>
+              <div
+                className="motion-rise mt-8 grid max-w-3xl gap-3 sm:grid-cols-3"
+                style={{ animationDelay: "240ms" }}
+              >
+                {[
+                  "Locally listed",
+                  "Map-friendly planning",
+                  "Request before confirm",
+                ].map((item) => (
+                  <div
+                    key={item}
+                    className="rounded-2xl bg-white/10 p-4 text-sm font-semibold ring-1 ring-white/15"
+                  >
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -110,14 +136,16 @@ export default async function CategoryPage({
             </h2>
           </div>
           <p className="brand-badge">
-            {listings.length} result{listings.length === 1 ? "" : "s"}
+            {listings.length > 0
+              ? `${listings.length} result${listings.length === 1 ? "" : "s"}`
+              : "Pre-launch"}
           </p>
         </div>
 
         {listings.length === 0 ? (
           <EmptyState
             title={pageCopy.emptyTitle}
-            text="This section is ready for local operators. Explore the map for nearby options or add your business to help grow the marketplace."
+            text="We're onboarding Roatan's first local operators in this category. Explore the map for context, ask Roa to shape a request now, or list your business to claim a founding spot."
           />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

@@ -459,10 +459,10 @@ type LeafletMapSurfaceProps = {
 
 const leafletTileUrl =
   process.env.NEXT_PUBLIC_MAP_TILE_URL ||
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+  "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png";
 const leafletTileAttribution =
   process.env.NEXT_PUBLIC_MAP_TILE_ATTRIBUTION ||
-  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (character) => {
@@ -550,6 +550,8 @@ function LeafletMapSurface({
       Leaflet.tileLayer(leafletTileUrl, {
         attribution: leafletTileAttribution,
         maxZoom,
+        detectRetina: true,
+        subdomains: "abcd",
       }).addTo(map);
 
       layersRef.current = {
@@ -1517,8 +1519,9 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-black text-white">
-              {filteredListings.length} option
-              {filteredListings.length === 1 ? "" : "s"}
+              {filteredListings.length > 0
+                ? `${filteredListings.length} option${filteredListings.length === 1 ? "" : "s"}`
+                : "Pre-launch"}
             </span>
             <button
               type="button"
@@ -1838,7 +1841,8 @@ export default function MapBrowser({ listings }: { listings: MapListing[] }) {
                 <div className="pointer-events-auto max-w-md rounded-2xl bg-white/95 p-4 shadow sm:p-6">
                   <p className="font-bold text-[#0B3C5D]">No matches here yet</p>
                   <p className="mt-2 hidden text-sm text-gray-600 sm:block">
-                    Try a guest-ready mode or clear the filters to reopen the map.
+                    Try a guest-ready mode, clear the filters, or ask Roa while
+                    local operators keep joining.
                   </p>
                   <div className="mt-3 flex gap-2 overflow-x-auto sm:mt-4 sm:grid sm:grid-cols-3">
                     {mapConciergeModes.slice(0, 3).map((mode) => (
